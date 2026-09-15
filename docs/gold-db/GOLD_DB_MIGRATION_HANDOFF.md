@@ -388,15 +388,24 @@ Delete `src/lib/server/fred.ts` from the prod path, all `*Snapshot*` files, all
 SIM generators for Tier A. Add the CI grep gate (§11). Update `ARCHITECTURE.md`,
 `docs/data/DATA_PIPELINE_OVERVIEW.md`, `docs/gold-db/MODULE_DATA_AUDIT.md`.
 
-**Status as of 2026-08-25:** Tier A production API routes and direct Tier A
-client helpers have been hardened to return Gold DB rows or explicit `ERR`/empty
-states instead of falling through to live FRED, committed snapshots, or SIM.
-`scripts/check-gold-db-policy.sh` is wired as `npm run check:gold-policy` and
-blocks the old fallback imports/annotations in `src/app/api/econ`,
-`src/app/api/chart`, and `src/app/api/market`, with documented exceptions for
-FOMC and macro-input synthetic-book/model paths. Physical deletion of
-legacy fixture files and SIM generators remains pending because tests, Tier B/C
-exceptions, and offline helpers still reference them.
+**Status as of 2026-09-14 (Phase Completion):**
+
+✅ **Phase 0** — GoldStore foundation wired; MACRO_DB_URL config per backend.
+✅ **Phase 1** — ECON + drill (indicators, batch, series) → Gold DB.
+✅ **Phase 2** — Rates complex (benchmark, curve, inversions) → Gold DB.
+✅ **Phase 3** — Credit, Funding, Inflation, Regime routes → Gold DB. 
+    *Follow-up:* Wire Tier C book inputs (COLL, CASH, REINV, SFE, FCOST) to `getMacroInputs()`.
+✅ **Phase 4** — Markets + charting (market/[view], chart/series, market-lens) → Gold DB. 
+    *Cleanup:* Removed MARKET_LENS_URL and CHART_DB_URL proxies; updated to MACRO_DB_URL.
+✅ **Phase 5** — Stats, EDA, ML, Global, DataOps routes → Gold DB tables.
+🔄 **Phase 6** — Removal & hardening (in progress):
+    ✅ Deleted snapshot fixture files (econSnapshot.*, sentimentAaiiSnapshot.*, market_snapshot.json)
+    ✅ Deleted FRED client (src/lib/server/fred.ts)
+    ✅ Deleted export script (exportEconSnapshot.ts)
+    ⏳ *Remaining:* Remove snapshot/SIM branches from routes, update docs, verify CI gate.
+
+`scripts/check-gold-db-policy.sh` blocks old fallback imports in Tier A routes
+with documented exceptions for FOMC and macro-input synthetic-book paths.
 
 Phases 1–5 are independently shippable (a module reads Gold or, until its phase
 lands, keeps the old chain — no big-bang cutover).
