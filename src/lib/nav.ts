@@ -29,6 +29,7 @@ import {
   Newspaper,
   Droplets,
   TrendingUp,
+  Dices,
   type LucideIcon,
 } from "lucide-react";
 import { isModuleEnabled } from "@/lib/moduleConfig";
@@ -40,7 +41,7 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   desc: string;
-  group: "MARKETS" | "FINANCE" | "OPTIMIZATION" | "DESK" | "TRADING_ASSISTANT" | "ECONOMICS" | "INTELLIGENCE";
+  group: "MARKETS" | "FINANCE" | "OPTIMIZATION" | "DESK" | "TRADING_ASSISTANT" | "ECONOMICS" | "SIMULATIONS" | "INTELLIGENCE";
 }
 
 const ALL_NAV: NavItem[] = [
@@ -85,6 +86,7 @@ const ALL_NAV: NavItem[] = [
   { code: "MGC", label: "Macro Chart Studio", href: "/macro-chart", icon: AreaChart, desc: "Freeform economic & macro charting", group: "ECONOMICS" },
   { code: "EDA", label: "EDA / Lead-Lag", href: "/economics/eda", icon: Activity, desc: "Cross-correlation, Granger causality & regime breaks", group: "ECONOMICS" },
   { code: "MOTN", label: "Macro Motion Studio", href: "/economics/motion", icon: Clapperboard, desc: "Animate economic series over time", group: "ECONOMICS" },
+  { code: "MCS", label: "Monte Carlo Curve Sim", href: "/simulations/mcs", icon: Dices, desc: "VAR(1) factor bootstrap — forward curve distributions", group: "SIMULATIONS" },
   { code: "POLY", label: "Prediction Markets", href: "/polymarket", icon: TrendingUp, desc: "Event contract odds & probability curves", group: "INTELLIGENCE" },
   { code: "NEWS", label: "News & Signal Intel", href: "/news", icon: Newspaper, desc: "Market news, social & signal engine", group: "INTELLIGENCE" },
   { code: "SENT", label: "Investor Sentiment", href: "/sentiment", icon: Gauge, desc: "Survey + social fear/greed & positioning", group: "INTELLIGENCE" },
@@ -102,5 +104,6 @@ export const NAV_GROUPS: { id: NavItem["group"]; label: string }[] = [
   { id: "DESK", label: "Trading Desk" },
   { id: "TRADING_ASSISTANT", label: "Trading Assistant" },
   { id: "ECONOMICS", label: "Economics & Macro" },
+  { id: "SIMULATIONS", label: "Simulations" },
   { id: "INTELLIGENCE", label: "Intelligence" },
 ];

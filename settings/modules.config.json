@@ -43,6 +43,7 @@
     "MGC":    { "enabled": true, "label": "Macro Chart Studio" },
     "EDA":    { "enabled": true, "label": "EDA / Lead-Lag" },
     "MOTN":   { "enabled": true, "label": "Macro Motion Studio" },
+    "MCS":    { "enabled": true, "label": "Monte Carlo Curve Sim" },
     "POLY":   { "enabled": true, "label": "Prediction Markets" },
     "NEWS":   { "enabled": true, "label": "News & Signal Intel" },
     "SENT":   { "enabled": true, "label": "Investor Sentiment" },
