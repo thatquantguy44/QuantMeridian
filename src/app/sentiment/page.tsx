@@ -9,7 +9,6 @@ import { LineChart } from "@/components/charts/LineChart";
 import { isRealEconSource, useLiveSeriesSet } from "@/lib/useEcon";
 import { useSocial } from "@/lib/useSocial";
 import { fmtSigned, pnlClass } from "@/lib/format";
-import { aaiiSnapshotGeneratedAt, hasAaiiSnapshot } from "@/data/sentimentAaiiSnapshot";
 import {
   getSentimentIndex,
   getSentimentSummary,
@@ -142,8 +141,8 @@ export default function SentimentModule() {
   const tickers = useMemo(() => getTickerSentiment(16, social), [social]);
   const btn = "rounded-sm border px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide transition-colors";
   const recent = aaii.slice(-10).reverse();
-  const aaiiSource = hasAaiiSnapshot() ? "SNAPSHOT" : "SIM";
-  const pageSource = vixLive ? "FRED" : socialLive ? "LIVE" : aaiiSource === "SNAPSHOT" ? "SNAPSHOT" : "SIM";
+  const aaiiSource = "SIM";
+  const pageSource = vixLive ? "FRED" : socialLive ? "LIVE" : "SIM";
 
   return (
     <div className="flex min-h-full flex-col">
@@ -225,7 +224,7 @@ export default function SentimentModule() {
                 right={
                   <span className="flex items-center gap-2">
                     <Tag tone={aaiiSnap.zone === "Euphoria" ? "down" : aaiiSnap.zone === "Capitulation" ? "up" : "amber"}>{aaiiSnap.zone}</Tag>
-                    <ProvenanceBadge source={aaiiSource} asOf={aaiiSnapshotGeneratedAt} />
+                    <ProvenanceBadge source={aaiiSource} asOf={null} />
                   </span>
                 }
               >
@@ -493,7 +492,7 @@ export default function SentimentModule() {
         <span className="text-term-amber">SENT</span> — investor sentiment & behavior: AAII survey + NAAIM positioning + X/Reddit/StockTwits mood, distilled into an explainable fear/greed index.
         {vixLive ? " VIX component live via FRED." : ""}
         {socialLive ? ` Social component live via ${socialSource}.` : " Social component is using SIM fallback."}
-        {hasAaiiSnapshot() ? " AAII survey uses the committed AAII snapshot." : " AAII survey is using deterministic fallback until the AAII snapshot refresh succeeds."}
+        {" "}AAII survey is deterministic (snapshot was removed in Phase 5-6 Gold DB migration).
         {" "}NAAIM remains deterministic until a connector is wired.
       </div>
     </div>

@@ -1,18 +1,14 @@
 /**
  * SENT — Investor Sentiment & Behavior (deterministic engine).
  *
- * Phase 1: the survey layer (AAII bull/neutral/bear, NAAIM manager exposure),
- * the social layer (reused from the NEWS module's getSocialIntel), and an
- * explainable 0–100 fear/greed Sentiment Index composed from both plus
- * market-based inputs. Everything is seeded so the module renders instantly and
- * SSR-safe with no backend; each component is tagged with the live source it
- * will upgrade to (SURVEY / SOCIAL / FRED / MARKET) so the composite shows what
- * is live vs simulated.
+ * AAII and NAAIM data are deterministic fallback only. Live feeds come from
+ * /api/social and are tagged "SURVEY" / "SOCIAL" when available. Everything
+ * here is seeded SSR-safe; the composite Sentiment Index merges social +
+ * market inputs and shows what is live vs simulated.
  */
 import { Rng } from "@/lib/rng";
 import { getSocialIntel, type SocialIntel } from "./news";
 import { getSqueezeBoard } from "./squeeze";
-import { getAaiiSnapshotHistory } from "./sentimentAaiiSnapshot";
 
 const clamp = (v: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v));
 

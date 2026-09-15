@@ -1,6 +1,5 @@
 import { describe, test, expect } from "vitest";
 import { isRealEconSource } from "./useEcon";
-import { getSnapshotObservations } from "@/data/econSnapshot";
 
 describe("mapSource contract", () => {
   const mapSource = (s: unknown): string => {
@@ -79,39 +78,5 @@ describe("isRealEconSource", () => {
 
   test("undefined is not a real source", () => {
     expect(isRealEconSource(undefined)).toBe(false);
-  });
-});
-
-describe("snapshot seeding", () => {
-  test("committed snapshot has DGS10 series data", () => {
-    const obs = getSnapshotObservations("DGS10");
-    expect(obs).not.toBeNull();
-    if (obs) {
-      expect(obs.length).toBeGreaterThan(0);
-      expect(obs[0]).toHaveProperty("date");
-      expect(obs[0]).toHaveProperty("value");
-    }
-  });
-
-  test("committed snapshot has CPIAUCSL series data", () => {
-    const obs = getSnapshotObservations("CPIAUCSL");
-    expect(obs).not.toBeNull();
-    if (obs) {
-      expect(obs.length).toBeGreaterThan(0);
-    }
-  });
-
-  test("non-existent series returns null from snapshot", () => {
-    const obs = getSnapshotObservations("FAKE_NONEXISTENT_SERIES_XYZ");
-    expect(obs).toBeNull();
-  });
-
-  test("snapshot observations are sorted by date ascending", () => {
-    const obs = getSnapshotObservations("DGS10");
-    if (obs && obs.length > 1) {
-      for (let i = 1; i < obs.length; i++) {
-        expect(obs[i].date >= obs[i - 1].date).toBe(true);
-      }
-    }
   });
 });
