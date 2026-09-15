@@ -45,6 +45,7 @@ from market_lens_studio.config.schemas import (
     ViewConfig,
 )
 from market_lens_studio.data.adapters.fred_adapter import FredAdapter
+from market_lens_studio.data.adapters.gold_adapter import GoldAdapter
 from market_lens_studio.data.adapters.proxy_resolver import ProxyResolver
 from market_lens_studio.data.lineage import LineageTracker
 from market_lens_studio.data.series_catalog import (
@@ -66,6 +67,8 @@ _CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
 _view_cache: Optional[dict[str, ViewConfig]] = None
 _preset_store: dict[str, list[PresetConfig]] = {}  # user_id -> presets
+_gold_adapter = GoldAdapter()  # Lazy-loaded Gold adapter
+_fred_adapter = FredAdapter()  # Lazy-loaded FRED adapter
 
 
 def _load_views() -> dict[str, ViewConfig]:
@@ -116,6 +119,11 @@ def _load_default_presets() -> list[PresetConfig]:
     return presets
 
 
+class DataNotAvailableError(Exception):
+    """Raised when data is not available in the configured source."""
+    pass
+
+
 def _fetch_series(
     series_id: str,
     source: str,
@@ -123,10 +131,43 @@ def _fetch_series(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
 ) -> tuple[list[date], list[float]]:
-    """Fetch a data series using the appropriate adapter."""
-    adapter = FredAdapter()
-    fid = get_fred_id(series_id) or ticker
-    return adapter.fetch_series(fid, start_date, end_date, series_id)
+    """Fetch a data series using the appropriate adapter.
+
+    Routes to Gold DB or FRED based on preferred_source from the catalog.
+    If data is not found in Gold, raises DataNotAvailableError with a clear message.
+
+    Args:
+        series_id: Series identifier (e.g. 'SPY', 'FEDFUNDS')
+        source: Preferred source from catalog ('gold' or 'fred')
+        ticker: Ticker or series code (used for Gold queries)
+        start_date: Optional start date filter
+        end_date: Optional end date filter
+
+    Returns:
+        (dates, values) tuples
+
+    Raises:
+        DataNotAvailableError if data is not available in the configured source
+    """
+    # Use the preferred source from the catalog
+    if source == "gold":
+        dates, values = _gold_adapter.fetch_series(ticker, start_date, end_date)
+        if not dates:
+            raise DataNotAvailableError(
+                f"{series_id} is not available in the Gold Pipeline DB Layer. "
+                f"Check the pipeline configuration for ticker '{ticker}'."
+            )
+        return dates, values
+
+    # Fall back to FRED for non-gold sources
+    fred_id = get_fred_id(series_id) or ticker
+    dates, values = _fred_adapter.fetch_series(fred_id, start_date, end_date, series_id)
+    if not dates:
+        raise DataNotAvailableError(
+            f"{series_id} is not available from FRED API. "
+            f"Check the FRED_API_KEY and verify the series exists."
+        )
+    return dates, values
 
 
 def _clean_dict(d: Any) -> Any:
@@ -311,6 +352,9 @@ async def run_analysis(request: AnalysisRequest):
             )
             if not dates:
                 warnings.append(f"No data retrieved for {sc.series_id}")
+        except DataNotAvailableError as exc:
+            logger.warning("Data not available for %s: %s", sc.series_id, exc)
+            warnings.append(str(exc))
         except Exception as exc:
             logger.error("Failed to fetch %s: %s", sc.series_id, exc)
             warnings.append(f"Failed to fetch {sc.series_id}: {str(exc)}")
