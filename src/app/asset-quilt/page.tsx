@@ -70,7 +70,7 @@ export default function AssetQuiltPage() {
         <div className="p-3 text-2xs text-term-text-mute">
           {source === "LOADING"
             ? "Loading asset quilt…"
-            : "No asset quilt available. Configure MACRO_DB_URL or MARKET_DB_URL, or enable Snapshot Fallback / SIM in the ribbon."}
+            : "No asset quilt available. Configure MACRO_DB_URL, or enable SIM mode in the ribbon."}
         </div>
       </div>
     );

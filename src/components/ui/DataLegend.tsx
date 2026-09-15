@@ -2,14 +2,14 @@ import { useState } from "react";
 import { PROVENANCE_META, PROVENANCE_TONE_CLASS, type ProvenanceSource } from "@/lib/provenance";
 
 const DISPLAY_TIERS: { source: ProvenanceSource; upgrade: string }[] = [
-  { source: "FRED", upgrade: "Active when FRED_API_KEY is configured" },
-  { source: "LIVE", upgrade: "Set MARKET_PIPELINE_URL for live market data" },
-  { source: "DB", upgrade: "Set MARKET_DB_URL for local pipeline database" },
-  { source: "FILE", upgrade: "Set MARKET_DATA_DIR for exported file cache" },
-  { source: "ETL", upgrade: "Run macro_data_etl with network access" },
-  { source: "SNAPSHOT", upgrade: "Committed build-time snapshot — always available" },
-  { source: "ECON", upgrade: "Deterministic econ model — set FRED_API_KEY to upgrade" },
-  { source: "SIM", upgrade: "Deterministic simulation — no live source available" },
+  { source: "FRED", upgrade: "Legacy FRED API — configure FRED_API_KEY (offline helpers only)" },
+  { source: "LIVE", upgrade: "Live provider (news/social/Polymarket only; Tier B exception)" },
+  { source: "DB", upgrade: "Gold DB — configure MACRO_DB_URL for series/market data (primary)" },
+  { source: "FILE", upgrade: "Local exported-file cache (legacy, decommissioned)" },
+  { source: "ETL", upgrade: "Committed macro_data_etl snapshot (frozen 2026-06-24)" },
+  { source: "SNAPSHOT", upgrade: "Committed build-time snapshot (Phase 6: removed from Tier A routes)" },
+  { source: "ECON", upgrade: "Deterministic econ model (fallback only)" },
+  { source: "SIM", upgrade: "Deterministic simulation (fallback only; enable SIM toggle to use)" },
 ];
 
 export function DataLegend({ className }: { className?: string }) {
