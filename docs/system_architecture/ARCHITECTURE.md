@@ -66,23 +66,27 @@ Shadow prices (dual values) on the binding constraints — surfaced verbatim in 
 **Optimization Center** and **Collateral** modules — quantify the marginal value of relaxing
 each limit, which drives the recommended trades and what-if analysis.
 
-## Data resolution — Gold DB migration
+## Data resolution — Gold DB migration (Phase 0-6 complete)
 
-As of the Gold DB migration (`GOLD_DB_MIGRATION_HANDOFF`), the terminal resolves
-economic/market series data through a prioritized chain:
+As of the **completed** Gold DB migration (`GOLD_DB_MIGRATION_HANDOFF`), all Tier A/C
+series and market data is read from a **single source of truth**: the Gold layer of
+`fred-bronze-to-gold-pipeline`. Routes return explicit empty/error states when the DB
+is unavailable; there are no fallback chains for Tier A.
 
 ```
-MACRO_DB_URL (Gold DB)          ← Tier A/C production path
+MACRO_DB_URL (Gold DB)          ← Tier A/C production path (Phase 0-6 complete)
   │  fred-bronze-to-gold-pipeline SQLite (local) / Postgres / Databricks
   │  Tables: gold.macro_indicator_dashboard, treasury_curve, benchmark_rate_board,
   │          credit_spread_daily, funding_tape_daily, equity_total_return_index, …
-  ↓ (fallback when MACRO_DB_URL not set)
-FRED_API_KEY                    ← legacy live path
-  ↓
-econSnapshot.json               ← committed frozen snapshot
-  ↓
-Deterministic SIM               ← offline / zero-config baseline
+  ↓ (explicit ERR/empty when DB unavailable)
+No fallback chains.             ← FRED_API_KEY, snapshots, SIM removed Phase 6
+Tier B (kept live only)         ← NEWS, SOCIAL, POLY, AI (deliberate exceptions)
 ```
+
+**Removed in Phase 4-6:**
+- FRED live API (`FRED_API_KEY`, `src/lib/server/fred.ts`)
+- Snapshot fixtures (`econSnapshot.json`, `market_snapshot.json`)
+- SIM generators for Tier A series (deterministic fallback removed from production paths)
 
 **Tier B (kept live — deliberate exceptions):** NEWS provider chain, SENT social/survey,
 Polymarket, AI Copilot LLM call. Each route carries a `// Exception to DB-only policy`
