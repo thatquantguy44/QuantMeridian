@@ -20,6 +20,12 @@ interface Var1Fit {
   fitEndDate: string;
 }
 
+interface FomcAnchorDiagnostics {
+  anchorTenor: number;
+  taperYears: number;
+  byHorizon: Record<string, { fomcImpliedRate: number; preAnchorMedian: number; shiftBps: number }>;
+}
+
 interface McsResult {
   fit: Var1Fit;
   config: { numPaths: number; horizonDays: number; checkpoints: number[]; tenors: number[]; regimeFilter?: string };
@@ -27,6 +33,7 @@ interface McsResult {
   currentCurve: Record<string, number>;
   shockPoolSize: number;
   sparseRegime: boolean;
+  fomcAnchor?: FomcAnchorDiagnostics;
 }
 
 interface McsResponse {
@@ -37,10 +44,12 @@ interface McsResponse {
   regimeFilter: string | null;
   currentRegime: string | null;
   regimeCounts: Record<string, number>;
+  fomcAnchorApplied: boolean;
+  fomcAnchorSkippedReason: string | null;
   result: McsResult | null;
 }
 
-const TENOR_LABELS: Record<string, string> = { "2": "2Y", "5": "5Y", "10": "10Y", "30": "30Y" };
+const TENOR_LABELS: Record<string, string> = { "0.25": "3M", "2": "2Y", "5": "5Y", "10": "10Y", "30": "30Y" };
 const HORIZON_LABELS: Record<number, string> = { 21: "1M", 63: "3M", 126: "6M", 252: "12M" };
 const FACTOR_LABELS = ["β0 (level)", "β1 (slope)", "β2 (curvature)"];
 /** Fixed display order — matches the desk's regime vocabulary (macro_regime_daily.regime_name). */
@@ -48,7 +57,7 @@ const REGIME_ORDER = ["Neutral", "Goldilocks", "Reflation", "Growth-Scare", "Pol
 /** Mirrors mcsEngine.MIN_REGIME_SHOCKS — the server rejects a regime bootstrap below this, so grey it out here instead of surfacing a runtime error. */
 const MIN_REGIME_SHOCKS = 20;
 
-function useMcs(fitYears: number, paths: number, regime: string) {
+function useMcs(fitYears: number, paths: number, regime: string, fomcAnchor: boolean) {
   const [data, setData] = useState<McsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,12 +65,12 @@ function useMcs(fitYears: number, paths: number, regime: string) {
     let alive = true;
     setLoading(true);
     const regimeQs = regime ? `&regime=${encodeURIComponent(regime)}` : "";
-    fetch(`/api/simulations/mcs?fitYears=${fitYears}&paths=${paths}${regimeQs}`)
+    fetch(`/api/simulations/mcs?fitYears=${fitYears}&paths=${paths}${regimeQs}&fomcAnchor=${fomcAnchor ? 1 : 0}`)
       .then((r) => r.json())
       .then((j) => { if (alive) { setData(j); setLoading(false); } })
       .catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [fitYears, paths, regime]);
+  }, [fitYears, paths, regime, fomcAnchor]);
 
   return { data, loading };
 }
@@ -132,7 +141,8 @@ export default function McsPage() {
   const [fitYears, setFitYears] = useState(10);
   const [tenor, setTenor] = useState("10");
   const [regime, setRegime] = useState(""); // "" = unconditional (all regimes pooled)
-  const { data, loading } = useMcs(fitYears, 2000, regime);
+  const [fomcAnchor, setFomcAnchor] = useState(true);
+  const { data, loading } = useMcs(fitYears, 2000, regime, fomcAnchor);
 
   const result = data?.result ?? null;
   const source = data?.ok ? "DB" : "ERR";
@@ -194,6 +204,17 @@ export default function McsPage() {
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-1.5 text-term-text-dim" title="Re-centers each horizon's distribution toward the market-implied Fed path (gold.fomc_meeting_path), tapering from the 3M point out to the long end. Dispersion is untouched.">
+          <input type="checkbox" checked={fomcAnchor} onChange={(e) => setFomcAnchor(e.target.checked)} className="accent-term-amber" />
+          FOMC-anchor front end
+        </label>
+        {fomcAnchor && data?.ok && !data.fomcAnchorApplied && (
+          <span title={data.fomcAnchorSkippedReason ?? undefined}>
+            <Tag tone="neutral">
+              Anchor unavailable{data.fomcAnchorSkippedReason ? ` — ${data.fomcAnchorSkippedReason}` : ""}
+            </Tag>
+          </span>
+        )}
         {result?.sparseRegime && (
           <span title="Fewer than 100 shocks in this regime within the fit window — tails likely reflect one historical episode, not a distribution.">
             <Tag tone="amber">Sparse regime · {result.shockPoolSize} obs</Tag>
@@ -270,6 +291,43 @@ export default function McsPage() {
               </table>
             </Panel>
 
+            {result.fomcAnchor && (
+              <Panel title="FOMC anchor" code="FOMC" subtitle={`3M anchor · taper ${result.fomcAnchor.taperYears}y`} className="lg:col-span-2">
+                <table className="w-full text-2xs">
+                  <thead>
+                    <tr className="border-b border-term-border text-term-text-mute">
+                      <th className="p-1.5 text-left">Horizon</th>
+                      <th className="p-1.5 text-right">Fed-path implied</th>
+                      <th className="p-1.5 text-right">Unconditional 3M median</th>
+                      <th className="p-1.5 text-right">Shift @3M</th>
+                      <th className="p-1.5 text-right">Shift @{TENOR_LABELS[tenor] ?? tenor}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.horizons.map((h) => {
+                      const diag = result.fomcAnchor!.byHorizon[h.horizonDays];
+                      if (!diag) return null;
+                      const taper = Math.max(0, Math.min(1, Math.exp(-(Number(tenor) - result.fomcAnchor!.anchorTenor) / result.fomcAnchor!.taperYears)));
+                      return (
+                        <tr key={h.horizonDays} className="border-b border-term-border-soft">
+                          <td className="p-1.5 font-mono">{HORIZON_LABELS[h.horizonDays] ?? `${h.horizonDays}d`}</td>
+                          <td className="tnum p-1.5 text-right">{fmtNum(diag.fomcImpliedRate, 2)}%</td>
+                          <td className="tnum p-1.5 text-right">{fmtNum(diag.preAnchorMedian, 2)}%</td>
+                          <td className="tnum p-1.5 text-right font-semibold">{fmtSigned(diag.shiftBps, 0)}bp</td>
+                          <td className="tnum p-1.5 text-right">{fmtSigned(diag.shiftBps * taper, 0)}bp</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div className="border-t border-term-border-soft px-3 py-1.5 text-3xs text-term-text-mute">
+                  Median re-centered on the Fed-funds-futures-implied path at the 3M point; longer tenors receive a tapered fraction
+                  of the same shift (exp decay, {result.fomcAnchor.taperYears}y half-scale). Dispersion (P5–P95 width) is untouched —
+                  only the distribution's location moves.
+                </div>
+              </Panel>
+            )}
+
             <Panel title="VAR(1) diagnostics" code="VAR" className="lg:col-span-2">
               <table className="w-full text-2xs">
                 <thead>
@@ -304,7 +362,14 @@ export default function McsPage() {
             ) : (
               <>Shocks are bootstrapped jointly across all regimes pooled, not per-factor and not assumed Gaussian.</>
             )} Tail percentiles reflect one historical sample either way — regimes that occurred rarely (or once, e.g.
-            1970s stagflation) will be under-represented unless explicitly selected above.{" "}
+            1970s stagflation) will be under-represented unless explicitly selected above. {result.fomcAnchor ? (
+              <>The front end is re-centered on the Fed-funds-futures-implied path (see FOMC panel below) — a market view, not
+              part of the bootstrap sample — while the bootstrap's dispersion is left untouched.</>
+            ) : data?.fomcAnchorSkippedReason ? (
+              <>FOMC anchor requested but unavailable ({data.fomcAnchorSkippedReason}); showing the unconditional statistical path.</>
+            ) : (
+              <>FOMC anchor is off — this is the raw statistical bootstrap with no Fed-path view blended in.</>
+            )}{" "}
             <Tag tone="amber" className="ml-1">Model output, not a forecast</Tag>
           </div>
         </>
