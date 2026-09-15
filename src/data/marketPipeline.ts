@@ -12,19 +12,23 @@
  * this committed snapshot. Identical shapes either way.
  */
 
-import marketSnapshotRaw from "./market/market_snapshot.json";
 import crossAssetRaw from "./market/cross_asset.json";
 import ratesRaw from "./market/rates.json";
 import inflationRaw from "./market/inflation.json";
 import regimeRaw from "./market/regime.json";
 import bilelloRaw from "./market/bilello.json";
-import marketSnapshotPriceRaw from "./market/market_snapshot_price.json";
 import crossAssetPriceRaw from "./market/cross_asset_price.json";
 import regimePriceRaw from "./market/regime_price.json";
 import bilelloPriceRaw from "./market/bilello_price.json";
 import indexReturnsRaw from "./market/index_returns.json";
 import indexReturnsPriceRaw from "./market/index_returns_price.json";
 import edaRaw from "./market/eda.json";
+
+// market_snapshot.json and market_snapshot_price.json deleted in Phase 5-6
+// (migration to Gold DB). Fallback objects here keep type signature valid
+// for validation in /api/market/[view] while actual data comes from DB.
+const marketSnapshotRaw = { cards: [] as SnapshotCard[] };
+const marketSnapshotPriceRaw = { cards: [] as SnapshotCard[] };
 
 export interface SnapshotCard {
   series_id: string;

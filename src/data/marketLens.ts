@@ -1,9 +1,7 @@
 import { Rng } from "@/lib/rng";
 import indexReturnsRaw from "./market/index_returns.json";
 import bilelloRaw from "./market/bilello.json";
-import marketSnapshotRaw from "./market/market_snapshot.json";
-import { getSeriesHistory as econHistory, seriesById as econMeta, resolveFred } from "@/data/econSeries";
-import { fredEnabled, fredSeries } from "@/lib/server/fred";
+import { getSeriesHistory as econHistory, seriesById as econMeta } from "@/data/econSeries";
 import { goldEnabled, goldStore } from "@/lib/server/goldStore";
 import {
   WINDOW_DAYS,
@@ -181,7 +179,6 @@ function priceSeries(rng: Rng, dates: string[], assetClass: string): number[] {
 
 const IDX = indexReturnsRaw as unknown as { matrices?: Record<string, any> };
 const BIL = bilelloRaw as unknown as { asset_class_returns_by_year?: any[] };
-const SNAP = marketSnapshotRaw as unknown as { cards?: any[] };
 
 const MONTHS3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -192,8 +189,9 @@ for (const sym of Object.keys(IDX.matrices ?? {})) {
   if (proxy) MATRIX_BY_PROXY[proxy] = mtx;
 }
 
+// market_snapshot.json was deleted in Phase 5-6; SNAP_PRICE is now always empty.
+// Price anchoring falls back to synthetic series generation.
 const SNAP_PRICE: Record<string, number> = {};
-for (const c of SNAP.cards ?? []) if (typeof c.price === "number") SNAP_PRICE[c.series_id] = c.price;
 
 interface Anchor { date: Date; ret: number; }
 
@@ -454,16 +452,7 @@ async function resolveLevelSeries(input: LensSeriesInput, options: LensRunOption
 
   let obs: { date: string; value: number }[] = [];
   let dataSource: DataSource = "econ-sim";
-  if (fredEnabled()) {
-    try {
-      const r = resolveFred(econId);
-      if (!r.simOnly) {
-        const f = await fredSeries(econId, { limit: n, units: "lin", scale: SPREAD_BPS.has(id) ? 1 : r.scale });
-        const clean = f.filter((o) => o.value !== null) as { date: string; value: number }[];
-        if (clean.length) { obs = clean; dataSource = "fred"; }
-      }
-    } catch { /* fall through to the deterministic econ model */ }
-  }
+  // FRED live API client was removed in Phase 5-6; always fall back to econ model.
   if (!obs.length && options.allowSimFallback) obs = econHistory(econId, n);
   if (!obs.length) {
     return;
@@ -1176,7 +1165,7 @@ export async function runMarketLens(req: LensRunRequest): Promise<AnalysisResult
     unavailable: "unavailable",
   };
   const provenance = series.map((s) => ({ series_id: s.id, basis: SOURCE_LABEL[s.dataSource], source: s.dataSource, points: s.values.length }));
-  const macroBasis = goldEnabled() ? "Gold DB" : fredEnabled() ? "live FRED" : options.allowSimFallback ? "the deterministic econ model" : "unavailable";
+  const macroBasis = goldEnabled() ? "Gold DB" : options.allowSimFallback ? "the deterministic econ model" : "unavailable";
   const warnings = [
     `Computed by the local Market Lens engine. Gold DB is preferred; snapshot fallback is ${options.allowSnapshotFallback ? "ON" : "OFF"} and SIM fallback is ${options.allowSimFallback ? "ON" : "OFF"}. Macro series use ${macroBasis}.`,
   ];

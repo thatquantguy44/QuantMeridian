@@ -1,6 +1,4 @@
 import { describe, test, expect } from "vitest";
-import { FRED_CATALOG } from "@/data/econSeries";
-import { getSnapshotObservations } from "@/data/econSnapshot";
 import { worstSource } from "@/lib/provenance";
 
 const pct = (now: number | undefined, then: number | undefined, decimals = 1): number | null => {
@@ -90,17 +88,6 @@ describe("FRED_CATALOG contract", () => {
 });
 
 describe("per-indicator source independence", () => {
-  test("some catalog series have snapshot data, others may not", () => {
-    let hasSnapshot = 0;
-    let noSnapshot = 0;
-    for (const s of FRED_CATALOG.slice(0, 20)) {
-      const snap = getSnapshotObservations(s.id, 24);
-      if (snap) hasSnapshot++;
-      else noSnapshot++;
-    }
-    expect(hasSnapshot).toBeGreaterThan(0);
-  });
-
   test("overall source reflects worst tier present (SIM when any are SIM)", () => {
     expect(worstSource(["FRED", "SIM", "SIM", "SNAPSHOT", "SIM"])).toBe("SIM");
   });

@@ -1,5 +1,4 @@
 import { json } from "@/lib/server/http";
-import { fredProbe } from "@/lib/server/fred";
 import { getIntelligenceFeedDiagnostics } from "@/lib/server/intelligenceFeedManifest";
 import { configuredSocialProviders } from "@/lib/server/socialProviders";
 import { goldConfigStatus, goldEnabled, goldStore } from "@/lib/server/goldStore";
@@ -132,12 +131,12 @@ export async function GET() {
   }
 
   // FRED — legacy fallback for Tier A routes when Gold DB is not configured.
-  const fred = await fredProbe();
-  providers.FRED = !fred.keyPresent
-    ? { status: "ERROR", detail: fred.detail + " — Tier A routes return explicit empty/error states when Gold DB is absent", live: false }
-    : fred.ok
-    ? { status: "LIVE", detail: fred.detail + " (legacy fallback — Gold DB preferred)", live: true }
-    : { status: "ERROR", detail: fred.detail, live: false };
+  // The live FRED API client was removed in Phase 5-6. FRED_API_KEY only gates
+  // whether the legacy fallback path is available; no actual probe is made.
+  const fredKey = process.env.FRED_API_KEY;
+  providers.FRED = !fredKey
+    ? { status: "ERROR", detail: "FRED_API_KEY not configured — Tier A routes return explicit empty/error states when Gold DB is absent", live: false }
+    : { status: "CACHED", detail: "FRED_API_KEY configured but live API client removed in Phase 5-6 (legacy fallback — Gold DB preferred)", live: false };
 
   // macro_data_etl — committed gold snapshot at build time.
   providers.MACRO_ETL = { status: "CACHED", detail: "committed macro_data_etl gold snapshot", live: false };
