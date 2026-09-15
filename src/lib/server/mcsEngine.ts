@@ -352,16 +352,25 @@ export function simulate(fit: Var1Fit, config: SimulationConfig): SimulationResu
 
 /**
  * The VAR(1) bootstrap has no opinion about scheduled Fed decisions — it just
- * extrapolates historical curve dynamics. But the market's own expectation for
- * the next ~12 months of policy is already priced into Fed funds futures, and
- * the terminal already computes it (gold.fomc_meeting_path via goldFomc.ts).
- * That expectation is a far better point forecast for the front end than an
- * unconditional statistical projection, so this shifts every simulated
- * percentile at each horizon toward it — most at the anchor tenor (3M by
- * default), tapering to near-zero by the long end, where FOMC decisions carry
- * little information content. The shift only moves the *location* of each
- * horizon's distribution; the bootstrap's dispersion (and therefore its
- * regime-conditional shape, if a regime filter was applied) is untouched.
+ * extrapolates historical curve dynamics. gold.fomc_meeting_path (via
+ * goldFomc.ts) gives a better-informed point forecast for the front end, so
+ * this shifts every simulated percentile at each horizon toward it — most at
+ * the anchor tenor (3M by default), tapering to near-zero by the long end,
+ * where FOMC decisions carry little information content. The shift only
+ * moves the *location* of each horizon's distribution; the bootstrap's
+ * dispersion (and therefore its regime-conditional shape, if a regime filter
+ * was applied) is untouched.
+ *
+ * IMPORTANT — this is not a CME FedWatch / Fed-funds-futures probability.
+ * The upstream pipeline (fred-bronze-to-gold-pipeline, "option A: no CME
+ * connector") derives it by bootstrapping forward rates from four Treasury
+ * CMT points (1M/3M/6M/1Y) and chaining them meeting-to-meeting. That curve
+ * has no tenor past 12 months, so any meeting beyond a ~12-month horizon
+ * gets the *same* flat-extrapolated rate as the 1Y point — no differentiation
+ * between meetings — and meetings between 6 and 12 months out are already
+ * interpolated between just two points (6M and 1Y), coarser than the near
+ * term. `FOMC_RELIABLE_HORIZON_MONTHS` below marks that boundary so callers
+ * can flag rather than hide it.
  */
 export interface FomcAnchorInput {
   /** Current effective policy rate (percent), e.g. SOFR or EFFR spot — the anchor before the next meeting. */
@@ -370,10 +379,13 @@ export interface FomcAnchorInput {
   meetings: { date: string; impliedRate: number }[];
 }
 
+/** Months out where the upstream curve bootstrap stops being closely-spaced (see doc comment above) — beyond this, treat the anchor as a coarse/flat extrapolation, not a differentiated view. */
+export const FOMC_RELIABLE_HORIZON_MONTHS = 6;
+
 export interface FomcAnchorDiagnostics {
   anchorTenor: number;
   taperYears: number;
-  byHorizon: Record<number, { fomcImpliedRate: number; preAnchorMedian: number; shiftBps: number }>;
+  byHorizon: Record<number, { fomcImpliedRate: number; preAnchorMedian: number; shiftBps: number; monthsOut: number; reliable: boolean }>;
 }
 
 /** Trading-day horizon to a calendar date, at ~21 trading days per 30.44-day month. */
@@ -412,7 +424,14 @@ export function applyFomcAnchor(
     const targetDate = horizonToCalendarDate(result.fit.fitEndDate, h.horizonDays);
     const fomcImpliedRate = impliedRateAt(sortedAnchor, targetDate);
     const shift = fomcImpliedRate - anchorStats.p50;
-    byHorizon[h.horizonDays] = { fomcImpliedRate, preAnchorMedian: anchorStats.p50, shiftBps: Math.round(shift * 100) };
+    const monthsOut = h.horizonDays / 21;
+    byHorizon[h.horizonDays] = {
+      fomcImpliedRate,
+      preAnchorMedian: anchorStats.p50,
+      shiftBps: Math.round(shift * 100),
+      monthsOut: Number(monthsOut.toFixed(1)),
+      reliable: monthsOut <= FOMC_RELIABLE_HORIZON_MONTHS,
+    };
 
     const byTenor: HorizonPercentiles["byTenor"] = {};
     for (const [tenorKey, stats] of Object.entries(h.byTenor)) {
