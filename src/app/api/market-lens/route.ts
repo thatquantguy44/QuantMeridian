@@ -3,7 +3,7 @@ import { runMarketLens, type AnalysisResult } from "@/data/marketLens";
 import { goldEnabled, goldStore } from "@/lib/server/goldStore";
 import { snapshotFallbackEnabled } from "@/lib/server/fallbacks";
 
-const LENS_URL = process.env.MARKET_LENS_URL || "";
+/** DEPRECATED: MARKET_LENS_URL is no longer used. Analysis is computed locally via runMarketLens(). */
 
 interface GoldConstituentRow {
   ticker: string;
@@ -73,23 +73,6 @@ const CATALOG = [
   { series_id: "CPIAUCSL", ticker: "CPIAUCSL", display_name: "CPI Urban All Items", asset_class: "MACRO", source: "fred" },
 ];
 
-async function proxyToBackend(path: string, method: string, body?: unknown): Promise<Response | null> {
-  if (!LENS_URL) return null;
-  try {
-    const url = `${LENS_URL}${path}`;
-    const opts: RequestInit = {
-      method,
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(30_000),
-    };
-    if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(url, opts);
-    if (res.ok) return res;
-  } catch {
-    // backend not available
-  }
-  return null;
-}
 
 function localRunSource(result: AnalysisResult): "DB" | "FRED" | "SNAPSHOT" | "ECON" | "SIM" | "ERR" {
   const provenance = result.metadata?.series_provenance;
@@ -128,33 +111,9 @@ export async function GET(req: Request) {
   const q = searchParams.get("q") || "";
   const allowSnapshot = snapshotFallbackEnabled(req);
 
-  // Try Python backend first — but only trust a well-formed payload. Any error,
-  // unreachable backend, or unexpected shape falls through to embedded data so
-  // the UI never ends up with an empty/broken view library.
-  if (LENS_URL) {
-    let path = "/market-lens/views";
-    if (action === "views" && id) path = `/market-lens/views/${id}`;
-    else if (action === "presets" && id) path = `/market-lens/presets/${id}`;
-    else if (action === "presets") path = "/market-lens/presets";
-    else if (action === "catalog" && q) path = `/market-lens/catalog/search?q=${encodeURIComponent(q)}`;
-    else if (action === "catalog") path = "/market-lens/catalog";
-
-    try {
-      const backendRes = await proxyToBackend(path, "GET");
-      if (backendRes) {
-        const data = await backendRes.json();
-        if (isValidGetShape(action, id, data)) {
-          return json({ source: "LIVE", data });
-        }
-      }
-    } catch {
-      // fall through to embedded data
-    }
-  }
-
-  // Fallback to embedded data. `fallback: true` flags that the live backend was
-  // configured but unavailable/invalid, so the UI can surface a clear notice.
-  const fallback = Boolean(LENS_URL);
+  // Use embedded view library + Gold DB enrichment (catalog).
+  // MARKET_LENS_URL backend is no longer supported.
+  const fallback = false;
   if (!allowSnapshot && action !== "catalog") {
     return json({ source: "ERR", fallback, data: id ? null : unavailableGetData(action), error: "Market Lens embedded view library is disabled while Snapshot Fallback is off." });
   }
@@ -212,16 +171,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Try Python backend
-    const backendRes = await proxyToBackend("/market-lens/run", "POST", body);
-    if (backendRes) {
-      const data = await backendRes.json();
-      return json({ source: "LIVE", data });
-    }
-
-    // Fallback: compute the analysis locally with the deterministic TypeScript
-    // engine — same graceful-degradation pattern as /api/market/[view], so the
-    // module renders real, configurable analytics with no backend configured.
+    // Compute analysis locally with TypeScript engine. MARKET_LENS_URL backend
+    // is no longer supported — all analysis is deterministic and Gold-backed.
     const data = await runMarketLens(body);
     return json({ source: localRunSource(data), data });
   } catch (e) {
