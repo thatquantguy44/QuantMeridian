@@ -123,7 +123,7 @@ export function ChartStudio({ code, title, desc, catalog, defaultRefs, allowChar
   );
 
   // Render local templates instantly, then merge in any DB-backed ones (shared
-  // across devices when CHART_DB_URL is configured) — render-local-then-upgrade.
+  // across devices when MACRO_DB_URL is configured) — render-local-then-upgrade.
   useEffect(() => {
     let alive = true;
     setSavedTemplates(localTemplates());
