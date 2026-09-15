@@ -22,9 +22,11 @@ interface Var1Fit {
 
 interface McsResult {
   fit: Var1Fit;
-  config: { numPaths: number; horizonDays: number; checkpoints: number[]; tenors: number[] };
+  config: { numPaths: number; horizonDays: number; checkpoints: number[]; tenors: number[]; regimeFilter?: string };
   horizons: HorizonPercentiles[];
   currentCurve: Record<string, number>;
+  shockPoolSize: number;
+  sparseRegime: boolean;
 }
 
 interface McsResponse {
@@ -32,26 +34,34 @@ interface McsResponse {
   ok: boolean;
   error?: string;
   asOf?: string;
+  regimeFilter: string | null;
+  currentRegime: string | null;
+  regimeCounts: Record<string, number>;
   result: McsResult | null;
 }
 
 const TENOR_LABELS: Record<string, string> = { "2": "2Y", "5": "5Y", "10": "10Y", "30": "30Y" };
 const HORIZON_LABELS: Record<number, string> = { 21: "1M", 63: "3M", 126: "6M", 252: "12M" };
 const FACTOR_LABELS = ["β0 (level)", "β1 (slope)", "β2 (curvature)"];
+/** Fixed display order — matches the desk's regime vocabulary (macro_regime_daily.regime_name). */
+const REGIME_ORDER = ["Neutral", "Goldilocks", "Reflation", "Growth-Scare", "Policy-Easing", "Liquidity-Squeeze", "Stagflation"];
+/** Mirrors mcsEngine.MIN_REGIME_SHOCKS — the server rejects a regime bootstrap below this, so grey it out here instead of surfacing a runtime error. */
+const MIN_REGIME_SHOCKS = 20;
 
-function useMcs(fitYears: number, paths: number) {
+function useMcs(fitYears: number, paths: number, regime: string) {
   const [data, setData] = useState<McsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    fetch(`/api/simulations/mcs?fitYears=${fitYears}&paths=${paths}`)
+    const regimeQs = regime ? `&regime=${encodeURIComponent(regime)}` : "";
+    fetch(`/api/simulations/mcs?fitYears=${fitYears}&paths=${paths}${regimeQs}`)
       .then((r) => r.json())
       .then((j) => { if (alive) { setData(j); setLoading(false); } })
       .catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [fitYears, paths]);
+  }, [fitYears, paths, regime]);
 
   return { data, loading };
 }
@@ -121,10 +131,17 @@ function FanChart({ horizons, tenor, current }: { horizons: HorizonPercentiles[]
 export default function McsPage() {
   const [fitYears, setFitYears] = useState(10);
   const [tenor, setTenor] = useState("10");
-  const { data, loading } = useMcs(fitYears, 2000);
+  const [regime, setRegime] = useState(""); // "" = unconditional (all regimes pooled)
+  const { data, loading } = useMcs(fitYears, 2000, regime);
 
   const result = data?.result ?? null;
   const source = data?.ok ? "DB" : "ERR";
+
+  // Regime options in fixed desk order, annotated with obs count in the current fit window.
+  const regimeOptions = useMemo(() => {
+    const counts = data?.regimeCounts ?? {};
+    return REGIME_ORDER.filter((r) => r in counts).map((r) => ({ name: r, count: counts[r] }));
+  }, [data?.regimeCounts]);
 
   const h12m = useMemo(() => result?.horizons.find((h) => h.horizonDays === 252) ?? null, [result]);
   const currentTenorYield = result?.currentCurve[tenor] ?? 0;
@@ -161,9 +178,31 @@ export default function McsPage() {
             {Object.entries(TENOR_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
+        <label className="flex items-center gap-1.5 text-term-text-dim">
+          Regime
+          <select
+            className="rounded-sm border border-term-border bg-term-panel px-1.5 py-0.5 text-term-text"
+            value={regime}
+            onChange={(e) => setRegime(e.target.value)}
+          >
+            <option value="">Unconditional (all regimes)</option>
+            <option value="current">Current{data?.currentRegime ? ` (${data.currentRegime})` : ""}</option>
+            {regimeOptions.map((r) => (
+              <option key={r.name} value={r.name} disabled={r.count < MIN_REGIME_SHOCKS}>
+                {r.name} ({r.count}{r.count < MIN_REGIME_SHOCKS ? " — too few" : ""})
+              </option>
+            ))}
+          </select>
+        </label>
+        {result?.sparseRegime && (
+          <span title="Fewer than 100 shocks in this regime within the fit window — tails likely reflect one historical episode, not a distribution.">
+            <Tag tone="amber">Sparse regime · {result.shockPoolSize} obs</Tag>
+          </span>
+        )}
         {result && (
           <span className="ml-auto text-3xs text-term-text-mute">
-            {result.config.numPaths.toLocaleString()} paths · fit {result.fit.fitStartDate} → {result.fit.fitEndDate} ({result.fit.fitObservations.toLocaleString()} obs)
+            {result.config.numPaths.toLocaleString()} paths from {result.shockPoolSize.toLocaleString()} shock{result.shockPoolSize === 1 ? "" : "s"}
+            {" "}· fit {result.fit.fitStartDate} → {result.fit.fitEndDate} ({result.fit.fitObservations.toLocaleString()} obs)
           </span>
         )}
       </div>
@@ -258,10 +297,15 @@ export default function McsPage() {
 
           <div className="border-t border-term-border bg-term-panel px-3 py-1.5 text-3xs text-term-text-mute">
             <span className="text-term-amber">MCS</span> — VAR(1) fit on {result.fit.fitObservations.toLocaleString()} daily
-            observations of the Gold NS factors ({fitYears}y trailing window); forward paths drawn by joint residual
-            bootstrap ({result.config.numPaths.toLocaleString()} paths), not an assumed Gaussian. Tail percentiles
-            reflect one historical sample — regimes that occurred rarely (or once) in the fit window will be
-            under-represented in the p5/p95 bands. <Tag tone="amber" className="ml-1">Model output, not a forecast</Tag>
+            observations of the Gold NS factors ({fitYears}y trailing window); the fitted dynamics are always
+            unconditional. {data?.regimeFilter ? (
+              <>Shocks are bootstrapped only from days regime-tagged <b className="text-term-text">{data.regimeFilter}</b> ({result.shockPoolSize.toLocaleString()} of {result.fit.fitObservations.toLocaleString()} in-window)
+              {result.sparseRegime ? " — that pool is thin enough that the tails likely reflect one historical episode rather than a genuine distribution." : "."}</>
+            ) : (
+              <>Shocks are bootstrapped jointly across all regimes pooled, not per-factor and not assumed Gaussian.</>
+            )} Tail percentiles reflect one historical sample either way — regimes that occurred rarely (or once, e.g.
+            1970s stagflation) will be under-represented unless explicitly selected above.{" "}
+            <Tag tone="amber" className="ml-1">Model output, not a forecast</Tag>
           </div>
         </>
       )}

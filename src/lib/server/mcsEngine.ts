@@ -13,6 +13,17 @@
  * random walk — but it is a bootstrap over one historical sample, and some
  * regimes in that sample (e.g. 1970s stagflation) occurred once. Treat the
  * tails as "what has happened," not "what will happen."
+ *
+ * Regime-conditional mode: the VAR(1) coefficients are always fit on the
+ * full window (refitting on a regime slice alone would make the dynamics
+ * themselves noisy for thin regimes), but the shock bootstrap can be
+ * restricted to residuals realized while a named `gold.macro_regime_daily`
+ * regime was in effect — e.g. "what does a Liquidity-Squeeze-flavored
+ * repricing of the curve look like," rather than pooling across every
+ * regime in history. Sample sizes vary enormously by regime (Neutral
+ * dominates; Stagflation is a single 1973-82 episode), so every result
+ * reports the shock pool size and a `sparseRegime` flag for the UI to
+ * surface rather than hide.
  */
 
 export interface NsFactorRow {
@@ -22,6 +33,8 @@ export interface NsFactorRow {
   beta2: number;
   lambda: number;
   fit_valid: number;
+  /** Named macro regime on this date (gold.macro_regime_daily), if joined. */
+  regime_name?: string | null;
 }
 
 export interface Var1Fit {
@@ -31,6 +44,16 @@ export interface Var1Fit {
   rSquared: number[];
   /** Residuals, one row per fitted observation, columns [e_beta0, e_beta1, e_beta2]. */
   residuals: number[][];
+  /**
+   * Regime tag for each residual — the named regime on the day the shock was
+   * realized (same index as `residuals`). Null where no regime row joined
+   * (e.g. dates before the regime table's 1971 start).
+   */
+  residualRegimes: (string | null)[];
+  /** Count of residuals available per regime, within the fit window. */
+  regimeCounts: Record<string, number>;
+  /** Most recent day's named regime — the natural default for conditioning. */
+  currentRegime: string | null;
   /** Last observed factor vector — the simulation's anchor point. */
   lastFactors: [number, number, number];
   avgLambda: number;
@@ -113,6 +136,9 @@ export function fitVar1(rows: NsFactorRow[]): Var1Fit {
 
   const coefficients: number[][] = [];
   const residuals: number[][] = Array.from({ length: n }, () => [0, 0, 0]);
+  // residuals[t-1] is the shock realized moving into valid[t] — tag it with
+  // that day's regime, not the prior day's.
+  const residualRegimes: (string | null)[] = valid.slice(1).map((r) => r.regime_name ?? null);
   const rSquared: number[] = [];
 
   for (let eq = 0; eq < 3; eq++) {
@@ -142,10 +168,18 @@ export function fitVar1(rows: NsFactorRow[]): Var1Fit {
   const last = valid[valid.length - 1];
   const avgLambda = valid.reduce((s, r) => s + r.lambda, 0) / valid.length;
 
+  const regimeCounts: Record<string, number> = {};
+  for (const r of residualRegimes) {
+    if (r) regimeCounts[r] = (regimeCounts[r] ?? 0) + 1;
+  }
+
   return {
     coefficients,
     rSquared,
     residuals,
+    residualRegimes,
+    regimeCounts,
+    currentRegime: last.regime_name ?? null,
     lastFactors: [last.beta0, last.beta1, last.beta2],
     avgLambda,
     fitObservations: n,
@@ -170,6 +204,11 @@ export function nsYield(beta0: number, beta1: number, beta2: number, lambda: num
 // Monte Carlo simulation
 // ---------------------------------------------------------------------------
 
+/** Below this many shocks, a regime-conditional bootstrap is one historical episode wearing a distribution's clothes. */
+export const MIN_REGIME_SHOCKS = 20;
+/** Below this many shocks, flag the regime as sparse in the UI even though the simulation still runs. */
+export const SPARSE_REGIME_SHOCKS = 100;
+
 export interface SimulationConfig {
   numPaths: number;
   horizonDays: number;
@@ -177,6 +216,14 @@ export interface SimulationConfig {
   checkpoints: number[];
   tenors: number[];
   seed?: number;
+  /**
+   * Restrict the residual bootstrap to shocks realized while this named
+   * regime was in effect (see `Var1Fit.regimeCounts`). VAR(1) coefficients
+   * are always fit on the full window — only the shock draw is conditioned,
+   * which avoids re-estimating dynamics on a handful of regime-specific
+   * observations. Omit for the unconditional bootstrap (all regimes pooled).
+   */
+  regimeFilter?: string;
 }
 
 export interface HorizonPercentiles {
@@ -191,6 +238,10 @@ export interface SimulationResult {
   horizons: HorizonPercentiles[];
   /** Current (t=0) yield at each requested tenor, from the last observed factors. */
   currentCurve: Record<number, number>;
+  /** Number of shocks actually drawn from — the full pool, or the regime-filtered subset. */
+  shockPoolSize: number;
+  /** True when `shockPoolSize` is below SPARSE_REGIME_SHOCKS — tails likely reflect one historical episode. */
+  sparseRegime: boolean;
 }
 
 function percentile(sorted: number[], p: number): number {
@@ -210,9 +261,20 @@ function percentile(sorted: number[], p: number): number {
  */
 export function simulate(fit: Var1Fit, config: SimulationConfig): SimulationResult {
   const rng = mulberry32(config.seed ?? 20260914);
-  const { coefficients, residuals, lastFactors, avgLambda } = fit;
+  const { coefficients, residuals, residualRegimes, lastFactors, avgLambda } = fit;
   const checkpointSet = new Set(config.checkpoints);
   const maxHorizon = Math.max(...config.checkpoints, config.horizonDays);
+
+  const shockPool = config.regimeFilter
+    ? residuals.map((_, i) => i).filter((i) => residualRegimes[i] === config.regimeFilter)
+    : residuals.map((_, i) => i);
+
+  if (shockPool.length < MIN_REGIME_SHOCKS) {
+    throw new Error(
+      `regime "${config.regimeFilter}" has only ${shockPool.length} shock(s) in the fit window ` +
+      `(need >= ${MIN_REGIME_SHOCKS}) — widen the fit window or choose a less sparse regime`
+    );
+  }
 
   // horizon -> tenor -> array of simulated yields across all paths
   const collected = new Map<number, Map<number, number[]>>();
@@ -223,7 +285,7 @@ export function simulate(fit: Var1Fit, config: SimulationConfig): SimulationResu
   for (let p = 0; p < config.numPaths; p++) {
     let f: [number, number, number] = [...lastFactors];
     for (let step = 1; step <= maxHorizon; step++) {
-      const shockIdx = Math.floor(rng() * residuals.length);
+      const shockIdx = shockPool[Math.floor(rng() * shockPool.length)];
       const shock = residuals[shockIdx];
       const next: [number, number, number] = [0, 0, 0];
       for (let eq = 0; eq < 3; eq++) {
@@ -264,5 +326,12 @@ export function simulate(fit: Var1Fit, config: SimulationConfig): SimulationResu
     currentCurve[tenor] = nsYield(lastFactors[0], lastFactors[1], lastFactors[2], avgLambda, tenor);
   }
 
-  return { fit, config, horizons, currentCurve };
+  return {
+    fit,
+    config,
+    horizons,
+    currentCurve,
+    shockPoolSize: shockPool.length,
+    sparseRegime: shockPool.length < SPARSE_REGIME_SHOCKS,
+  };
 }
