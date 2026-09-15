@@ -8,15 +8,15 @@ import { json } from "@/lib/server/http";
  *   POST   /api/chart/templates  { template } → { ok, source }
  *   DELETE /api/chart/templates?id=...        → { ok, source }
  *
- * When CHART_DB_URL (or MARKET_DB_URL) points at a Postgres instance, templates
- * are shared across browsers/devices via a `chart_templates` table (auto-created).
- * Without a DB the route is a no-op (`source: "NONE"`) and the client falls back
- * to localStorage — the same render-local-then-upgrade pattern as the rest of the
+ * When MACRO_DB_URL points at a Postgres instance, templates are shared across
+ * browsers/devices via a `chart_templates` table (auto-created). Without a DB
+ * the route is a no-op (`source: "NONE"`) and the client falls back to
+ * localStorage — the same render-local-then-upgrade pattern as the rest of the
  * terminal. Always 200 with a `source` field.
  */
 
 function dbUrl(): string | undefined {
-  const url = process.env.CHART_DB_URL || process.env.MARKET_DB_URL;
+  const url = process.env.MACRO_DB_URL;
   return url && /^postgres(ql)?:\/\//.test(url) ? url : undefined;
 }
 
