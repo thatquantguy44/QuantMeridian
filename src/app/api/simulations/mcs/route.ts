@@ -1,13 +1,15 @@
 import { json } from "@/lib/server/http";
 import { goldEnabled, goldStore, goldTable, goldParam } from "@/lib/server/goldStore";
-import { fitVar1, simulate, type NsFactorRow } from "@/lib/server/mcsEngine";
+import { fitVar1, simulate, applyFomcAnchor, type NsFactorRow } from "@/lib/server/mcsEngine";
+import { buildFomcFromGold } from "@/lib/server/goldFomc";
+import { getMacroInputs } from "@/data/macroInputs";
 
 export const runtime = "nodejs";
 
 const DEFAULT_FIT_YEARS = 10;
 const DEFAULT_NUM_PATHS = 2000;
 const CHECKPOINTS = [21, 63, 126, 252]; // ~1m, 3m, 6m, 12m trading days
-const TENORS = [2, 5, 10, 30]; // years
+const TENORS = [0.25, 2, 5, 10, 30]; // years — 3M added as the FOMC anchor tenor
 
 /**
  * GET /api/simulations/mcs
@@ -17,12 +19,16 @@ const TENORS = [2, 5, 10, 30]; // years
  * bootstrap, and returns percentile bands per tenor per horizon.
  *
  * Query params:
- *   fitYears  — trailing years of factor history to fit on (default 10)
- *   paths     — number of Monte Carlo paths (default 2000, max 10000)
- *   regime    — restrict the shock bootstrap to a named macro_regime_daily
- *               regime (e.g. "Growth-Scare"), "current" for whatever regime
- *               the most recent day is in, or omitted for unconditional
- *               (all regimes pooled — the default).
+ *   fitYears   — trailing years of factor history to fit on (default 10)
+ *   paths      — number of Monte Carlo paths (default 2000, max 10000)
+ *   regime     — restrict the shock bootstrap to a named macro_regime_daily
+ *                regime (e.g. "Growth-Scare"), "current" for whatever regime
+ *                the most recent day is in, or omitted for unconditional
+ *                (all regimes pooled — the default).
+ *   fomcAnchor — "0" to disable re-centering the front end on the
+ *                market-implied Fed path (gold.fomc_meeting_path). On by
+ *                default; silently skipped (not an error) if Gold has no
+ *                FOMC data or no live SOFR/EFFR spot to anchor "now."
  *
  * No fallback: Gold DB only. Returns an explicit error when unavailable.
  */
@@ -35,6 +41,7 @@ export async function GET(req: Request) {
   const fitYears = Math.max(3, Math.min(30, Number(url.searchParams.get("fitYears")) || DEFAULT_FIT_YEARS));
   const numPaths = Math.max(200, Math.min(10000, Number(url.searchParams.get("paths")) || DEFAULT_NUM_PATHS));
   const regimeParam = url.searchParams.get("regime");
+  const wantFomcAnchor = url.searchParams.get("fomcAnchor") !== "0";
 
   try {
     const store = goldStore();
@@ -65,13 +72,37 @@ export async function GET(req: Request) {
       regimeParam && regimeParam.toLowerCase() === "current" ? fit.currentRegime ?? undefined
       : regimeParam || undefined;
 
-    const result = simulate(fit, {
+    let result = simulate(fit, {
       numPaths,
       horizonDays: Math.max(...CHECKPOINTS),
       checkpoints: CHECKPOINTS,
       tenors: TENORS,
       regimeFilter,
     });
+
+    let fomcAnchorApplied = false;
+    let fomcAnchorSkippedReason: string | null = null;
+
+    if (wantFomcAnchor) {
+      const macroInputs = await getMacroInputs();
+      const spotEffectiveRate =
+        macroInputs.source === "DB" ? macroInputs.benchmarks["SOFR"] ?? macroInputs.benchmarks["EFFR"] ?? undefined : undefined;
+
+      if (spotEffectiveRate == null) {
+        fomcAnchorSkippedReason = "no live SOFR/EFFR spot rate from Gold DB";
+      } else {
+        const goldFomc = await buildFomcFromGold(store, spotEffectiveRate);
+        if (!goldFomc || !goldFomc.meetings.length) {
+          fomcAnchorSkippedReason = "no FOMC meeting-path data in Gold DB";
+        } else {
+          result = applyFomcAnchor(result, {
+            spotEffectiveRate,
+            meetings: goldFomc.meetings.map((m) => ({ date: m.date, impliedRate: m.impliedRate })),
+          });
+          fomcAnchorApplied = true;
+        }
+      }
+    }
 
     return json({
       source: "DB",
@@ -80,6 +111,8 @@ export async function GET(req: Request) {
       regimeFilter: regimeFilter ?? null,
       currentRegime: fit.currentRegime,
       regimeCounts: fit.regimeCounts,
+      fomcAnchorApplied,
+      fomcAnchorSkippedReason,
       result,
     });
   } catch (err) {

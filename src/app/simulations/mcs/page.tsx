@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
+import clsx from "clsx";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
@@ -20,6 +21,12 @@ interface Var1Fit {
   fitEndDate: string;
 }
 
+interface FomcAnchorDiagnostics {
+  anchorTenor: number;
+  taperYears: number;
+  byHorizon: Record<string, { fomcImpliedRate: number; preAnchorMedian: number; shiftBps: number; monthsOut: number; reliable: boolean }>;
+}
+
 interface McsResult {
   fit: Var1Fit;
   config: { numPaths: number; horizonDays: number; checkpoints: number[]; tenors: number[]; regimeFilter?: string };
@@ -27,6 +34,7 @@ interface McsResult {
   currentCurve: Record<string, number>;
   shockPoolSize: number;
   sparseRegime: boolean;
+  fomcAnchor?: FomcAnchorDiagnostics;
 }
 
 interface McsResponse {
@@ -37,18 +45,22 @@ interface McsResponse {
   regimeFilter: string | null;
   currentRegime: string | null;
   regimeCounts: Record<string, number>;
+  fomcAnchorApplied: boolean;
+  fomcAnchorSkippedReason: string | null;
   result: McsResult | null;
 }
 
-const TENOR_LABELS: Record<string, string> = { "2": "2Y", "5": "5Y", "10": "10Y", "30": "30Y" };
+const TENOR_LABELS: Record<string, string> = { "0.25": "3M", "2": "2Y", "5": "5Y", "10": "10Y", "30": "30Y" };
 const HORIZON_LABELS: Record<number, string> = { 21: "1M", 63: "3M", 126: "6M", 252: "12M" };
 const FACTOR_LABELS = ["β0 (level)", "β1 (slope)", "β2 (curvature)"];
 /** Fixed display order — matches the desk's regime vocabulary (macro_regime_daily.regime_name). */
 const REGIME_ORDER = ["Neutral", "Goldilocks", "Reflation", "Growth-Scare", "Policy-Easing", "Liquidity-Squeeze", "Stagflation"];
 /** Mirrors mcsEngine.MIN_REGIME_SHOCKS — the server rejects a regime bootstrap below this, so grey it out here instead of surfacing a runtime error. */
 const MIN_REGIME_SHOCKS = 20;
+/** Mirrors mcsEngine.FOMC_RELIABLE_HORIZON_MONTHS — see the "Confidence" column note in the FOMC panel below. */
+const FOMC_RELIABLE_HORIZON_MONTHS = 6;
 
-function useMcs(fitYears: number, paths: number, regime: string) {
+function useMcs(fitYears: number, paths: number, regime: string, fomcAnchor: boolean) {
   const [data, setData] = useState<McsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,12 +68,12 @@ function useMcs(fitYears: number, paths: number, regime: string) {
     let alive = true;
     setLoading(true);
     const regimeQs = regime ? `&regime=${encodeURIComponent(regime)}` : "";
-    fetch(`/api/simulations/mcs?fitYears=${fitYears}&paths=${paths}${regimeQs}`)
+    fetch(`/api/simulations/mcs?fitYears=${fitYears}&paths=${paths}${regimeQs}&fomcAnchor=${fomcAnchor ? 1 : 0}`)
       .then((r) => r.json())
       .then((j) => { if (alive) { setData(j); setLoading(false); } })
       .catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [fitYears, paths, regime]);
+  }, [fitYears, paths, regime, fomcAnchor]);
 
   return { data, loading };
 }
@@ -132,7 +144,8 @@ export default function McsPage() {
   const [fitYears, setFitYears] = useState(10);
   const [tenor, setTenor] = useState("10");
   const [regime, setRegime] = useState(""); // "" = unconditional (all regimes pooled)
-  const { data, loading } = useMcs(fitYears, 2000, regime);
+  const [fomcAnchor, setFomcAnchor] = useState(true);
+  const { data, loading } = useMcs(fitYears, 2000, regime, fomcAnchor);
 
   const result = data?.result ?? null;
   const source = data?.ok ? "DB" : "ERR";
@@ -194,6 +207,17 @@ export default function McsPage() {
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-1.5 text-term-text-dim" title="Re-centers each horizon's distribution toward gold.fomc_meeting_path — a rate bootstrapped from the Treasury curve, chained meeting-to-meeting, NOT a CME FedWatch / Fed-funds-futures probability. Tapers from the 3M point out to the long end; dispersion is untouched.">
+          <input type="checkbox" checked={fomcAnchor} onChange={(e) => setFomcAnchor(e.target.checked)} className="accent-term-amber" />
+          FOMC-anchor front end
+        </label>
+        {fomcAnchor && data?.ok && !data.fomcAnchorApplied && (
+          <span title={data.fomcAnchorSkippedReason ?? undefined}>
+            <Tag tone="neutral">
+              Anchor unavailable{data.fomcAnchorSkippedReason ? ` — ${data.fomcAnchorSkippedReason}` : ""}
+            </Tag>
+          </span>
+        )}
         {result?.sparseRegime && (
           <span title="Fewer than 100 shocks in this regime within the fit window — tails likely reflect one historical episode, not a distribution.">
             <Tag tone="amber">Sparse regime · {result.shockPoolSize} obs</Tag>
@@ -270,6 +294,54 @@ export default function McsPage() {
               </table>
             </Panel>
 
+            {result.fomcAnchor && (
+              <Panel title="FOMC anchor" code="FOMC" subtitle={`3M anchor · taper ${result.fomcAnchor.taperYears}y · curve-bootstrapped, not futures-implied`} className="lg:col-span-2">
+                <table className="w-full text-2xs">
+                  <thead>
+                    <tr className="border-b border-term-border text-term-text-mute">
+                      <th className="p-1.5 text-left">Horizon</th>
+                      <th className="p-1.5 text-right">Curve-implied rate</th>
+                      <th className="p-1.5 text-right">Unconditional 3M median</th>
+                      <th className="p-1.5 text-right">Shift @3M</th>
+                      <th className="p-1.5 text-right">Shift @{TENOR_LABELS[tenor] ?? tenor}</th>
+                      <th className="p-1.5 text-right">Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.horizons.map((h) => {
+                      const diag = result.fomcAnchor!.byHorizon[h.horizonDays];
+                      if (!diag) return null;
+                      const taper = Math.max(0, Math.min(1, Math.exp(-(Number(tenor) - result.fomcAnchor!.anchorTenor) / result.fomcAnchor!.taperYears)));
+                      return (
+                        <tr key={h.horizonDays} className={clsx("border-b border-term-border-soft", !diag.reliable && "bg-term-amber/5")}>
+                          <td className="p-1.5 font-mono">{HORIZON_LABELS[h.horizonDays] ?? `${h.horizonDays}d`}</td>
+                          <td className="tnum p-1.5 text-right">{fmtNum(diag.fomcImpliedRate, 2)}%</td>
+                          <td className="tnum p-1.5 text-right">{fmtNum(diag.preAnchorMedian, 2)}%</td>
+                          <td className="tnum p-1.5 text-right font-semibold">{fmtSigned(diag.shiftBps, 0)}bp</td>
+                          <td className="tnum p-1.5 text-right">{fmtSigned(diag.shiftBps * taper, 0)}bp</td>
+                          <td className="p-1.5 text-right">
+                            {diag.reliable
+                              ? <Tag tone="up">Reliable</Tag>
+                              : <span title={`${diag.monthsOut}mo out — the upstream curve only has real tenor points to 12mo (1M/3M/6M/1Y), so 6–12mo meetings are coarsely interpolated between just two points, and anything past 12mo is flat-extrapolated at the 1Y rate with no meeting-to-meeting differentiation.`}>
+                                  <Tag tone="amber">Coarse · {diag.monthsOut}mo out</Tag>
+                                </span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div className="border-t border-term-border-soft px-3 py-1.5 text-3xs text-term-text-mute">
+                  Median re-centered on a rate bootstrapped from the Treasury curve (1M/3M/6M/1Y) and chained meeting-to-meeting —
+                  <b className="text-term-text"> not</b> a CME FedWatch / Fed-funds-futures probability, since no futures feed is
+                  in the pipeline. Longer tenors receive a tapered fraction of the same shift (exp decay, {result.fomcAnchor.taperYears}y
+                  half-scale). Dispersion (P5–P95 width) is untouched — only the distribution's location moves. Horizons flagged
+                  "Coarse" beyond {FOMC_RELIABLE_HORIZON_MONTHS} months sit past the curve's closely-spaced tenors — treat their shift
+                  as a rough lean, not a differentiated meeting-by-meeting view.
+                </div>
+              </Panel>
+            )}
+
             <Panel title="VAR(1) diagnostics" code="VAR" className="lg:col-span-2">
               <table className="w-full text-2xs">
                 <thead>
@@ -304,7 +376,15 @@ export default function McsPage() {
             ) : (
               <>Shocks are bootstrapped jointly across all regimes pooled, not per-factor and not assumed Gaussian.</>
             )} Tail percentiles reflect one historical sample either way — regimes that occurred rarely (or once, e.g.
-            1970s stagflation) will be under-represented unless explicitly selected above.{" "}
+            1970s stagflation) will be under-represented unless explicitly selected above. {result.fomcAnchor ? (
+              <>The front end is re-centered on a curve-bootstrapped, meeting-chained rate (see FOMC panel below — this is
+              <i> not</i> a Fed-funds-futures probability) rather than the bootstrap's own unconditional drift; horizons past
+              {" "}{FOMC_RELIABLE_HORIZON_MONTHS} months are flagged there as coarse.</>
+            ) : data?.fomcAnchorSkippedReason ? (
+              <>FOMC anchor requested but unavailable ({data.fomcAnchorSkippedReason}); showing the unconditional statistical path.</>
+            ) : (
+              <>FOMC anchor is off — this is the raw statistical bootstrap with no curve-implied Fed path blended in.</>
+            )}{" "}
             <Tag tone="amber" className="ml-1">Model output, not a forecast</Tag>
           </div>
         </>
