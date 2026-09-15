@@ -231,7 +231,7 @@ export function deleteTemplate(id: string): void {
 
 /**
  * Optional shared persistence via /api/chart/templates (DB-backed when
- * CHART_DB_URL / MARKET_DB_URL is configured). localStorage stays the offline
+ * CHART_DB_URL / MACRO_DB_URL is configured). localStorage stays the offline
  * tier; these calls are best-effort and never throw to the caller.
  */
 export async function fetchRemoteTemplates(studio: "MGC" | "MKC"): Promise<ChartTemplate[]> {

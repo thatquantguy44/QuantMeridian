@@ -139,21 +139,6 @@ export async function GET() {
     ? { status: "LIVE", detail: fred.detail + " (legacy fallback — Gold DB preferred)", live: true }
     : { status: "ERROR", detail: fred.detail, live: false };
 
-  // Market pipeline (YAHOO) — legacy fallback; Gold equity tables are now preferred.
-  const { MARKET_DB_URL, MARKET_DATA_DIR, MARKET_PIPELINE_URL } = process.env;
-  if (MARKET_PIPELINE_URL) {
-    const p = await probe(MARKET_PIPELINE_URL);
-    providers.YAHOO = p.ok
-      ? { status: "LIVE", detail: `pipeline service reachable (${MARKET_PIPELINE_URL}) — Gold equity tables preferred`, live: true }
-      : { status: "STALE", detail: "MARKET_PIPELINE_URL set but unreachable", live: false };
-  } else if (MARKET_DB_URL) {
-    providers.YAHOO = { status: "LIVE", detail: "MARKET_DB_URL (DuckDB/Postgres analytics_api_views) — Gold equity tables preferred", live: true };
-  } else if (MARKET_DATA_DIR) {
-    providers.YAHOO = { status: "LIVE", detail: "MARKET_DATA_DIR (exported views) — Gold equity tables preferred", live: true };
-  } else {
-    providers.YAHOO = { status: "CACHED", detail: "committed market snapshot (Gold equity tables preferred)", live: false };
-  }
-
   // macro_data_etl — committed gold snapshot at build time.
   providers.MACRO_ETL = { status: "CACHED", detail: "committed macro_data_etl gold snapshot", live: false };
 

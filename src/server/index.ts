@@ -6,8 +6,8 @@
  * static SPA, so the `/api/*` route handlers never run in production and every
  * data module silently falls back to committed snapshots. This server serves the
  * built client from `dist/` and mounts the exact same route registry the dev
- * server uses, so configured providers (`FRED_API_KEY`, `MARKET_DB_URL`,
- * `MARKET_PIPELINE_URL`, …) are actually reachable in a deployed build.
+ * server uses, so configured providers (`MACRO_DB_URL`, `FRED_API_KEY`, …) are
+ * actually reachable in a deployed build.
  *
  * Build with `npm run build` (client → `dist/`, this entry → `dist-server/`),
  * then run with `npm start`.
