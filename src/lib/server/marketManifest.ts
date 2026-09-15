@@ -1,11 +1,11 @@
 /**
- * Live DATAOPS runs/lineage from the market_data_pipeline ingestion manifest.
+ * DEPRECATED: Live DATAOPS runs/lineage from the market_data_pipeline ingestion manifest.
  *
- * When MARKET_PIPELINE_URL is configured we fetch `/manifest/latest` (the
- * pipeline's per-series ingestion audit) and aggregate it into the terminal's
- * ProviderRun / SeriesRunResult / LineageRun shapes, so the DATAOPS Runs, Series
- * Outcomes and Lineage panels show real ingestion history. Returns null when no
- * pipeline is wired (→ the page keeps its fixture baseline).
+ * The market_data_pipeline infrastructure (MARKET_PIPELINE_URL, MARKET_DB_URL, MARKET_DATA_DIR)
+ * has been decommissioned. This module is retained for backward compatibility only.
+ *
+ * Replacement: Use gold audit tables (audit_etl_run, audit_etl_series_run) via GoldStore
+ * to surface real pipeline lineage. See GOLD_DB_MIGRATION_REMAINING_GAPS.md (G8).
  */
 import type { ProviderName, ProviderRun, SeriesRunResult, LineageRun } from "@/data/dataOps";
 
@@ -137,7 +137,7 @@ function optionalRequire(name: string): any {
 
 const MANIFEST_SQL = (limit: number) => `SELECT * FROM ingestion_manifest ORDER BY requested_at DESC LIMIT ${limit}`;
 
-/** Read the manifest directly from MARKET_DB_URL (Postgres or DuckDB), mirroring the market views path. */
+/** DEPRECATED: Read the manifest directly from MARKET_DB_URL (decommissioned). */
 async function readManifestFromDb(dbUrl: string, limit: number): Promise<ManifestRow[] | null> {
   const isPg = /^postgres(ql)?:\/\//.test(dbUrl);
   if (isPg) {
@@ -184,9 +184,14 @@ async function readManifestFromPipeline(base: string, limit: number): Promise<Ma
 }
 
 /**
- * Resolve + aggregate the ingestion manifest from the first configured source —
- * MARKET_DB_URL (DuckDB/Postgres) → MARKET_PIPELINE_URL (FastAPI) — mirroring the
- * market-views resolver. Returns null when nothing is wired/reachable.
+ * DEPRECATED: Resolve + aggregate the ingestion manifest from decommissioned sources.
+ *
+ * Previously checked MARKET_DB_URL (DuckDB/Postgres) and MARKET_PIPELINE_URL (FastAPI).
+ * Both infrastructure components have been removed from the stack. This function is
+ * retained for backward compatibility and returns null (no data available).
+ *
+ * Replacement: Use gold audit tables (audit_etl_run, audit_etl_series_run) via GoldStore.
+ * See GOLD_DB_MIGRATION_REMAINING_GAPS.md (G8).
  */
 export async function fetchPipelineManifest(limit = 200): Promise<LiveRuns | null> {
   const dbUrl = process.env.MARKET_DB_URL;
