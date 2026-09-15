@@ -35,9 +35,6 @@ export interface AaiiWeek {
 }
 
 export function getAaiiHistory(weeks = 104): AaiiWeek[] {
-  const snap = getAaiiSnapshotHistory(weeks);
-  if (snap?.length) return snap;
-
   const dates = weeklyDates(weeks);
   const rng = new Rng("sent-aaii-v1");
   // mean-revert bullish & bearish around historical norms (~37.5 / ~31)
