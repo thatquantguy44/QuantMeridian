@@ -1,4 +1,5 @@
 import { describe, test, expect } from "vitest";
+import { FRED_CATALOG } from "@/data/econSeries";
 import { worstSource } from "@/lib/provenance";
 
 const pct = (now: number | undefined, then: number | undefined, decimals = 1): number | null => {
