@@ -6,7 +6,7 @@ Cash Collateral Reinvestment, Liquidity & Funding Stress, Sources & Uses Matchin
 Treasury & Funding Analytics, Borrow-Demand / Squeeze Radar, Macro Regime Playbooks,
 Market News, Investor Sentiment, Prediction Markets, Market Volatility, DataOps/Lineage, and AI-driven
 decision support** into a single dense, keyboard-driven, multi-monitor terminal —
-**46 modules** in all.
+**47 modules** in all.
 
 Built to look and feel like the software that runs a multi-trillion-dollar book at
 State Street, Goldman Sachs, Morgan Stanley, J.P. Morgan, BNY Mellon, Citi, UBS, or
@@ -54,6 +54,7 @@ BlackRock.
 | `LIQ`  | **Liquidity & Funding Stress** | Funding ladder, stress outflows, liquidity survival horizon, desk exposure heat map, scenario console, and escalation signals |
 | `SXU`  | **Sources & Uses** | Matching engine network graph, internalization opportunities, funding savings, allocation heat map |
 | `OPT`  | **Optimization Center** | Flagship — solver runs (Gurobi / OR-Tools / Pyomo), objective/runtime/status/duals, before-after comparison, recommended trades |
+| `IBAL` | **InventoryBallast** | Real InventoryBallast solver workspace: synthetic or uploaded securities-lending datasets, strict validation, pinned Python service solve, allocation/constraint verification, and result bundle export |
 | `DESK` | **Trading Desk** | Trader scorecards, execution analytics (slippage / VWAP / TWAP / fill rates), risk analytics, position concentration |
 | `ECON` | **Macro Dashboard** | FRED-connected economic indicators grouped by category, surprise index, breadth, live series explorer |
 | `MGC`  | **Macro Chart Studio** | Charting studio over the **166-series FRED catalog** — build/compare/transform any series (`/api/chart/series`) |
@@ -401,6 +402,7 @@ The table below shows the **real-world data source** each module ultimately draw
 | ML Applications (EML) | 🔴 Sim/model | Recession probit, inflation nowcast, rate-path models |
 | Squeeze Radar (SQZ) | 🔴 Sim (lending spine) | utilization/fee + synthesized SI/DTC; needs vendor feed |
 | Liquidity & Funding Stress (LIQ) | 🔴 Sim / local model | Stress ladder designed for FRED/Yahoo inputs |
+| InventoryBallast (IBAL) | 🔴 Synthetic / user upload via pinned service | Calls the separate InventoryBallast Python service; no governed production book feed yet |
 | **Tier B — non-series feeds (kept live):**| | |
 | News & Signal Intel (NEWS) | 🟡 Provider chain | Alpha Vantage → Marketaux → Finnhub → NewsAPI + FinBERT NLP |
 | Investor Sentiment (SENT) | 🟡 FRED (VIX) + social | Reddit, StockTwits, AAII/NAAIM survey |
@@ -415,11 +417,19 @@ The table below shows the **real-world data source** each module ultimately draw
 - 🔵 = ETL-fed via macro_data_etl or market_data_pipeline (Tier B)
 - 🟡 = Partial live (external APIs or internal fixtures, kept live by design as exceptions to Gold DB–only rule)
 - 🔴 = Simulation / model output (no external source of truth)
-- **Note:** Internal-book modules (SLAB, SQZ, PB, COLL, CASH, REINV, LIQ, SXU, OPT, DESK) wire their macro *inputs* from Gold DB but keep their position/inventory/P&L books synthetic (no external book exists for a fictional trading desk).
+- **Note:** Internal-book modules (SLAB, SQZ, PB, COLL, CASH, REINV, LIQ, SXU, OPT, IBAL, DESK) wire their macro *inputs* from Gold DB where applicable but keep their position/inventory/P&L books synthetic, uploaded, or otherwise explicitly user-provided until a governed book feed exists.
 
 ### Ongoing integration log
 
 Use this section as the running handoff log whenever a feature moves from planning into the integrated terminal. Keep each entry dated, list the module codes affected, and update the module count / provenance table above at the same time.
+
+#### 2026-09-16 — InventoryBallast integration checkpoint (`IBAL`)
+
+- Added **InventoryBallast (`IBAL`)** as a separate Optimization-group module at `/inventory-optimizer`; the existing simulated **Optimization Center (`OPT`)** remains unchanged.
+- Added `services/inventory_optimizer_api`, a pinned FastAPI companion service for InventoryBallast commit `74737e53bf9821089c6aa2aeca5dffc4e67c81b7`, including synthetic generation, XLSX/JSON templates and upload parsing, validation, solve, and engine-owned result bundle export.
+- Added server-only `/api/inventory-optimizer/*` proxy routes so the browser never receives the service URL or bearer token; production defaults remain off pending explicit owner approval and trusted access/authentication.
+- Checkpoint verification: Python service tests passed (`5 passed`, one upstream Starlette deprecation warning) and a direct synthetic starter smoke solved to `optimal` with a non-empty export bundle. Remaining before final close-out: PR #119 Vercel/CI, broader parity/error/security tests, full workbench state/result tabs, Data Ops health, ops docs, and browser E2E/screenshots.
+- Source-of-truth product/spec handoff lives in InventoryBallast: `specs/0013-market-terminal-integration/`.
 
 #### 2026-07-17 — Gold DB migration: DB-first economics & macro (all 22 economic modules)
 
@@ -439,7 +449,7 @@ Use this section as the running handoff log whenever a feature moves from planni
 - Added the **EDA / Lead-Lag Lab (`EDA`)** at `/economics/eda` — CCF/Granger/lagged-OLS/
   change-point analytics rendered from the `market_data_pipeline` gold `eda` view.
 - Added **module toggles**: `settings/modules.config.json` + `src/lib/moduleConfig.ts` let you
-  enable/disable any of the 46 modules — disabled modules disappear from navigation and routing.
+  enable/disable any of the 47 modules — disabled modules disappear from navigation and routing.
 - Hardened **data provenance**: `worstSource` badge aggregation, provenance badges on the
   DataOps and Market Lens pages, staleness markers, and provenance/source-resolution unit tests.
 - Added the **test suite & CI**: Vitest unit tests, a **Playwright E2E smoke suite**
@@ -477,11 +487,12 @@ fixtures today, can use free **FRED** and **Yahoo Finance/yfinance** style input
 can later scale to licensed feeds, internal books, optimizer outputs, and the
 `market_data_pipeline` quality/lineage tables without changing the terminal UX.
 
-**Since then** the terminal has grown to **46 modules**, adding the charting studios
+**Since then** the terminal has grown to **47 modules**, adding the charting studios
 (`MGC`/`MOTN`/`LENS`/`MKC`), **Funding & Liquidity (`FUND`)** and **Squeeze Radar
 (`SQZ`)**, the **News (`NEWS`)** + **Investor Sentiment (`SENT`)** intelligence
 layer, the benchmark-rate analysis suite (`BMRK`/`BRA`/`YCURV`/`RVOL`/`FCOST`/`UTIL`),
-the **EDA / Lead-Lag Lab (`EDA`)**, and **Prediction Markets (`POLY`)** — backed by an
+the **EDA / Lead-Lag Lab (`EDA`)**, **Prediction Markets (`POLY`)**, and the
+initial **InventoryBallast (`IBAL`)** optimizer workspace — backed by an
 expanded **166-series FRED catalog**, a news provider chain
 (Alpha Vantage / Marketaux / Finnhub / NewsAPI), Reddit/StockTwits social, the
 **`news_nlp`** FinBERT NLP stage, and the Polymarket Gamma API. See
@@ -666,7 +677,7 @@ NEWS_NLP_URL=http://localhost:8088 npm run dev   # → /api/news re-scores with 
 The `news_nlp` package installs/imports on a lexicon fallback without the model
 stack and surfaces in **DATAOPS** under the `NEWS_NLP` provider. See
 `news_nlp/README.md` and `docs/PLATFORM_DATA_CONNECTIVITY.md` for the full
-data-connectivity map across all 46 modules.
+data-connectivity map across all 47 modules.
 
 ---
 
@@ -684,7 +695,7 @@ data-connectivity map across all 46 modules.
 ## Tech stack
 
 **This build** is a **Vite + React single-page app** over **deterministic, seeded data
-generators**, so all 46 modules render with **zero configuration** — no database, no required
+generators**, so all 47 modules render with **zero configuration** — no database, no required
 keys. The `/api/*` endpoints are standard Web `Request → Response` handlers in `src/app/api/**`,
 served from **one shared route registry** (`src/server/registry.ts`) in every environment (see
 "How `/api/*` is served"). Optional live integrations include FRED for economics (166-series
@@ -777,7 +788,7 @@ no second source of truth:
 ## Run locally
 
 The terminal is a **Vite + React** SPA — **zero config, no database, no keys**.
-All 46 modules render offline; Gold-only modules show explicit empty/error states when the database is absent. For live economics/macro data,
+All 47 modules render offline; Gold-only modules show explicit empty/error states when the database is absent, and IBAL shows explicit service-unavailable state until its Python service/token are configured. For live economics/macro data,
 set `MACRO_DB_URL` to read from Gold DB (the **production data path as of 2026-07-17**).
 
 ```bash
