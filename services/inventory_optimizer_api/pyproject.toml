@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "inventory-optimizer-api"
+version = "0.1.0"
+description = "Bounded API adapter between QuantMeridian and InventoryBallast."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.116.1",
+  "numpy==2.3.2",
+  "openpyxl==3.1.5",
+  "pydantic==2.11.7",
+  "python-multipart==0.0.20",
+  "uvicorn[standard]==0.35.0",
+  "inventory-optimizer[highs] @ git+https://github.com/thatquantguy44/InventoryBallast.git@74737e53bf9821089c6aa2aeca5dffc4e67c81b7",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx==0.28.1",
+  "hypothesis==6.138.2",
+  "pytest==8.4.1",
+  "ruff==0.12.9",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/inventory_optimizer_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

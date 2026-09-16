@@ -30,6 +30,7 @@ import {
   Droplets,
   TrendingUp,
   Dices,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 import { isModuleEnabled } from "@/lib/moduleConfig";
@@ -62,6 +63,7 @@ const ALL_NAV: NavItem[] = [
   { code: "LIQ", label: "Liquidity Stress", href: "/liquidity", icon: Wallet, desc: "Funding stress and survival ladder", group: "OPTIMIZATION" },
   { code: "SXU", label: "Sources & Uses", href: "/sources-uses", icon: GitMerge, desc: "Matching & internalization engine", group: "OPTIMIZATION" },
   { code: "OPT", label: "Optimization Center", href: "/optimization", icon: Cpu, desc: "Solver runs & impact analysis", group: "OPTIMIZATION" },
+  { code: "IBAL", label: "InventoryBallast", href: "/inventory-optimizer", icon: Scale, desc: "Inventory optimizer with synthetic and uploaded datasets", group: "OPTIMIZATION" },
   { code: "DESK", label: "Trading Desk", href: "/trading-desk", icon: LineChart, desc: "Scorecards & execution analytics", group: "DESK" },
   { code: "TASSIST", label: "Trading Assistant", href: "/trading-assistant", icon: Bot, desc: "Bot selector, signals & paper trading", group: "TRADING_ASSISTANT" },
   { code: "ECON", label: "Macro Dashboard", href: "/economics", icon: Globe, desc: "FRED-connected economic analytics", group: "ECONOMICS" },
