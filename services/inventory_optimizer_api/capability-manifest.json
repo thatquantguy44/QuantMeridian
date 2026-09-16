@@ -1,0 +1,11 @@
+{
+  "api_schema_version": "1.0.0",
+  "template_schema_version": "1.0",
+  "generator_version": "synthetic-v1",
+  "engine_package": "inventory-optimizer",
+  "engine_package_version": "0.1.0",
+  "engine_commit": "74737e53bf9821089c6aa2aeca5dffc4e67c81b7",
+  "problem_families": ["securities_lending_inventory"],
+  "formulations": ["lp", "mip", "qp"],
+  "upload_formats": ["xlsx", "json"]
+}

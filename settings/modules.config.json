@@ -19,6 +19,7 @@
     "LIQ":    { "enabled": true, "label": "Liquidity Stress" },
     "SXU":    { "enabled": true, "label": "Sources & Uses" },
     "OPT":    { "enabled": true, "label": "Optimization Center" },
+    "IBAL":   { "enabled": true, "label": "InventoryBallast" },
     "DESK":   { "enabled": true, "label": "Trading Desk" },
     "TASSIST": { "enabled": true, "label": "Trading Assistant" },
     "ECON":   { "enabled": true, "label": "Macro Dashboard" },

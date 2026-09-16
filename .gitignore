@@ -43,6 +43,7 @@ next-env.d.ts
 # python backend
 backend/__pycache__/
 backend/.venv/
+services/**/.venv/
 **/__pycache__/
 *.pyc
 

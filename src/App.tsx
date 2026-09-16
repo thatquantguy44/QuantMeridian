@@ -21,6 +21,7 @@ import Reinvestment from "./app/reinvestment/page";
 import Liquidity from "./app/liquidity/page";
 import SourcesUses from "./app/sources-uses/page";
 import Optimization from "./app/optimization/page";
+import InventoryOptimizer from "./app/inventory-optimizer/page";
 import TradingDesk from "./app/trading-desk/page";
 import TradingAssistant from "./app/trading-assistant/page";
 import MacroChart from "./app/macro-chart/page";
@@ -108,6 +109,7 @@ export function App() {
         {on("LIQ") && <Route path="liquidity" element={<Liquidity />} />}
         {on("SXU") && <Route path="sources-uses" element={<SourcesUses />} />}
         {on("OPT") && <Route path="optimization" element={<Optimization />} />}
+        {on("IBAL") && <Route path="inventory-optimizer" element={<InventoryOptimizer />} />}
         {on("DESK") && <Route path="trading-desk" element={<TradingDesk />} />}
         {on("TASSIST") && <Route path="trading-assistant" element={<TradingAssistant />} />}
         {on("MGC") && <Route path="macro-chart" element={<MacroChart />} />}
