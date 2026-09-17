@@ -24,6 +24,130 @@ export interface DatasetSummary {
   effective_date: string;
 }
 
+export interface IbalInventoryRow {
+  inventory_id: string;
+  inventory_pool_id: string;
+  security_id: string;
+  as_of: string;
+  settlement_date: string;
+  total_lendable_shares: number;
+  on_loan_shares: number;
+  reserved_shares: number;
+  committed_out_shares: number;
+  available_to_lend_shares: number;
+  price_usd: number;
+  currency: string;
+  eligible: boolean;
+  source_version: string;
+}
+
+export interface IbalRouteRow {
+  route_id: string;
+  inventory_id: string;
+  security_id: string;
+  borrower_id: string;
+  demand_group_id: string;
+  current_quantity_shares: number;
+  hard_minimum_quantity_shares: number;
+  minimum_active_quantity_shares: number | null;
+  maximum_quantity_shares: number;
+  fee_rate: number;
+  revenue_share: number;
+  reinvestment_rate: number | null;
+  collateral_factor: number | null;
+  variable_cost_rate: number;
+  increase_cost_usd_per_share: number;
+  decrease_cost_usd_per_share: number;
+  recall_notice_days: number;
+  term_end_date: string | null;
+  eligible: boolean;
+  all_or_none: boolean;
+  lot_size_shares: number | null;
+  priority_class: string | null;
+}
+
+export interface IbalDemandRow {
+  demand_group_id: string;
+  security_id: string;
+  borrower_id: string;
+  as_of: string;
+  reference_quantity_shares: number;
+  reference_fee_rate: number;
+  elasticity: number;
+  forecast_std_shares: number | null;
+  hard_max_quantity_shares: number | null;
+  source_model: string;
+  source_version: string;
+  candidate_fee_rates: number[];
+}
+
+export interface IbalCounterpartyLimitRow {
+  limit_id: string;
+  borrower_id: string;
+  legal_entity_id: string | null;
+  ultimate_parent_id: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  security_id: string | null;
+  inventory_pool_id: string | null;
+  maximum_notional_usd: number | null;
+  maximum_quantity_shares: number | null;
+  hard: boolean;
+  risk_class: string | null;
+  source: string;
+  source_version: string;
+}
+
+export interface IbalUtilizationPolicyRow {
+  policy_id: string;
+  inventory_pool_id: string | null;
+  security_id: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  minimum_utilization: number | null;
+  target_utilization: number | null;
+  maximum_utilization: number | null;
+  reserve_buffer_shares: number;
+  reserve_buffer_fraction: number;
+  target_hard: boolean;
+  target_penalty_usd_per_share: number | null;
+  target_priority: number | null;
+  maximum_active_routes: number | null;
+  source: string;
+  source_version: string;
+}
+
+export interface IbalEntityRelationshipRow {
+  value: {
+    entity_id: string;
+    legal_entity_id: string;
+    ultimate_parent_id: string;
+    relationship_type: string;
+    ownership_confidence: number;
+  };
+  observed_at: string;
+  effective_from: string;
+  effective_to: string | null;
+  source: string;
+  source_version: string;
+  field_mapping_version: string;
+  quality: string;
+}
+
+export interface IbalRequest {
+  request_id: string;
+  as_of: string;
+  effective_date: string;
+  problem_family: string;
+  inventory: IbalInventoryRow[];
+  routes: IbalRouteRow[];
+  demand: IbalDemandRow[];
+  counterparty_limits: IbalCounterpartyLimitRow[];
+  utilization_policies: IbalUtilizationPolicyRow[];
+  entity_relationships: IbalEntityRelationshipRow[];
+  [key: string]: unknown;
+}
+
 export interface DatasetEnvelope {
   api_schema_version: string;
   template_schema_version: string;
@@ -35,7 +159,7 @@ export interface DatasetEnvelope {
     upload_hash?: string | null;
     filename?: string | null;
   };
-  request: Record<string, unknown>;
+  request: IbalRequest;
   request_hash: string;
   summary: DatasetSummary;
   validation: ValidationReport;

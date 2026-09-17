@@ -19,9 +19,15 @@ import {
   type IbalAllocation,
   type IbalBalance,
   type IbalConstraint,
+  type IbalCounterpartyLimitRow,
   type IbalDemand,
+  type IbalDemandRow,
+  type IbalEntityRelationshipRow,
   type IbalHealth,
+  type IbalInventoryRow,
   type IbalResult,
+  type IbalRouteRow,
+  type IbalUtilizationPolicyRow,
   type LocatedIssue,
   type RunConfig,
   type SyntheticConfig,
@@ -39,6 +45,18 @@ const RESULT_TABS: { value: ResultTab; label: string }[] = [
   { value: "economics", label: "Economics" },
   { value: "constraints", label: "Constraints" },
   { value: "diagnostics", label: "Diagnostics" },
+  { value: "raw", label: "Raw" },
+];
+
+type DatasetTab = "inventory" | "routes" | "demand" | "limits" | "policies" | "entities" | "raw";
+
+const DATASET_TABS: { value: DatasetTab; label: string }[] = [
+  { value: "inventory", label: "Inventory" },
+  { value: "routes", label: "Routes" },
+  { value: "demand", label: "Demand" },
+  { value: "limits", label: "Limits" },
+  { value: "policies", label: "Policies" },
+  { value: "entities", label: "Entities" },
   { value: "raw", label: "Raw" },
 ];
 
@@ -95,6 +113,7 @@ export default function InventoryOptimizerPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [resultTab, setResultTab] = useState<ResultTab>("allocations");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [datasetTab, setDatasetTab] = useState<DatasetTab>("inventory");
 
   // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
@@ -172,6 +191,64 @@ export default function InventoryOptimizerPage() {
       bindingConstraints: (result?.constraints ?? []).filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
     };
   }, [result]);
+
+  const inventoryPreviewColumns: Column<IbalInventoryRow>[] = [
+    { key: "id", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "pool", header: "Pool", render: (row) => <span className="text-term-text-mute">{row.inventory_pool_id}</span>, sortVal: (row) => row.inventory_pool_id },
+    { key: "total", header: "Total", align: "right", render: (row) => fmtAbbr(row.total_lendable_shares), sortVal: (row) => row.total_lendable_shares },
+    { key: "on_loan", header: "On Loan", align: "right", render: (row) => fmtAbbr(row.on_loan_shares), sortVal: (row) => row.on_loan_shares },
+    { key: "available", header: "Available", align: "right", render: (row) => <span className={row.available_to_lend_shares < 0 ? "text-term-down" : "text-term-text"}>{fmtAbbr(row.available_to_lend_shares)}</span>, sortVal: (row) => row.available_to_lend_shares },
+    { key: "price", header: "Price", align: "right", render: (row) => fmtUsdAbbr(row.price_usd), sortVal: (row) => row.price_usd },
+    { key: "eligible", header: "Eligible", align: "center", render: (row) => <Tag tone={row.eligible ? "up" : "neutral"}>{row.eligible ? "YES" : "NO"}</Tag>, sortVal: (row) => (row.eligible ? 1 : 0) },
+  ];
+
+  const routePreviewColumns: Column<IbalRouteRow>[] = [
+    { key: "route", header: "Route", render: (row) => <span className="text-term-text">{row.route_id}</span>, sortVal: (row) => row.route_id },
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text-dim">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-dim">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "current", header: "Current", align: "right", render: (row) => fmtAbbr(row.current_quantity_shares), sortVal: (row) => row.current_quantity_shares },
+    { key: "max", header: "Max", align: "right", render: (row) => fmtAbbr(row.maximum_quantity_shares), sortVal: (row) => row.maximum_quantity_shares },
+    { key: "fee", header: "Fee", align: "right", render: (row) => pctFromDecimal(row.fee_rate), sortVal: (row) => row.fee_rate },
+    { key: "eligible", header: "Eligible", align: "center", render: (row) => <Tag tone={row.eligible ? "up" : "neutral"}>{row.eligible ? "YES" : "NO"}</Tag>, sortVal: (row) => (row.eligible ? 1 : 0) },
+    { key: "discrete", header: "Lot Size", align: "right", render: (row) => (row.lot_size_shares != null ? fmtAbbr(row.lot_size_shares) : "-"), sortVal: (row) => row.lot_size_shares ?? 0 },
+  ];
+
+  const demandPreviewColumns: Column<IbalDemandRow>[] = [
+    { key: "group", header: "Demand Group", render: (row) => <span className="text-term-text">{row.demand_group_id}</span>, sortVal: (row) => row.demand_group_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-dim">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "reference", header: "Reference", align: "right", render: (row) => fmtAbbr(row.reference_quantity_shares), sortVal: (row) => row.reference_quantity_shares },
+    { key: "fee", header: "Ref Fee", align: "right", render: (row) => pctFromDecimal(row.reference_fee_rate), sortVal: (row) => row.reference_fee_rate },
+    { key: "elasticity", header: "Elasticity", align: "right", render: (row) => fmtAbbr(row.elasticity, 3), sortVal: (row) => row.elasticity },
+  ];
+
+  const limitPreviewColumns: Column<IbalCounterpartyLimitRow>[] = [
+    { key: "id", header: "Limit", render: (row) => <span className="text-term-text">{row.limit_id}</span>, sortVal: (row) => row.limit_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-dim">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "parent", header: "Parent", render: (row) => <span className="text-term-text-mute">{row.ultimate_parent_id ?? "-"}</span>, sortVal: (row) => row.ultimate_parent_id ?? "" },
+    { key: "max_qty", header: "Max Shares", align: "right", render: (row) => (row.maximum_quantity_shares != null ? fmtAbbr(row.maximum_quantity_shares) : "-"), sortVal: (row) => row.maximum_quantity_shares ?? 0 },
+    { key: "max_notional", header: "Max Notional", align: "right", render: (row) => (row.maximum_notional_usd != null ? fmtUsdAbbr(row.maximum_notional_usd) : "-"), sortVal: (row) => row.maximum_notional_usd ?? 0 },
+    { key: "hard", header: "Hard", align: "center", render: (row) => <Tag tone={row.hard ? "amber" : "neutral"}>{row.hard ? "YES" : "NO"}</Tag>, sortVal: (row) => (row.hard ? 1 : 0) },
+  ];
+
+  const policyPreviewColumns: Column<IbalUtilizationPolicyRow>[] = [
+    { key: "id", header: "Policy", render: (row) => <span className="text-term-text">{row.policy_id}</span>, sortVal: (row) => row.policy_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id ?? "-"}</span>, sortVal: (row) => row.security_id ?? "" },
+    { key: "pool", header: "Pool", render: (row) => <span className="text-term-text-mute">{row.inventory_pool_id ?? "-"}</span>, sortVal: (row) => row.inventory_pool_id ?? "" },
+    { key: "min", header: "Min Util", align: "right", render: (row) => (row.minimum_utilization != null ? pctFromDecimal(row.minimum_utilization) : "-"), sortVal: (row) => row.minimum_utilization ?? 0 },
+    { key: "max", header: "Max Util", align: "right", render: (row) => (row.maximum_utilization != null ? pctFromDecimal(row.maximum_utilization) : "-"), sortVal: (row) => row.maximum_utilization ?? 0 },
+    { key: "target", header: "Target Util", align: "right", render: (row) => (row.target_utilization != null ? pctFromDecimal(row.target_utilization) : "-"), sortVal: (row) => row.target_utilization ?? 0 },
+  ];
+
+  const entityPreviewColumns: Column<IbalEntityRelationshipRow>[] = [
+    { key: "entity", header: "Entity", render: (row) => <span className="text-term-text">{row.value.entity_id}</span>, sortVal: (row) => row.value.entity_id },
+    { key: "legal", header: "Legal Entity", render: (row) => <span className="text-term-text-dim">{row.value.legal_entity_id}</span>, sortVal: (row) => row.value.legal_entity_id },
+    { key: "parent", header: "Ultimate Parent", render: (row) => <span className="text-term-text-dim">{row.value.ultimate_parent_id}</span>, sortVal: (row) => row.value.ultimate_parent_id },
+    { key: "type", header: "Type", render: (row) => <span className="text-term-text-mute">{row.value.relationship_type}</span>, sortVal: (row) => row.value.relationship_type },
+    { key: "confidence", header: "Confidence", align: "right", render: (row) => pctFromDecimal(row.value.ownership_confidence), sortVal: (row) => row.value.ownership_confidence },
+    { key: "quality", header: "Quality", render: (row) => <span className="text-term-text-mute">{row.quality}</span>, sortVal: (row) => row.quality },
+  ];
 
   const allocationColumns: Column<IbalAllocation>[] = [
     { key: "route", header: "Route", render: (row) => <span className="text-term-text">{row.route_id}</span>, sortVal: (row) => row.route_id },
@@ -295,6 +372,7 @@ export default function InventoryOptimizerPage() {
     setActionIssues([]);
     setSelectedRouteId(null);
     setResultTab("allocations");
+    setDatasetTab("inventory");
   }
 
   async function solveCurrent() {
@@ -482,6 +560,58 @@ export default function InventoryOptimizerPage() {
               <Stat label="Source" value={dataset?.source.mode.toUpperCase() ?? "-"} sub={dataset?.source.filename ?? (dataset?.source.seed != null ? `seed ${dataset.source.seed}` : undefined)} />
             </div>
           </Panel>
+
+          {dataset && (
+            <Panel
+              title="Dataset Preview"
+              code="PREVIEW"
+              toolbar={<TermToggleGroup value={datasetTab} onChange={setDatasetTab} options={DATASET_TABS} size="sm" />}
+            >
+              {datasetTab === "inventory" && (
+                <DataGrid columns={inventoryPreviewColumns} rows={dataset.request.inventory} rowKey={(row) => row.inventory_id} maxHeight="280px" zebra />
+              )}
+              {datasetTab === "routes" && (
+                <DataGrid columns={routePreviewColumns} rows={dataset.request.routes} rowKey={(row) => row.route_id} maxHeight="280px" zebra />
+              )}
+              {datasetTab === "demand" && (
+                <DataGrid columns={demandPreviewColumns} rows={dataset.request.demand} rowKey={(row) => row.demand_group_id} maxHeight="280px" zebra />
+              )}
+              {datasetTab === "limits" && (
+                dataset.request.counterparty_limits.length === 0 ? (
+                  <div className="p-2 text-2xs text-term-text-mute">No counterparty limits in this dataset.</div>
+                ) : (
+                  <DataGrid columns={limitPreviewColumns} rows={dataset.request.counterparty_limits} rowKey={(row) => row.limit_id} maxHeight="280px" zebra />
+                )
+              )}
+              {datasetTab === "policies" && (
+                dataset.request.utilization_policies.length === 0 ? (
+                  <div className="p-2 text-2xs text-term-text-mute">No utilization policies in this dataset.</div>
+                ) : (
+                  <DataGrid columns={policyPreviewColumns} rows={dataset.request.utilization_policies} rowKey={(row) => row.policy_id} maxHeight="280px" zebra />
+                )
+              )}
+              {datasetTab === "entities" && (
+                dataset.request.entity_relationships.length === 0 ? (
+                  <div className="p-2 text-2xs text-term-text-mute">No entity relationships in this dataset.</div>
+                ) : (
+                  <DataGrid columns={entityPreviewColumns} rows={dataset.request.entity_relationships} rowKey={(row) => row.value.entity_id} maxHeight="280px" zebra />
+                )
+              )}
+              {datasetTab === "raw" && (
+                <div className="relative">
+                  <button
+                    className="term-btn absolute right-2 top-2 z-10"
+                    onClick={() => navigator.clipboard?.writeText(JSON.stringify(dataset.request, null, 2))}
+                  >
+                    <Copy size={13} /> Copy
+                  </button>
+                  <pre className="analytics-scroll max-h-[320px] overflow-auto bg-term-panel-2 p-2 text-3xs text-term-text-dim">
+                    {JSON.stringify(dataset.request, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </Panel>
+          )}
 
           {issuesToShow.length > 0 && (
             <Panel
