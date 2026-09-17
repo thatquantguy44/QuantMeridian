@@ -16,6 +16,12 @@ const KEYS = [
   "REDDIT_USER_AGENT",
   "STOCKTWITS_ACCESS_TOKEN",
   "STOCKTWITS_ENABLED",
+  "INVENTORY_OPTIMIZER_API_URL",
+  "INVENTORY_OPTIMIZER_API_TOKEN",
+  "IBAL_API_URL",
+  "IBAL_API_TOKEN",
+  "IBAL_PRODUCTION_ENABLED",
+  "IBAL_TRUSTED_ACCESS_BOUNDARY",
 ] as const;
 
 function clearKeys() {
@@ -50,6 +56,12 @@ describe("/api/dataops/health intelligence feeds", () => {
     expect(body.providers.NEWS).toMatchObject({ status: "ERROR", live: false });
     expect(body.providers.SOCIAL).toMatchObject({ status: "ERROR", live: false });
     expect(body.providers.NEWS_NLP).toMatchObject({ status: "SIM", live: false });
+    expect(body.providers.IBAL).toMatchObject({
+      status: "ERROR",
+      live: false,
+      configured: false,
+      explicitStatus: "IBAL_TOKEN_MISSING",
+    });
   });
 
   test("surfaces structured NEWS_NLP health when the service is configured", async () => {
@@ -83,6 +95,71 @@ describe("/api/dataops/health intelligence feeds", () => {
       clustering: { model: "all-MiniLM-test" },
       ner: { model: "en_core_web_sm" },
       device: "cpu",
+    });
+  });
+
+  test("surfaces IBAL optimizer readiness without exposing secrets", async () => {
+    process.env.INVENTORY_OPTIMIZER_API_URL = "http://ibal.local";
+    process.env.INVENTORY_OPTIMIZER_API_TOKEN = "secret-token";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "http://ibal.local/health") {
+        return new Response(JSON.stringify({
+          status: "ready",
+          ready: true,
+          api_schema_version: "1.0.0",
+          engine_package_version: "0.1.0",
+          backend: { name: "highs", version: "1.15.1", ready: true },
+          error_category: null,
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      throw new Error(`unexpected URL ${url}`);
+    }));
+
+    const body = await callHealth();
+
+    expect(body.providers.IBAL).toMatchObject({
+      status: "LIVE",
+      live: true,
+      configured: true,
+      readSuccessfully: true,
+      explicitStatus: "IBAL service reachable and engine ready",
+    });
+    expect(body.providers.IBAL.detail).toContain("engine=0.1.0");
+    expect(body.providers.IBAL.detail).toContain("backend=highs 1.15.1");
+    expect(JSON.stringify(body.providers.IBAL)).not.toContain("secret-token");
+    expect(JSON.stringify(body.providers.IBAL)).not.toContain("http://ibal.local");
+  });
+
+  test("reports reachable but unready IBAL service as stale", async () => {
+    process.env.INVENTORY_OPTIMIZER_API_URL = "http://ibal.local";
+    process.env.INVENTORY_OPTIMIZER_API_TOKEN = "secret-token";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "http://ibal.local/health") {
+        return new Response(JSON.stringify({
+          status: "unavailable",
+          ready: false,
+          api_schema_version: "1.0.0",
+          engine_package_version: null,
+          backend: { name: "highs", version: null, ready: false },
+          error_category: "ENGINE_IMPORT_FAILED",
+        }), { status: 503, headers: { "content-type": "application/json" } });
+      }
+      throw new Error(`unexpected URL ${url}`);
+    }));
+
+    const body = await callHealth();
+
+    expect(body.providers.IBAL).toMatchObject({
+      status: "STALE",
+      live: false,
+      configured: true,
+      readSuccessfully: false,
+      explicitStatus: "IBAL_ENGINE_NOT_READY",
+    });
+    expect(body.providers.IBAL.diagnostics).toMatchObject({
+      reachable: true,
+      ready: false,
+      health: { error_category: "ENGINE_IMPORT_FAILED" },
     });
   });
 });

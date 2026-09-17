@@ -60,12 +60,87 @@ function isBodyAllowed(method: string): boolean {
 export function inventoryOptimizerStatus() {
   const production = isProductionRuntime();
   return {
-    baseUrl: serviceBaseUrl(),
     configured: Boolean(serviceToken()),
     production,
     productionEnabled: !production || truthy(env("IBAL_PRODUCTION_ENABLED")),
     trustedAccessBoundary: !production || truthy(env("IBAL_TRUSTED_ACCESS_BOUNDARY")),
   };
+}
+
+export async function inventoryOptimizerHealthSnapshot(timeoutMs = 3000) {
+  const status = inventoryOptimizerStatus();
+  if (!status.configured) {
+    return {
+      ok: false,
+      reachable: false,
+      ready: false,
+      code: "IBAL_TOKEN_MISSING",
+      detail: "IBAL service token is not configured.",
+      status,
+    };
+  }
+  if (!status.productionEnabled) {
+    return {
+      ok: false,
+      reachable: false,
+      ready: false,
+      code: "IBAL_PRODUCTION_DISABLED",
+      detail: "IBAL production access is disabled.",
+      status,
+    };
+  }
+  if (!status.trustedAccessBoundary) {
+    return {
+      ok: false,
+      reachable: false,
+      ready: false,
+      code: "IBAL_TRUSTED_BOUNDARY_MISSING",
+      detail: "IBAL requires a trusted access boundary in production.",
+      status,
+    };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const started = performance.now();
+  try {
+    const response = await fetch(`${serviceBaseUrl()}/health`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const latencyMs = Math.round(performance.now() - started);
+    const body = await response.json().catch(() => ({}));
+    const ready = response.ok && Boolean(body.ready);
+    return {
+      ok: response.ok,
+      reachable: true,
+      ready,
+      code: ready ? "IBAL_READY" : "IBAL_ENGINE_NOT_READY",
+      detail: ready ? "IBAL service reachable and engine ready." : "IBAL service reachable but engine is not ready.",
+      latencyMs,
+      health: {
+        status: body.status,
+        ready: body.ready,
+        api_schema_version: body.api_schema_version,
+        engine_package_version: body.engine_package_version,
+        backend: body.backend,
+        error_category: body.error_category,
+      },
+      status,
+    };
+  } catch (error) {
+    const aborted = error instanceof DOMException && error.name === "AbortError";
+    return {
+      ok: false,
+      reachable: false,
+      ready: false,
+      code: aborted ? "IBAL_HEALTH_TIMEOUT" : "IBAL_HEALTH_UNREACHABLE",
+      detail: aborted ? "IBAL service health probe timed out." : "IBAL service health probe failed.",
+      status,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function proxyInventoryOptimizer(request: Request, upstreamPath: string, init?: { method?: string; timeoutMs?: number }) {

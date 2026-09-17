@@ -125,27 +125,26 @@ the Vite dev server, because this local setup can hang browser POSTs through Vit
 and direct `curl` calls remain healthy. The durable runbook and verification record is
 `docs/features/IBAL_WHAT_IF_HANDOFF.md`.
 
-**HIGH PRIORITY -- QuantSmith Phase 4 (IBAL model-plugin pilot):** `docs/specs/spec005/SPEC.md`
-was revisited 2026-09-17 to add candidate synergy item 6 and Phase 4: registering `IBAL` with
-QuantSmith's `model_plugin` adapter (spec `0026`) so a QuantSmith review agent
-(`agents/optimization/inventory_supply_chain/` or `solver_diagnostics_sensitivity/`) can invoke a
-real `IBAL` solve and produce an independent review/report -- not a second solver, a second pair of
-eyes, same re-verification discipline as the already-completed Phase 2 narrative pilot
-(`PHASE2_PILOT_DRAFT.md`/`PHASE2_PILOT_VERIFICATION.md`). QuantSmith's own securities-lending
-runtime (spec `0023`) is explicitly not adopted -- confirmed less mature than `IBAL`. The general
-optimization/portfolio/trading agent-family exclusion for Market Terminal is reaffirmed; this is a
-narrow, single-purpose exception. **Scoped, not started.** Two blockers before this can move:
-spec `0026` itself has no executable dispatcher yet (QuantSmith-repo work), and any first pilot
-should stay manual/scripted (mirroring Phase 2's shape) with synthetic `IBAL` data only -- real
-book/request data must never enter QuantSmith's repo. Read spec005's item 6 and Phase 4 sections in
-full before starting; check `Related Documents` there for the exact QuantSmith spec paths.
+**QuantSmith Phase 4 (IBAL model-plugin pilot) -- completed / PR opened 2026-09-17:**
+QuantSmith branch `feature/ibal-model-plugin-pilot` registered `IBAL` in local, gitignored
+`model_plugins.yml`, produced one `model_plugin_registration` understanding brief, invoked the real
+IBAL REST API once with synthetic data, independently re-verified the reported numbers against the
+IBAL API response, and wrote a pilot report. QuantSmith PR #94 tracks that artifact-only pilot. No
+dispatcher, runtime wiring, production route, or Market Terminal UI change shipped from that pilot.
 
-Remaining IBAL priorities, in order: (1) QuantSmith Phase 4 pilot (above); (2) custom what-if shock
-controls and scenario export; (3) reducer/state-machine/session polish for the frontend workbench;
-(4) Data Ops health plus production env/runbook hardening (T-013/T-014); (5) investigate the Vite
-dev-server browser POST hang so IBAL Playwright can run against `npm run dev` as well as standalone.
-Production remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly
-configured. CI/Vercel repair stays out of scope until the owner asks for it.
+**IBAL follow-through checkpoint, 2026-09-17:** custom what-if shocks and scenario export are now
+implemented on `main` (`1c110b9`, `89db3ca`): the workbench can save the current Dataset Intake +
+Run Config forms as user-defined shocks; the scenario comparison table has CSV export; and the main
+result-bundle export follows the currently selected base/scenario result, including route-level
+allocation tables through the engine-owned ZIP exporter.
+
+Active follow-through branch `feature/ibal-handoff-followthrough` starts the remaining IBAL
+priorities: (1) reducer/state-machine/session polish for the frontend workbench; (2) Data Ops
+health plus production env/runbook hardening (T-013/T-014); (3) investigate the Vite dev-server
+browser POST hang so IBAL Playwright can run against `npm run dev` as well as standalone; and (4)
+keep CI/Vercel repair scoped out unless the owner explicitly asks for that platform track.
+Production remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are
+explicitly configured.
 
 Tier A production routes for econ, chart, and market data have been hardened to
 read the Gold DB or return explicit `ERR`/empty states. The old silent fallback

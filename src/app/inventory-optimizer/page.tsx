@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Copy, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
@@ -148,6 +148,102 @@ interface BeforeAfterAnalytics {
   inventoryMovers: BaseInventoryAnalyticsRow[];
   demandDrivers: BaseDemandAnalyticsRow[];
   reasonCodes: ReasonCodeAnalyticsRow[];
+}
+
+type WorkflowPhase = "idle" | "preparing" | "solving" | "exporting" | "scenario";
+
+interface WorkflowState {
+  phase: WorkflowPhase;
+  dataset: DatasetEnvelope | null;
+  result: IbalResult | null;
+  message: string | null;
+  actionIssues: LocatedIssue[];
+  pendingAction: PendingAction | null;
+  resultTab: ResultTab;
+  selectedRouteId: string | null;
+  datasetTab: DatasetTab;
+  selectedScenarioIds: WhatIfScenarioId[];
+  whatIfResults: WhatIfResult[];
+  selectedWhatIfId: WhatIfScenarioId | null;
+}
+
+type WorkflowAction =
+  | { type: "patch"; patch: Partial<WorkflowState> | ((state: WorkflowState) => Partial<WorkflowState>) }
+  | { type: "start"; phase: Exclude<WorkflowPhase, "idle"> }
+  | { type: "finish" }
+  | { type: "reset" };
+
+const INITIAL_SELECTED_SCENARIOS: WhatIfScenarioId[] = ["base", "scarce", "specials", "concentration"];
+
+const INITIAL_WORKFLOW_STATE: WorkflowState = {
+  phase: "idle",
+  dataset: null,
+  result: null,
+  message: null,
+  actionIssues: [],
+  pendingAction: null,
+  resultTab: "allocations",
+  selectedRouteId: null,
+  datasetTab: "inventory",
+  selectedScenarioIds: INITIAL_SELECTED_SCENARIOS,
+  whatIfResults: [],
+  selectedWhatIfId: null,
+};
+
+interface IbalSessionPrefs {
+  synthetic?: SyntheticConfig;
+  runConfig?: RunConfig;
+  selectedScenarioIds?: WhatIfScenarioId[];
+  customScenarios?: WhatIfScenario[];
+}
+
+const SESSION_PREFS_KEY = "ibal.workbench.session.v1";
+
+function readSessionPrefs(): IbalSessionPrefs {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_PREFS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as IbalSessionPrefs;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function initWorkflowState(prefs: IbalSessionPrefs): WorkflowState {
+  return {
+    ...INITIAL_WORKFLOW_STATE,
+    selectedScenarioIds: prefs.selectedScenarioIds?.length ? prefs.selectedScenarioIds : INITIAL_SELECTED_SCENARIOS,
+  };
+}
+
+function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
+  switch (action.type) {
+    case "patch": {
+      const patch = typeof action.patch === "function" ? action.patch(state) : action.patch;
+      return { ...state, ...patch };
+    }
+    case "start":
+      return { ...state, phase: action.phase, message: null, actionIssues: [] };
+    case "finish":
+      return { ...state, phase: "idle" };
+    case "reset":
+      return {
+        ...state,
+        phase: "idle",
+        dataset: null,
+        result: null,
+        message: null,
+        actionIssues: [],
+        pendingAction: null,
+        resultTab: "allocations",
+        selectedRouteId: null,
+        datasetTab: "inventory",
+        whatIfResults: [],
+        selectedWhatIfId: null,
+      };
+  }
 }
 
 const WHAT_IF_SCENARIOS: WhatIfScenario[] = [
@@ -319,25 +415,50 @@ function formatFieldValue(field: keyof SyntheticConfig, value: number): string {
 }
 
 export default function InventoryOptimizerPage() {
+  const [sessionPrefs] = useState<IbalSessionPrefs>(readSessionPrefs);
   const [health, setHealth] = useState<IbalHealth | null>(null);
-  const [dataset, setDataset] = useState<DatasetEnvelope | null>(null);
-  const [result, setResult] = useState<IbalResult | null>(null);
-  const [synthetic, setSynthetic] = useState<SyntheticConfig>(DEFAULT_SYNTHETIC_CONFIG);
+  const [synthetic, setSynthetic] = useState<SyntheticConfig>(() => sessionPrefs.synthetic ?? DEFAULT_SYNTHETIC_CONFIG);
   const [showAdvancedSynthetic, setShowAdvancedSynthetic] = useState(false);
-  const [runConfig, setRunConfig] = useState<RunConfig>(DEFAULT_RUN_CONFIG);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [actionIssues, setActionIssues] = useState<LocatedIssue[]>([]);
-  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
-  const [resultTab, setResultTab] = useState<ResultTab>("allocations");
-  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
-  const [datasetTab, setDatasetTab] = useState<DatasetTab>("inventory");
-  const [selectedScenarioIds, setSelectedScenarioIds] = useState<WhatIfScenarioId[]>(["base", "scarce", "specials", "concentration"]);
-  const [whatIfResults, setWhatIfResults] = useState<WhatIfResult[]>([]);
-  const [scenarioBusy, setScenarioBusy] = useState(false);
-  const [selectedWhatIfId, setSelectedWhatIfId] = useState<WhatIfScenarioId | null>(null);
-  const [customScenarios, setCustomScenarios] = useState<WhatIfScenario[]>([]);
+  const [runConfig, setRunConfig] = useState<RunConfig>(() => sessionPrefs.runConfig ?? DEFAULT_RUN_CONFIG);
+  const [workflow, dispatchWorkflow] = useReducer(workflowReducer, sessionPrefs, initWorkflowState);
+  const [customScenarios, setCustomScenarios] = useState<WhatIfScenario[]>(() => sessionPrefs.customScenarios ?? []);
   const [customShockLabel, setCustomShockLabel] = useState("");
+  const {
+    dataset,
+    result,
+    message,
+    actionIssues,
+    pendingAction,
+    resultTab,
+    selectedRouteId,
+    datasetTab,
+    selectedScenarioIds,
+    whatIfResults,
+    selectedWhatIfId,
+  } = workflow;
+  const busy = workflow.phase !== "idle";
+  const scenarioBusy = workflow.phase === "scenario";
+
+  const patchWorkflow = (patch: Partial<WorkflowState> | ((state: WorkflowState) => Partial<WorkflowState>)) => {
+    dispatchWorkflow({ type: "patch", patch });
+  };
+  const setDataset = (next: DatasetEnvelope | null) => patchWorkflow({ dataset: next });
+  const setResult = (next: IbalResult | null) => patchWorkflow({ result: next });
+  const setMessage = (next: string | null) => patchWorkflow({ message: next });
+  const setActionIssues = (next: LocatedIssue[]) => patchWorkflow({ actionIssues: next });
+  const setPendingAction = (next: PendingAction | null) => patchWorkflow({ pendingAction: next });
+  const setResultTab = (next: ResultTab) => patchWorkflow({ resultTab: next });
+  const setSelectedRouteId = (next: string | null | ((current: string | null) => string | null)) => {
+    patchWorkflow((state) => ({ selectedRouteId: typeof next === "function" ? next(state.selectedRouteId) : next }));
+  };
+  const setDatasetTab = (next: DatasetTab) => patchWorkflow({ datasetTab: next });
+  const setSelectedWhatIfId = (next: WhatIfScenarioId | null) => patchWorkflow({ selectedWhatIfId: next });
+  const setSelectedScenarioIds = (next: WhatIfScenarioId[] | ((current: WhatIfScenarioId[]) => WhatIfScenarioId[])) => {
+    patchWorkflow((state) => ({ selectedScenarioIds: typeof next === "function" ? next(state.selectedScenarioIds) : next }));
+  };
+  const setWhatIfResults = (next: WhatIfResult[] | ((current: WhatIfResult[]) => WhatIfResult[])) => {
+    patchWorkflow((state) => ({ whatIfResults: typeof next === "function" ? next(state.whatIfResults) : next }));
+  };
 
   // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
@@ -399,6 +520,18 @@ export default function InventoryOptimizerPage() {
   useEffect(() => {
     getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
   }, []);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(
+      SESSION_PREFS_KEY,
+      JSON.stringify({
+        synthetic,
+        runConfig,
+        selectedScenarioIds,
+        customScenarios,
+      } satisfies IbalSessionPrefs)
+    );
+  }, [synthetic, runConfig, selectedScenarioIds, customScenarios]);
 
   // Whichever result set is on screen right now: the plain Base Case Run by default, or -- once
   // the What If sweep has produced results -- whichever scenario is selected in that comparison
@@ -688,9 +821,7 @@ export default function InventoryOptimizerPage() {
   ];
 
   async function doRefreshSynthetic() {
-    setBusy(true);
-    setMessage(null);
-    setActionIssues([]);
+    dispatchWorkflow({ type: "start", phase: "preparing" });
     try {
       const next = await generateSyntheticDataset(synthetic);
       setDataset(next);
@@ -700,14 +831,12 @@ export default function InventoryOptimizerPage() {
       setMessage(error instanceof Error ? error.message : "Synthetic dataset failed.");
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
-      setBusy(false);
+      dispatchWorkflow({ type: "finish" });
     }
   }
 
   async function doUploadFile(file: File) {
-    setBusy(true);
-    setMessage(null);
-    setActionIssues([]);
+    dispatchWorkflow({ type: "start", phase: "preparing" });
     try {
       const next = await uploadIbalDataset(file);
       setDataset(next);
@@ -717,7 +846,7 @@ export default function InventoryOptimizerPage() {
       setMessage(error instanceof Error ? error.message : "Upload failed.");
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
-      setBusy(false);
+      dispatchWorkflow({ type: "finish" });
     }
   }
 
@@ -749,20 +878,12 @@ export default function InventoryOptimizerPage() {
   }
 
   function resetAll() {
-    setDataset(null);
-    setResult(null);
-    setMessage(null);
-    setActionIssues([]);
-    setSelectedRouteId(null);
-    setResultTab("allocations");
-    setDatasetTab("inventory");
+    dispatchWorkflow({ type: "reset" });
   }
 
   async function solveCurrent() {
     if (!dataset) return;
-    setBusy(true);
-    setMessage(null);
-    setActionIssues([]);
+    dispatchWorkflow({ type: "start", phase: "solving" });
     setSelectedRouteId(null);
     try {
       const response = await runIbal(dataset, runConfig);
@@ -772,7 +893,7 @@ export default function InventoryOptimizerPage() {
       setMessage(error instanceof Error ? error.message : "Run failed.");
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
-      setBusy(false);
+      dispatchWorkflow({ type: "finish" });
     }
   }
 
@@ -781,9 +902,7 @@ export default function InventoryOptimizerPage() {
   // is actually looking at.
   async function exportBundle() {
     if (!viewDataset || !viewResult) return;
-    setBusy(true);
-    setMessage(null);
-    setActionIssues([]);
+    dispatchWorkflow({ type: "start", phase: "exporting" });
     try {
       const blob = await exportIbalBundle(viewDataset, viewResult);
       const url = URL.createObjectURL(blob);
@@ -798,7 +917,7 @@ export default function InventoryOptimizerPage() {
       setMessage(error instanceof Error ? error.message : "Export failed.");
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
-      setBusy(false);
+      dispatchWorkflow({ type: "finish" });
     }
   }
 
@@ -863,10 +982,7 @@ export default function InventoryOptimizerPage() {
   async function runWhatIfScenarios() {
     const scenarios = allScenarios.filter((scenario) => scenarioSet.has(scenario.id));
     if (!scenarios.length) return;
-    setScenarioBusy(true);
-    setBusy(true);
-    setMessage(null);
-    setActionIssues([]);
+    dispatchWorkflow({ type: "start", phase: "scenario" });
     setSelectedWhatIfId(scenarios[0]?.id ?? null);
     setWhatIfResults(scenarios.map((scenario) => ({ id: scenario.id, label: scenario.label, status: "pending" })));
     try {
@@ -905,8 +1021,7 @@ export default function InventoryOptimizerPage() {
       }
       setMessage(`Completed ${scenarios.length} what-if ${scenarios.length === 1 ? "scenario" : "scenarios"}.`);
     } finally {
-      setScenarioBusy(false);
-      setBusy(false);
+      dispatchWorkflow({ type: "finish" });
     }
   }
 

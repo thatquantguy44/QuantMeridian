@@ -2,6 +2,7 @@ import { json } from "@/lib/server/http";
 import { getIntelligenceFeedDiagnostics } from "@/lib/server/intelligenceFeedManifest";
 import { configuredSocialProviders } from "@/lib/server/socialProviders";
 import { goldConfigStatus, goldEnabled, goldStore } from "@/lib/server/goldStore";
+import { inventoryOptimizerHealthSnapshot } from "@/lib/server/inventoryOptimizerProxy";
 import type { NewsNlpProbe } from "@/lib/server/newsDiagnostics";
 
 type Status = "LIVE" | "CACHED" | "SIM" | "STALE" | "ERROR" | "FALLBACK_AVAILABLE";
@@ -235,6 +236,28 @@ export async function GET() {
   } else {
     providers.NEWS_NLP = { status: "SIM", detail: "no news/social keys, no NEWS_NLP_URL — heuristic/SIM", live: false, diagnostics: news.nlp };
   }
+
+  const ibal = await inventoryOptimizerHealthSnapshot();
+  providers.IBAL = ibal.ready
+    ? {
+        status: "LIVE",
+        detail: `InventoryBallast service ready — engine=${ibal.health?.engine_package_version ?? "?"}, backend=${String((ibal.health?.backend as { name?: string; version?: string } | undefined)?.name ?? "?")} ${String((ibal.health?.backend as { name?: string; version?: string } | undefined)?.version ?? "")}`.trim(),
+        live: true,
+        configured: ibal.status.configured,
+        readSuccessfully: true,
+        latencyMs: ibal.latencyMs,
+        explicitStatus: "IBAL service reachable and engine ready",
+        diagnostics: ibal,
+      }
+    : {
+        status: ibal.reachable ? "STALE" : "ERROR",
+        detail: ibal.detail,
+        live: false,
+        configured: ibal.status.configured,
+        readSuccessfully: false,
+        explicitStatus: ibal.code,
+        diagnostics: ibal,
+      };
 
   // Internal books — Tier C: book stays synthetic; macro inputs wired to Gold DB.
   providers.LOCAL_BOOK = {
