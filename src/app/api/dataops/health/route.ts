@@ -55,9 +55,10 @@ function nlpHealthDetail(nlp: NewsNlpProbe): string {
  * After the Gold DB migration, MACRO_DB (GoldStore) is the primary source for
  * all Tier A/C series data. FRED, MARKET_*, MACRO_ETL are legacy/fallback paths.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const providers: Record<string, ProviderProbe> = {};
   const goldConfig = goldConfigStatus();
+  const scope = new URL(request.url).searchParams.get("scope");
 
   // Gold DB — primary series data source post-migration (Tier A + C).
   if (goldEnabled()) {
@@ -141,6 +142,11 @@ export async function GET() {
 
   // macro_data_etl — committed gold snapshot at build time.
   providers.MACRO_ETL = { status: "CACHED", detail: "committed macro_data_etl gold snapshot", live: false };
+
+  if (scope === "shell") {
+    providers.SYNTHETIC = { status: "FALLBACK_AVAILABLE", detail: "deterministic fallback available; not a live upstream", live: false };
+    return json({ probedAt: new Date().toISOString(), providers, scope });
+  }
 
   // News/social provider chains — Tier B (kept live, deliberate exception to DB-only policy).
   // Exception to DB-only policy: non-series real-time feed, see GOLD_DB_MIGRATION_HANDOFF §7 D1.

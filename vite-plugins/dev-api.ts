@@ -19,17 +19,31 @@ export function devApiPlugin(): Plugin {
         try {
           const url = new URL(rawUrl, `http://${req.headers.host ?? "localhost"}`);
           const method = (req.method ?? "GET").toUpperCase();
+          const trace = process.env.IBAL_DEV_API_TRACE === "1" && url.pathname.startsWith("/api/inventory-optimizer/");
+          const started = performance.now();
+          const mark = (stage: string, extra = "") => {
+            if (!trace) return;
+            const elapsed = Math.round(performance.now() - started);
+            // eslint-disable-next-line no-console
+            console.info(`[dev-api] ${method} ${url.pathname} ${stage} +${elapsed}ms${extra ? ` ${extra}` : ""}`);
+          };
+          mark("start", `complete=${req.complete} readableEnded=${req.readableEnded} len=${req.headers["content-length"] ?? "?"}`);
           const body = method === "GET" || method === "HEAD" ? undefined : await readBody(req);
+          mark("body-read", `bytes=${body?.byteLength ?? 0} complete=${req.complete} readableEnded=${req.readableEnded}`);
           const request = toWebRequest(req, url, body);
+          mark("web-request");
 
           // Re-loaded per request so route edits hot-reload; Vite's module graph
           // invalidates the registry (and its globbed handlers) on change.
           const registry = (await server.ssrLoadModule("/src/server/registry.ts")) as {
             handleApiRequest: (request: Request) => Promise<Response | null>;
           };
+          mark("registry-loaded");
           const response = await registry.handleApiRequest(request);
+          mark("handler-returned", response ? `status=${response.status}` : "fallthrough");
           if (!response) return next();
           await sendWebResponse(res, response);
+          mark("response-sent");
         } catch (err) {
           server.ssrFixStacktrace(err as Error);
           // eslint-disable-next-line no-console

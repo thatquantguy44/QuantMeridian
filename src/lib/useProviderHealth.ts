@@ -25,8 +25,9 @@ interface HealthResponse {
  * from /api/dataops/health (env config + reachability of news_nlp / market
  * pipeline). Seeds from cache for instant re-navigation.
  */
-export function useProviderHealth(): { health: Record<string, ProviderProbe> | null; probedAt: string | null } {
-  const url = "/api/dataops/health";
+export function useProviderHealth(options: { timeoutMs?: number; full?: boolean } = {}): { health: Record<string, ProviderProbe> | null; probedAt: string | null } {
+  const url = options.full ? "/api/dataops/health" : "/api/dataops/health?scope=shell";
+  const timeoutMs = options.timeoutMs ?? 5_000;
   const cached = peekFresh<HealthResponse>(url);
   const [state, setState] = useState<{ health: Record<string, ProviderProbe> | null; probedAt: string | null }>(
     cached ? { health: cached.providers, probedAt: cached.probedAt } : { health: null, probedAt: null }
@@ -34,17 +35,24 @@ export function useProviderHealth(): { health: Record<string, ProviderProbe> | n
 
   useEffect(() => {
     let alive = true;
-    fetchJson<HealthResponse>(url)
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    fetchJson<HealthResponse>(url, { signal: controller.signal, dedupeMs: timeoutMs })
       .then((j) => {
         if (alive && j?.providers) setState({ health: j.providers, probedAt: j.probedAt });
       })
       .catch(() => {
         /* keep fixture baseline */
+      })
+      .finally(() => {
+        window.clearTimeout(timer);
       });
     return () => {
       alive = false;
+      controller.abort();
+      window.clearTimeout(timer);
     };
-  }, []);
+  }, [timeoutMs, url]);
 
   return state;
 }

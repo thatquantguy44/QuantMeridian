@@ -29,7 +29,7 @@ function clearKeys() {
 }
 
 async function callHealth() {
-  const res = await GET();
+  const res = await GET(new Request("http://localhost/api/dataops/health"));
   return res.json();
 }
 
