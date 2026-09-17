@@ -42,7 +42,7 @@ current going forward. It indexes every test file by what it protects, documents
 edge-case framework (`tests/edge_cases.py`: named boundary-value `SyntheticConfig`s plus a
 Hypothesis-strategy pattern for sweeping cross-field combinations), maps AC-001 through AC-024 to
 concrete covering tests with a DONE/PARTIAL/TODO status, and keeps a running "bugs found and
-fixed" log with the *pattern* behind each bug, not just the instance. Suite is now `141 passed`,
+fixed" log with the *pattern* behind each bug, not just the instance. Suite is now `151 passed`,
 0 failed, 0 xfail/skip, `ruff check tests/` clean.
 
 This work now lives on its own branch, **`feature/ibal-backend-test-coverage`**, cut from latest
@@ -83,9 +83,18 @@ cell for the same solved result -- not a re-derived value, the literal engine ou
 directly unit-tests the CSV serialization helper's escaping/`None`/float-precision behavior. No bug
 found; AC-016 is now DONE.
 
-Remaining IBAL priorities, in order: (1) backend test gaps listed in VALIDATION.md's "Next up"
-(AC-019 health matrix, AC-021 benchmark harness, AC-010 dataset summary adversarial test);
-(2) frontend workbench -- `src/app/inventory-optimizer/page.tsx` is still a
+`test_benchmark.py` + `benchmark.py` (AC-021) added the benchmark harness: a reusable
+`run_benchmark_suite()` timing generation and solve at every scale preset (small/medium/large)
+plus JSON/XLSX upload parsing, writing a retained JSON manifest to
+`tests/benchmarks/latest.json` (gitignored -- machine-specific numbers, not meant to be versioned)
+and a curated baseline snapshot committed in VALIDATION.md. Everything is comfortably sub-100ms
+even at `large` scale (100 securities, 2,000 routes) on a dev laptop; sanity thresholds are set
+5-15x above baseline so the test catches a real regression without being flaky on ordinary machine
+noise. AC-021 is now DONE.
+
+Remaining IBAL priorities, in order: (1) the last two backend test gaps in VALIDATION.md's
+"Next up" (AC-019 health matrix, AC-010 dataset summary adversarial test); (2) frontend
+workbench -- `src/app/inventory-optimizer/page.tsx` is still a
 shell; the spec's T-010-T-012 reducer/state machine, result tabs (Allocations/Balances/Demand/
 Economics/Constraints/Diagnostics/Raw), dirty confirmation, and session-only result handling are
 not built; (3) Data Ops health + env/runbook docs (T-013/T-014); (4) browser-to-solver E2E and

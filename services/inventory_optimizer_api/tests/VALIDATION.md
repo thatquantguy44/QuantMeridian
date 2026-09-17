@@ -8,7 +8,7 @@ actual test suite in this repo.
 
 Run everything: `cd services/inventory_optimizer_api && .venv/bin/python -m pytest -q`
 Lint: `.venv/bin/python -m ruff check tests/`
-Current state: **141 passed**, 0 failed, 0 xfail/skip.
+Current state: **151 passed**, 0 failed, 0 xfail/skip.
 
 ## How the suite is organized
 
@@ -30,6 +30,7 @@ source layout first.
 | `test_edge_cases.py` | 9 | Boundary-value sweep using the shared edge-case framework (see below) plus a pinned regression for the joint reserve/utilization bug. |
 | `test_economics.py` | 18 | Every `economics` total reconstructed from raw allocation/route/inventory data and checked against a real solved result -- not just internal component-sum bookkeeping, but that `fee_revenue`/`transition_cost` actually reconcile to the notional math, across day-count bases and at boundary configs. |
 | `test_exports.py` | 19 | Export bundle contents are exactly the expected files; `normalized-input.json`/`raw-result.json`/`validation-report.json` round-trip exactly; every result-table CSV, read back, matches `reporting.tables.result_tables()` cell-for-cell for the same result; `_table_csv` escaping/`None`/float-precision edge cases tested directly. |
+| `test_benchmark.py` | 10 | Runs the benchmark harness (see below), writes the retained runtime manifest, and asserts every operation's p95 stays under a generous sanity threshold -- catches a severe (10x+) performance regression, not day-to-day machine noise. |
 
 Shared infrastructure (not test files themselves, collected as 0 tests):
 
@@ -37,6 +38,7 @@ Shared infrastructure (not test files themselves, collected as 0 tests):
   and `IBAL_ENV=local` pre-set); `raw_client` fixture (TestClient with nothing pre-set, for tests
   that need to control env vars themselves, e.g. auth/kill-switch tests).
 - `edge_cases.py` -- the edge-case framework, described next.
+- `benchmark.py` -- the benchmark harness, described after that.
 
 ## The edge-case framework (`edge_cases.py`)
 
@@ -74,6 +76,49 @@ opposed to the curated, one-off named configs above): a `@given(...)` over the e
 range of each suspect field, `scale="custom"`, small counts to keep it fast, asserting
 `dataset.validation.valid`. Reach for this whenever two or more fields jointly bound a physical
 quantity (shares, a fraction of 1.0, a rate) -- that is where per-field bounds checks miss things.
+
+## The benchmark harness (`benchmark.py`, AC-021)
+
+Purpose: a real generation/parsing/solve timing profile, re-runnable on demand, not a one-time
+manual measurement that immediately goes stale.
+
+What it provides:
+
+- `time_operation(name, fn, iterations=...)` -- runs `fn` N times, returns a `TimingStats`
+  (count/min/p50/p95/max/mean in milliseconds).
+- `run_benchmark_suite(iterations=20)` -- times `generate_dataset()` and a full `solve()` at every
+  scale preset (`small`/`medium`/`large`), plus `parse_upload()` for both the JSON and XLSX
+  starter templates. Returns a JSON-serializable manifest: timestamp, engine identity
+  (package version/commit/backend), iteration count, and one `TimingStats` per operation.
+
+`test_benchmark.py` runs this suite once per test session (module-scoped fixture), writes the
+manifest to `tests/benchmarks/latest.json` (gitignored -- machine-specific numbers are not
+meaningful to version control; re-run the suite locally whenever you want current numbers), and
+asserts every operation's p95 stays under a generous sanity threshold (`MAX_P95_MS` in that file).
+Those thresholds are set 5-15x above the recorded baseline on purpose: they exist to catch an
+actual regression (a new O(n^2) code path, an accidentally-removed cache, a much slower solver
+setting), not to fail on ordinary machine-to-machine or run-to-run noise. If you deliberately
+change something that shifts timing meaningfully (up or down), update both the threshold and the
+baseline snapshot below in the same change -- don't let this table go stale.
+
+**Benchmark baseline** (recorded 2026-09-17, local dev machine, InventoryBallast `74737e5`,
+HiGHS `1.15.1`, 15 iterations/operation -- p50/p95/max in ms):
+
+| Operation | p50 | p95 | max |
+| --- | --- | --- | --- |
+| `generate.small` | 0.7 | 1.5 | 2.8 |
+| `generate.medium` | 3.7 | 4.0 | 15.8 |
+| `generate.large` | 19.3 | 23.3 | 31.5 |
+| `solve.small` | 2.2 | 12.2 | 34.0 |
+| `solve.medium` | 8.7 | 15.0 | 22.9 |
+| `solve.large` | 42.8 | 56.7 | 61.0 |
+| `parse.json` | 0.5 | 0.7 | 1.1 |
+| `parse.xlsx` | 8.4 | 13.6 | 22.6 |
+
+Everything is comfortably sub-100ms even at `large` scale (100 securities, 2,000 routes) on a dev
+laptop -- there is no current performance concern at these scales. Re-run
+`.venv/bin/python -m pytest tests/test_benchmark.py -v` and refresh this table if scale limits
+change, the pinned engine commit changes, or synthetic generation/solve logic changes meaningfully.
 
 ## Bugs found and fixed via this suite
 
@@ -157,7 +202,7 @@ sync with this table -- trust this table for backend Python scope, not that file
 | AC-018 | Capability omission; disabled-feature rejection; altered-client-state | PARTIAL | `upload.py::_unsupported_feature_issues` exists and is exercised implicitly; no dedicated capability-omission test yet. |
 | AC-019 | Health response/service matrix; outage behavior | PARTIAL | `test_auth.py::test_end_to_end_health_endpoint_is_unauthenticated_even_when_disabled` covers one case; no matrix over engine-identity mismatch / unready states yet. |
 | AC-020 | Module-disabled build/runtime; unauthenticated proxy; kill-switch smoke | DONE (backend) | `test_auth.py` full kill-switch + auth matrix. Frontend module-disabled build test not started. |
-| AC-021 | Generation/parsing/solve benchmark suite | TODO | No test yet. |
+| AC-021 | Generation/parsing/solve benchmark suite | DONE | `test_benchmark.py` + `benchmark.py`; retained manifest at `tests/benchmarks/latest.json`, baseline snapshot in this doc's "Benchmark harness" section. |
 | AC-022 | Confidential sentinels absent from service logs | DONE | `test_security.py` |
 | AC-023 | Playwright keyboard/screenshot suite | TODO | Frontend/E2E scope; not started. |
 | AC-024 | Clean-checkout CI job | TODO | Explicitly out of scope per current local-only-work directive; see project memory. |
@@ -168,9 +213,7 @@ Backend items with no test coverage yet, roughly in order of value:
 
 1. **AC-019**: health-endpoint matrix -- engine-identity mismatch (wrong version/commit/backend),
    each surfaced independently, plus the `ready=False`/`error_category="incompatible_engine"` path.
-2. **AC-021**: a small benchmark harness (p50/p95/max generation+solve time across the boundary
-   configs already defined in `edge_cases.py`) with a retained artifact, per the spec's intent.
-3. **AC-010**: a dedicated adversarial test that a tampered/mismatched `DatasetSummary` is actually
+2. **AC-010**: a dedicated adversarial test that a tampered/mismatched `DatasetSummary` is actually
    caught somewhere (currently only implicitly true because summaries are always self-generated).
 
 Beyond backend test coverage, the largest untouched piece of the spec remains the frontend
