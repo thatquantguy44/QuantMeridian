@@ -196,11 +196,24 @@ export const DEFAULT_RUN_CONFIG: RunConfig = {
   allocation_stability_penalty: 0,
 };
 
+/** Preserves the service's located-issue list (if any) alongside the error message, so callers
+ * can render exactly what was rejected instead of just a flattened string. */
+export class IbalRequestError extends Error {
+  code?: string;
+  issues: LocatedIssue[];
+  constructor(message: string, opts?: { code?: string; issues?: LocatedIssue[] }) {
+    super(message);
+    this.name = "IbalRequestError";
+    this.code = opts?.code;
+    this.issues = opts?.issues ?? [];
+  }
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const message = body?.error ?? body?.message ?? `Request failed with ${response.status}`;
-    throw new Error(message);
+    throw new IbalRequestError(message, { code: body?.code, issues: body?.issues });
   }
   return body as T;
 }
@@ -264,7 +277,10 @@ export async function exportIbalBundle(dataset: DatasetEnvelope, result: IbalRes
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error(body?.error ?? body?.message ?? `Export failed with ${response.status}`);
+    throw new IbalRequestError(body?.error ?? body?.message ?? `Export failed with ${response.status}`, {
+      code: body?.code,
+      issues: body?.issues,
+    });
   }
   return response.blob();
 }

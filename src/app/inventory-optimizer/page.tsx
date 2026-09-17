@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Play, RefreshCw, Upload } from "lucide-react";
+import { Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
@@ -7,6 +8,7 @@ import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import {
   DEFAULT_RUN_CONFIG,
   DEFAULT_SYNTHETIC_CONFIG,
+  IbalRequestError,
   exportIbalBundle,
   generateSyntheticDataset,
   getIbalHealth,
@@ -17,10 +19,13 @@ import {
   type IbalConstraint,
   type IbalHealth,
   type IbalResult,
+  type LocatedIssue,
   type RunConfig,
   type SyntheticConfig,
 } from "@/lib/inventoryOptimizer";
 import { fmtAbbr, fmtInt, fmtPct, fmtUsdAbbr } from "@/lib/format";
+
+type PendingAction = { kind: "synthetic" } | { kind: "upload"; file: File };
 
 function pctFromDecimal(value: number) {
   return fmtPct(value * 100, 2);
@@ -43,6 +48,13 @@ export default function InventoryOptimizerPage() {
   const [runConfig, setRunConfig] = useState<RunConfig>(DEFAULT_RUN_CONFIG);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [actionIssues, setActionIssues] = useState<LocatedIssue[]>([]);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+
+  // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
+  // take priority since they explain what just went wrong; otherwise fall back to the prepared
+  // dataset's own validation issues, if any.
+  const issuesToShow = actionIssues.length > 0 ? actionIssues : dataset?.validation.issues ?? [];
 
   useEffect(() => {
     getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
@@ -69,6 +81,13 @@ export default function InventoryOptimizerPage() {
     { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_codes?.slice(0, 2).join(", ") || "-"}</span>, sortVal: (row) => row.reason_codes?.[0] ?? "" },
   ];
 
+  const issueColumns: Column<LocatedIssue>[] = [
+    { key: "severity", header: "Severity", align: "center", render: (row) => <Tag tone={row.severity === "warning" ? "amber" : "down"}>{row.severity ?? "error"}</Tag>, sortVal: (row) => (row.severity === "warning" ? 0 : 1) },
+    { key: "code", header: "Code", render: (row) => <span className="font-mono text-term-text">{row.code}</span>, sortVal: (row) => row.code },
+    { key: "location", header: "Location", render: (row) => <span className="text-term-text-dim">{row.location}</span>, sortVal: (row) => row.location },
+    { key: "message", header: "Message", render: (row) => <span className="text-term-text-mute">{row.message}</span>, sortVal: (row) => row.message },
+  ];
+
   const constraintColumns: Column<IbalConstraint>[] = [
     { key: "kind", header: "Kind", render: (row) => <span className="text-term-text">{row.row.kind}</span>, sortVal: (row) => row.row.kind },
     { key: "scope", header: "Scope", render: (row) => <span className="text-term-text-dim">{row.row.scope_id}</span>, sortVal: (row) => row.row.scope_id },
@@ -77,9 +96,10 @@ export default function InventoryOptimizerPage() {
     { key: "dual", header: "Dual", align: "right", render: (row) => fmtAbbr(row.dual_value ?? 0), sortVal: (row) => row.dual_value ?? 0 },
   ];
 
-  async function refreshSynthetic() {
+  async function doRefreshSynthetic() {
     setBusy(true);
     setMessage(null);
+    setActionIssues([]);
     try {
       const next = await generateSyntheticDataset(synthetic);
       setDataset(next);
@@ -87,30 +107,16 @@ export default function InventoryOptimizerPage() {
       setMessage(`Prepared ${next.source.mode} dataset ${next.request_hash.slice(0, 12)}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Synthetic dataset failed.");
+      if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       setBusy(false);
     }
   }
 
-  async function solveCurrent() {
-    if (!dataset) return;
+  async function doUploadFile(file: File) {
     setBusy(true);
     setMessage(null);
-    try {
-      const response = await runIbal(dataset, runConfig);
-      setResult(response.result);
-      setMessage(`Run ${response.result.run_id} returned ${response.result.status}.`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Run failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function uploadFile(file: File | null) {
-    if (!file) return;
-    setBusy(true);
-    setMessage(null);
+    setActionIssues([]);
     try {
       const next = await uploadIbalDataset(file);
       setDataset(next);
@@ -118,6 +124,58 @@ export default function InventoryOptimizerPage() {
       setMessage(`Uploaded ${next.source.filename ?? file.name}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Upload failed.");
+      if (error instanceof IbalRequestError) setActionIssues(error.issues);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Preparing a new dataset always discards whatever is currently prepared/solved, so gate both
+  // entry points behind a confirmation once there's something to lose.
+  function refreshSynthetic() {
+    if (dataset) {
+      setPendingAction({ kind: "synthetic" });
+      return;
+    }
+    void doRefreshSynthetic();
+  }
+
+  function uploadFile(file: File | null) {
+    if (!file) return;
+    if (dataset) {
+      setPendingAction({ kind: "upload", file });
+      return;
+    }
+    void doUploadFile(file);
+  }
+
+  function confirmPendingAction() {
+    const action = pendingAction;
+    setPendingAction(null);
+    if (!action) return;
+    if (action.kind === "synthetic") void doRefreshSynthetic();
+    else void doUploadFile(action.file);
+  }
+
+  function resetAll() {
+    setDataset(null);
+    setResult(null);
+    setMessage(null);
+    setActionIssues([]);
+  }
+
+  async function solveCurrent() {
+    if (!dataset) return;
+    setBusy(true);
+    setMessage(null);
+    setActionIssues([]);
+    try {
+      const response = await runIbal(dataset, runConfig);
+      setResult(response.result);
+      setMessage(`Run ${response.result.run_id} returned ${response.result.status}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Run failed.");
+      if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       setBusy(false);
     }
@@ -127,6 +185,7 @@ export default function InventoryOptimizerPage() {
     if (!dataset || !result) return;
     setBusy(true);
     setMessage(null);
+    setActionIssues([]);
     try {
       const blob = await exportIbalBundle(dataset, result);
       const url = URL.createObjectURL(blob);
@@ -138,6 +197,7 @@ export default function InventoryOptimizerPage() {
       setMessage("Export bundle created.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Export failed.");
+      if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       setBusy(false);
     }
@@ -219,6 +279,9 @@ export default function InventoryOptimizerPage() {
                   <input className="hidden" type="file" accept=".json,.xlsx" onChange={(event) => uploadFile(event.target.files?.[0] ?? null)} />
                 </label>
               </div>
+              <button className="term-btn justify-center" disabled={!dataset || busy} onClick={resetAll}>
+                <RotateCcw size={13} /> Reset
+              </button>
             </div>
           </Panel>
 
@@ -232,7 +295,7 @@ export default function InventoryOptimizerPage() {
                 Minimum entity confidence
                 <input type="range" min={0} max={1} step={0.01} value={runConfig.minimum_entity_confidence} onChange={(event) => updateNumber(setRunConfig, runConfig, "minimum_entity_confidence", event.target.value)} />
               </label>
-              <button className="term-btn justify-center border-term-amber text-term-amber" disabled={!dataset || busy} onClick={solveCurrent}>
+              <button className="term-btn justify-center border-term-amber text-term-amber" disabled={!dataset || !dataset.validation.valid || busy} onClick={solveCurrent}>
                 <Play size={13} /> Run
               </button>
               <button className="term-btn justify-center" disabled={!dataset || !result || busy} onClick={exportBundle}>
@@ -243,7 +306,15 @@ export default function InventoryOptimizerPage() {
         </div>
 
         <div className="flex min-h-0 flex-col gap-2">
-          <Panel title="Dataset Summary" code={dataset?.request_hash.slice(0, 10) ?? "EMPTY"} right={<Tag tone={dataset?.validation.valid ? "up" : "neutral"}>{dataset?.validation.valid ? "VALID" : "NO DATA"}</Tag>}>
+          <Panel
+            title="Dataset Summary"
+            code={dataset?.request_hash.slice(0, 10) ?? "EMPTY"}
+            right={
+              <Tag tone={!dataset ? "neutral" : dataset.validation.valid ? "up" : "down"}>
+                {!dataset ? "NO DATA" : dataset.validation.valid ? "VALID" : "INVALID"}
+              </Tag>
+            }
+          >
             <div className="grid grid-cols-2 divide-x divide-term-border md:grid-cols-4">
               <Stat label="Inventory Rows" value={fmtInt(dataset?.summary.row_counts.inventory ?? 0)} />
               <Stat label="Route Rows" value={fmtInt(dataset?.summary.row_counts.routes ?? 0)} />
@@ -251,6 +322,17 @@ export default function InventoryOptimizerPage() {
               <Stat label="Source" value={dataset?.source.mode.toUpperCase() ?? "-"} sub={dataset?.source.filename ?? (dataset?.source.seed != null ? `seed ${dataset.source.seed}` : undefined)} />
             </div>
           </Panel>
+
+          {issuesToShow.length > 0 && (
+            <Panel
+              title="Issues"
+              code="ISSUES"
+              accent
+              right={<Tag tone="down">{issuesToShow.length} {issuesToShow.length === 1 ? "issue" : "issues"}</Tag>}
+            >
+              <DataGrid columns={issueColumns} rows={issuesToShow} rowKey={(row, i) => `${row.code}-${row.location}-${i}`} maxHeight="200px" initialSort={{ key: "severity", dir: "desc" }} zebra />
+            </Panel>
+          )}
 
           <Panel title="Allocations" code="ALLOC" right={<Tag tone={result ? "up" : "neutral"}>{fmtAbbr(totals.allocationIncrease - totals.allocationDecrease)} net</Tag>}>
             <DataGrid columns={allocationColumns} rows={result?.allocations ?? []} rowKey={(row) => row.route_id} maxHeight="360px" initialSort={{ key: "delta", dir: "desc" }} zebra />
@@ -271,6 +353,24 @@ export default function InventoryOptimizerPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingAction !== null}
+        title="Replace prepared dataset?"
+        body={
+          <>
+            {result
+              ? "There is a completed run that hasn't been exported yet. "
+              : "There is a prepared dataset that hasn't been run yet. "}
+            {pendingAction?.kind === "upload"
+              ? `Uploading "${pendingAction.file.name}" will replace it.`
+              : "Generating a new synthetic dataset will replace it."}
+          </>
+        }
+        confirmLabel="Replace"
+        onConfirm={confirmPendingAction}
+        onCancel={() => setPendingAction(null)}
+      />
     </div>
   );
 }
