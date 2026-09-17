@@ -23,26 +23,62 @@ conversion, NEWS persistence, and CPI component expansion. Detailed source docs 
 
 ## Current State
 
-IBAL / InventoryBallast integration is in PR #119 on `feature/ibal-inventory-optimizer`. The
-checkpoint adds a separate `IBAL` module at `/inventory-optimizer`, a pinned Python FastAPI
-service under `services/inventory_optimizer_api`, server-only proxy routes at
-`/api/inventory-optimizer/*`, synthetic/upload dataset preparation, solve invocation, and result
-bundle export. The existing `/optimization` / `OPT` page remains untouched.
+IBAL / InventoryBallast integration scaffold (PR #119) and its docs checkpoint (PR #120) are both
+merged to `main`. The `feature/ibal-inventory-optimizer` branch adds a separate `IBAL` module at
+`/inventory-optimizer`, a pinned Python FastAPI service under `services/inventory_optimizer_api`,
+server-only proxy routes at `/api/inventory-optimizer/*`, synthetic/upload dataset preparation,
+solve invocation, and result bundle export. The existing `/optimization` / `OPT` page remains
+untouched.
 
 The source-of-truth spec and task map live in the InventoryBallast repo at
 `specs/0013-market-terminal-integration/`; this Market Terminal handoff records only the terminal
-branch state. As of this update, Python service tests pass (`5 passed`, one upstream Starlette
-deprecation warning). `npm run typecheck` is still blocked by existing unrelated TypeScript errors
-in older econ/market modules plus sandbox denial writing `tsconfig.tsbuildinfo`. PR #119 was marked
-ready for review and GitHub reported it mergeable; Vercel was failing and two CI `verify` jobs were
-still in progress when checked.
+branch state. Both `verify` CI and Vercel have been failing on `main` across the last three merges
+(PR #118-#120); by explicit owner direction this is being deferred while IBAL work stays local-only
+-- no CI/Vercel fix is planned as part of this workstream right now.
 
-Immediate IBAL priorities: inspect/repair Vercel and any CI failures, add direct-facade parity and
-status/error matrix tests, finish upload rejection/property/redaction coverage, complete the
-workbench state machine/result tabs/dirty confirmation flows, wire Data Ops health and env/runbook
-docs, then run browser-to-solver E2E and screenshots before any production enablement. Production
-remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly
-configured.
+Python service test coverage is now tracked in a master validation document:
+**`services/inventory_optimizer_api/tests/VALIDATION.md`** -- keep that file, not this paragraph,
+current going forward. It indexes every test file by what it protects, documents the shared
+edge-case framework (`tests/edge_cases.py`: named boundary-value `SyntheticConfig`s plus a
+Hypothesis-strategy pattern for sweeping cross-field combinations), maps AC-001 through AC-024 to
+concrete covering tests with a DONE/PARTIAL/TODO status, and keeps a running "bugs found and
+fixed" log with the *pattern* behind each bug, not just the instance. Suite is now `122 passed`,
+0 failed, 0 xfail/skip, `ruff check tests/` clean.
+
+Three real bugs were found and fixed via this test-writing pass (full detail + patterns in
+VALIDATION.md's "Bugs found and fixed" section): (1) XLSX/JSON starter templates were not
+hash-identical because `fee_rate`/`elasticity` were generated unrounded in `synthetic.py`, losing
+precision through XLSX float serialization -- fixed by rounding to 6dp like every other synthetic
+field, and dropping a redundant unread `metadata` key; (2) independently-valid
+`starting_utilization`/`reserve_fraction`/`utilization_cap` values could combine to produce
+negative `available_to_lend_shares` and `current > maximum` routes -- found immediately by the new
+edge-case framework's `EDGE_MAX_EVERYTHING` boundary config, fixed by also capping
+`starting_utilization` against the room `reserve_fraction` leaves behind; (3) the generic
+`RequestValidationError` handler in `app.py` crashed on *every* malformed request body across
+*every* endpoint (wrong type, extra field, missing field, malformed JSON), silently downgrading
+what should be a `422 REQUEST_CONTRACT_INVALID` into a generic `500` -- FastAPI's own
+`RequestValidationError.errors()` takes no keyword arguments in the pinned 0.116.1, unlike
+pydantic's `ValidationError.errors()` the handler was written against. This was invisible until a
+test finally sent a body that failed FastAPI's own parsing layer. Fixed, and pinned broadly across
+endpoints/shapes in `test_request_validation.py` so it can't silently regress again.
+
+`test_economics.py` (AC-014) was added next: every `economics` total in a solved result is
+reconstructed from raw allocation/route/inventory data and checked against the engine's own
+numbers, not just internal component-sum bookkeeping. The `fee_revenue`/`transition_cost` formulas
+were not documented anywhere and had to be reverse-engineered empirically against real solved
+results first (documented in the test file's module docstring) -- no bug found here, but the
+formula-verification-before-asserting approach is itself recorded in VALIDATION.md as a pattern to
+repeat for other engine-owned computed fields.
+
+Remaining IBAL priorities, in order: (1) backend test gaps listed in VALIDATION.md's "Next up"
+(AC-016 full export byte-parity, AC-019 health matrix, AC-021 benchmark harness, AC-010 dataset
+summary adversarial test); (2) frontend workbench -- `src/app/inventory-optimizer/page.tsx` is still a
+shell; the spec's T-010-T-012 reducer/state machine, result tabs (Allocations/Balances/Demand/
+Economics/Constraints/Diagnostics/Raw), dirty confirmation, and session-only result handling are
+not built; (3) Data Ops health + env/runbook docs (T-013/T-014); (4) browser-to-solver E2E and
+Playwright screenshots before any production enablement. Production remains off unless
+`IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly configured. CI/Vercel repair
+stays out of scope until the owner asks for it.
 
 Tier A production routes for econ, chart, and market data have been hardened to
 read the Gold DB or return explicit `ERR`/empty states. The old silent fallback

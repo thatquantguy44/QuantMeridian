@@ -46,6 +46,7 @@ backend/.venv/
 services/**/.venv/
 **/__pycache__/
 *.pyc
+.hypothesis/
 
 # test artifacts
 /test-results/
