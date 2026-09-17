@@ -11,6 +11,22 @@ half (registering Market Terminal in QuantSmith's own downstream-repo list,
 which requires editing the separate `QuantSmith` GitHub repo) and Phase 3
 (deciding on items 3/4 below) remain open.
 
+**2026-09-17 revisit:** the original Non-Goals ruled QuantSmith's
+optimization/portfolio/trading agent families out of scope on the premise
+that "Market Terminal is a display/analytics terminal, not a trading or
+portfolio system." That premise no longer fully holds — `IBAL`
+(InventoryBallast) shipped since this spec was written: a real, pinned
+MILP/QP securities-lending inventory optimizer living inside this repo (see
+`services/inventory_optimizer_api/tests/VALIDATION.md`,
+`src/app/inventory-optimizer/`). The general optimization/trading/portfolio
+Non-Goal is reaffirmed as still correct — Market Terminal is not becoming a
+trading or portfolio system — but a narrow, IBAL-specific exception is added
+as candidate synergy item 6 below: registering IBAL with QuantSmith's model
+plugin adapter (spec `0026`), which is purpose-built for exactly this case
+("route work to a model an adopter has already built internally... without
+reimplementing it inside this SDK"). Not yet approved for implementation —
+see item 6 and the updated Decisions Before Implementation table.
+
 ## Owner
 
 Joshua Lutkemuller / Market Terminal
@@ -232,6 +248,65 @@ definitions and provenance) and have different access-control needs
 integration is proposed here. Noted only so a future contributor doesn't
 assume the two stores should become one.
 
+### 6. Register IBAL as a QuantSmith model plugin (spec `0026`) — added 2026-09-17
+
+Added on revisit; not covered by the original Phase 0 audit, since `IBAL`
+did not exist when this spec was written.
+
+QuantSmith's `agents/optimization/` group ships its own built-in solver
+formulations (LP, MILP, QP, conic, nonlinear, global, stochastic, robust,
+DP, network flow) plus `inventory_supply_chain/` and
+`solver_diagnostics_sensitivity/` review roles — the general "optimization
+toolkit" family the original Non-Goals correctly excludes. Separately,
+`adapters/model_plugin/` (spec `0026`) exists specifically so a workflow can
+route to **a model an adopter has already built internally** instead of that
+model being reimplemented inside the SDK: a registration-manifest contract
+with three invocation profiles (Python callable, REST endpoint, CLI binary),
+resolved through a local, gitignored `model_plugins.yml` at the QuantSmith
+repo root (real model/endpoint specifics never enter the QuantSmith repo,
+tracked/staged copies are gate-blocked), reviewed by
+`agents/optimization/model_plugin_registration/`, which produces an
+honestly-bounded understanding brief — every declared capability labeled a
+*claim*, not a verified fact.
+
+`IBAL`'s FastAPI service (`services/inventory_optimizer_api`,
+`/v1/datasets/synthetic`, `/v1/runs`, `/v1/exports/result-tables`, `/health`,
+`/v1/capabilities`) is a clean fit for the REST-endpoint invocation profile
+as-is — no new surface required on the Market Terminal side.
+
+This is **not** a proposal to adopt QuantSmith's own securities-lending
+runtime (spec `0023`, `sec_lending_workflow.py`). That pipeline is a lighter,
+research/demo-oriented LP-with-greedy-fallback optimizer with heuristic ML
+and synthetic/SQL seed data — built to exercise the agentic-quant pattern,
+not a production engine. `IBAL` is materially more mature on every axis that
+matters here (pinned MILP/QP engine, full domain/reconciliation validation,
+176 backend tests per `tests/VALIDATION.md`). Nothing about item 6 touches
+or replaces `IBAL`'s own solve authority; QuantSmith would only ever *review
+or report on* an `IBAL` result it independently invoked, never recompute or
+override one.
+
+Two things currently block this from being more than a scoped plan:
+
+- Spec `0026` itself ships **no executable dispatcher** — Non-Goals there
+  say so explicitly ("a future spec may add an executable dispatcher... once
+  a concrete invocation target exists to build and test against"). `IBAL`
+  would be the first concrete invocation target, but building the dispatcher
+  is QuantSmith-repo work, not Market Terminal work.
+- Every existing Non-Goal below still applies: no merged codebase, no
+  `pip install quantsmith` inside Market Terminal's Node server, and any
+  number a QuantSmith agent reports about an `IBAL` run must be independently
+  re-resolved against `IBAL`'s own API response before Market Terminal (or
+  anyone) treats it as fact — the same borrowed-authority guardrail Phase 2's
+  narrative pilot exists to enforce.
+
+Proposed narrow first pilot, once approved: register `IBAL` in a local
+`model_plugins.yml` (QuantSmith side, gitignored, per the existing template
+pattern), run `model_plugin_registration` against it to produce the
+understanding brief, and — since no dispatcher exists yet — invoke `IBAL`'s
+REST API manually/by script from outside both repos' runtimes to produce one
+real reviewed run, mirroring Phase 2's manual, one-off pilot shape rather
+than wiring live automation on the first attempt.
+
 ## Explicit Non-Goals
 
 - No merged codebase, shared process, or shared deploy target. QuantSmith
@@ -254,6 +329,17 @@ assume the two stores should become one.
   `0007`/`0012`/`0013`/`0034`-`0036`/`0044`/`0046`) are out of scope. Market
   Terminal is a display/analytics terminal, not a trading or portfolio system,
   and taking on that surface is a separate decision this spec does not make.
+  **Reaffirmed on the 2026-09-17 revisit** — `IBAL` existing does not change
+  this: Market Terminal is still not adopting QuantSmith's general
+  optimization/portfolio/trading agents to *build* anything new. The one
+  narrow exception is item 6 (`0026` model-plugin registration), which
+  connects an already-built, already-pinned, already-validated engine to a
+  review/reporting layer — it does not import solver logic, formulation
+  agents, or portfolio-construction agents into Market Terminal, and `IBAL`'s
+  own optimization stays entirely outside QuantSmith's authority.
+- QuantSmith's own securities-lending runtime (spec `0023`,
+  `sec_lending_workflow.py`) is explicitly not adopted, in whole or in part —
+  `IBAL` already solves this problem at a higher standard of rigor. See item 6.
 - No direct posting, alert delivery, or external notification ships as a side
   effect of this spec. Any alert-delivery use (item 3) still requires the same
   human-approval gate `MPUB`'s Publish workspace already requires for external
@@ -332,16 +418,36 @@ Phase 3, not yet proven unattended enough to wire into `MPUB` live.
   a material-change detector (item 3) or a `DashboardSpec` chart-authoring
   adapter (item 4) is worth building, each requiring its own spec.
 
+### Phase 4: IBAL model-plugin pilot (item 6) — scoped 2026-09-17, not started
+
+- Owner confirmed the boundary is worth revisiting for `IBAL` specifically
+  (this document's 2026-09-17 revisit note); not yet a go on implementation.
+- Blocked on QuantSmith shipping spec `0026`'s executable dispatcher (that
+  repo's own open work, not Market Terminal's) — or, to unblock sooner,
+  running the first pilot invocation manually/by script per item 6's
+  "proposed narrow first pilot," matching how Phase 2 stayed manual before
+  any automation was justified.
+- When run: register `IBAL` in QuantSmith's local `model_plugins.yml`,
+  produce one `model_plugin_registration` understanding brief, invoke `IBAL`
+  for one real solve, and independently re-verify every number the agent
+  reports about that run against `IBAL`'s own API response before writing up
+  findings — same discipline as `PHASE2_PILOT_VERIFICATION.md`.
+- Deliverable: a written pilot report (mirroring Phase 2's shape), not a
+  shipped feature or live wiring, until that pilot itself recommends further
+  investment.
+
 ## Decisions Before Implementation
 
 | Decision | Recommendation |
 | --- | --- |
 | Runtime boundary | QuantSmith never runs inside Market Terminal's Node/Vite process; artifact/API boundary only |
-| Numeric trust | Every number from a QuantSmith artifact is re-resolved against `GoldStore` or dropped; never displayed as-is |
+| Numeric trust | Every number from a QuantSmith artifact is re-resolved against `GoldStore` (or, for item 6, against `IBAL`'s own API response) or dropped; never displayed as-is |
 | First pilot package | Pre-Market Brief (`MPUB`), narrowest package type in spec004 |
 | First pilot agent | `morning_brief_writer` or `macro_backdrop_summarizer` |
 | News/commentary sources | Treated as Tier B live exception category, still requires its own spec004 Source Gate decision |
-| Trading/portfolio/backtest agent families | Out of scope for Market Terminal entirely |
+| Trading/portfolio/backtest agent families | Out of scope for Market Terminal entirely — reaffirmed on the 2026-09-17 revisit; the only exception is item 6, which does not import solver/formulation/portfolio-construction agents, only a review layer over an already-built, already-pinned engine |
+| QuantSmith's own securities-lending runtime (spec `0023`) | Not adopted; `IBAL` already solves this at a higher standard of rigor (item 6) |
+| IBAL as a QuantSmith model plugin (spec `0026`, item 6) | Boundary revisit approved; implementation blocked on spec `0026`'s dispatcher (QuantSmith-side) or a manual first pilot (Phase 4) |
 | Version tracking | Adopt spec `0047`'s downstream-consumer pattern even without a Python package install |
 | Alerting | Reference architecture only in Phase 0-2; no delivery wiring until a later spec |
 
@@ -363,6 +469,14 @@ Phase 3, not yet proven unattended enough to wire into `MPUB` live.
   integrates this provider" as equivalent to Market Terminal approval. It is
   not — spec004's Source Gate applies regardless of what QuantSmith already
   trusts.
+- **Model-plugin scope creep (item 6):** registering `IBAL` as reviewable
+  should not be read as license for QuantSmith's optimization agents to
+  modify, re-tune, or "improve" `IBAL`'s formulation — they may only review
+  or report on a result `IBAL` itself produced. Real IBAL book/request data
+  must stay out of QuantSmith's repository even in the gitignored local
+  `model_plugins.yml`; use synthetic or already-public example data for any
+  pilot, matching `IBAL`'s own `tests/edge_cases.py` synthetic fixtures rather
+  than a real book.
 
 ## Related Documents
 
@@ -370,6 +484,9 @@ Phase 3, not yet proven unattended enough to wire into `MPUB` live.
 - `docs/specs/spec005/PHASE2_PILOT_DRAFT.md` (Phase 2 raw agent draft, unverified)
 - `docs/specs/spec005/PHASE2_PILOT_VERIFICATION.md` (Phase 2 verification report and findings)
 - `docs/specs/spec004/SPEC.md` (`MPUB`, the primary consumer for item 2/3/4)
+- `services/inventory_optimizer_api/tests/VALIDATION.md` (`IBAL`'s own backend
+  test/validation status, primary source for item 6)
+- `docs/handoff.md` (`IBAL` narrative and current state)
 - `docs/features/GOLD_DB_MIGRATION_HANDOFF.md`
 - `docs/gold-db/README.md`, `docs/gold-db/MODULE_DATA_AUDIT.md`
 - `../agentic_workflows/qf_workflow_sdk_public/README.md`
@@ -378,3 +495,9 @@ Phase 3, not yet proven unattended enough to wire into `MPUB` live.
 - `../agentic_workflows/qf_workflow_sdk_public/specs/0059-morning-market-brief/spec.md`
 - `../agentic_workflows/qf_workflow_sdk_public/agents/economists/README.md`
 - `../agentic_workflows/qf_workflow_sdk_public/instructions/engineering_principles.md`
+- `../agentic_workflows/qf_workflow_sdk_public/specs/0026-model-plugin-adapter/spec.md`
+  (item 6's mechanism)
+- `../agentic_workflows/qf_workflow_sdk_public/specs/0023-securities-lending-workflow/spec.md`
+  (the runtime item 6 explicitly does not adopt)
+- `../agentic_workflows/qf_workflow_sdk_public/agents/optimization/README.md`
+  (the general toolkit that stays out of scope)
