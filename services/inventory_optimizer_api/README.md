@@ -3,7 +3,11 @@
 This companion service is the only QuantMeridian boundary allowed to construct, validate, solve,
 or export InventoryBallast data. It pins InventoryBallast commit
 `74737e53bf9821089c6aa2aeca5dffc4e67c81b7` and fails readiness if the installed package identity
-or HiGHS backend does not match the checked capability manifest.
+does not match the checked capability manifest or no supported solver backend is installed.
+
+Market Terminal does not require `highspy` by default. The service can solve LP/MIP runs through
+SciPy's HiGHS wrappers, while QP runs require installing the optional `highs` extra because IBAL's
+QP adapter is owned by `highspy`.
 
 ## Local run
 
@@ -12,6 +16,12 @@ python3.11 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 INVENTORY_OPTIMIZER_API_TOKEN=local-only-change-me \
   .venv/bin/uvicorn inventory_optimizer_api.app:app --host 127.0.0.1 --port 8013
+```
+
+For full LP/MIP/QP coverage, install the optional HiGHS binding:
+
+```bash
+.venv/bin/pip install -e ".[dev,highs]"
 ```
 
 Port `8013` matches `src/lib/server/inventoryOptimizerProxy.ts`'s default

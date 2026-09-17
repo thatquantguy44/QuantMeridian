@@ -9,13 +9,14 @@ from inventory_optimizer.config import InventoryOptimizerConfig
 from inventory_optimizer.domain.requests import OptimizationRequest
 from inventory_optimizer.domain.results import OptimizationResult
 from inventory_optimizer.facade import InventoryOptimizer
+from inventory_optimizer.formulation.compiler_support import needs_qp
 from inventory_optimizer.platform import PlatformInvocationContext
 from inventory_optimizer.reporting.tables import result_tables
 from inventory_optimizer.validation import validate_request
 from pydantic import ValidationError
 
 from .canonical import canonical_hash, canonical_json
-from .capabilities import require_compatible_engine
+from .capabilities import engine_identity, require_compatible_engine
 from .config_adapter import RunConfigurationError, engine_overrides
 from .contracts import (
     DatasetEnvelope,
@@ -26,6 +27,7 @@ from .contracts import (
     ValidationReport,
 )
 from .datasets import summarize
+from .scipy_highs_backend import ScipyHighsBackend
 
 
 class DatasetValidationError(ValueError):
@@ -89,6 +91,17 @@ def validation_report(dataset: DatasetEnvelope, *, max_staleness_hours: float = 
     return ValidationReport(valid=True)
 
 
+def _optimizer(config: InventoryOptimizerConfig) -> InventoryOptimizer:
+    identity = engine_identity()
+    if identity["active_backend"] == "highs":
+        return InventoryOptimizer(config=config)
+    if needs_qp(config):
+        raise RuntimeError("QP solves require the optional highspy backend")
+    if identity["active_backend"] == "scipy_highs":
+        return InventoryOptimizer(config=config, backend=ScipyHighsBackend())
+    raise RuntimeError("no supported optimizer solver backend is installed")
+
+
 def solve(run: RunRequest, *, correlation_id: str, idempotency_key: str) -> RunResponse:
     require_compatible_engine()
     request = validated_request(
@@ -120,7 +133,7 @@ def solve(run: RunRequest, *, correlation_id: str, idempotency_key: str) -> RunR
         platform_tenant_id=request.desk_context.platform_tenant_id if request.desk_context else None,
         actor_reference=None,
     )
-    result = InventoryOptimizer(config=config).optimize(request, platform=context)
+    result = _optimizer(config).optimize(request, platform=context)
     return RunResponse(
         source=run.dataset.source,
         request_hash=run.dataset.request_hash,

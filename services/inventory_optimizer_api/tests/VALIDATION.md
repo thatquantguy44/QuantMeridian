@@ -8,7 +8,7 @@ actual test suite in this repo.
 
 Run everything: `cd services/inventory_optimizer_api && .venv/bin/python -m pytest -q`
 Lint: `.venv/bin/python -m ruff check tests/`
-Current state: **176 passed**, 0 failed, 0 xfail/skip. Every backend item in this document's
+Current state: **182 passed**, 0 failed, 0 xfail/skip. Every backend item in this document's
 coverage map is now DONE or PARTIAL-for-frontend-reasons-only; the only remaining gaps are
 frontend/E2E scope (see "Next up").
 
@@ -33,7 +33,7 @@ source layout first.
 | `test_economics.py` | 18 | Every `economics` total reconstructed from raw allocation/route/inventory data and checked against a real solved result -- not just internal component-sum bookkeeping, but that `fee_revenue`/`transition_cost` actually reconcile to the notional math, across day-count bases and at boundary configs. |
 | `test_exports.py` | 19 | Export bundle contents are exactly the expected files; `normalized-input.json`/`raw-result.json`/`validation-report.json` round-trip exactly; every result-table CSV, read back, matches `reporting.tables.result_tables()` cell-for-cell for the same result; `_table_csv` escaping/`None`/float-precision edge cases tested directly. |
 | `test_benchmark.py` | 10 | Runs the benchmark harness (see below), writes the retained runtime manifest, and asserts every operation's p95 stays under a generous sanity threshold -- catches a severe (10x+) performance regression, not day-to-day machine noise. |
-| `test_health.py` | 14 | `engine_identity()`'s full mismatch matrix (wrong package version, package not found, missing backend, wrong commit), `/health`'s ready/unready + `error_category` reflect it exactly, `/v1/capabilities`' `engine_compatible` tracks it too, and `solve()`/`require_compatible_engine()` actually refuse to run on a real (not monkeypatched) mismatch. |
+| `test_health.py` | 19 | `engine_identity()`'s full mismatch matrix (wrong package version, package not found, solver-backend fallback/missing, wrong commit), `/health`'s ready/unready + `error_category` reflect it exactly, `/v1/capabilities`' `engine_compatible` and formulation list track it too, and `solve()`/`require_compatible_engine()` actually route or refuse through real service code instead of monkeypatching solve itself. |
 | `test_dataset_summary_integrity.py` | 11 | Regression suite for a real gap this file found: a tampered `DatasetEnvelope.summary` (left `request`/`request_hash` untouched) was previously accepted by `solve()`/`export_bundle()` unnoticed. See "Bugs found" below. |
 
 Shared infrastructure (not test files themselves, collected as 0 tests):

@@ -13,11 +13,15 @@ dependencies = [
   "openpyxl==3.1.5",
   "pydantic==2.11.7",
   "python-multipart==0.0.20",
+  "scipy==1.18.1",
   "uvicorn[standard]==0.35.0",
-  "inventory-optimizer[highs] @ git+https://github.com/thatquantguy44/InventoryBallast.git@74737e53bf9821089c6aa2aeca5dffc4e67c81b7",
+  "inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@74737e53bf9821089c6aa2aeca5dffc4e67c81b7",
 ]
 
 [project.optional-dependencies]
+highs = [
+  "highspy==1.15.1",
+]
 dev = [
   "httpx==0.28.1",
   "hypothesis==6.138.2",
