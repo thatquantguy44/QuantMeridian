@@ -63,7 +63,7 @@ const DATASET_TABS: { value: DatasetTab; label: string }[] = [
   { value: "raw", label: "Raw" },
 ];
 
-type WhatIfScenarioId = "base" | "scarce" | "specials" | "concentration" | "confidence" | "capacity";
+type WhatIfScenarioId = string;
 
 interface WhatIfScenario {
   id: WhatIfScenarioId;
@@ -72,6 +72,7 @@ interface WhatIfScenario {
   synthetic?: Partial<SyntheticConfig>;
   runConfig?: Partial<RunConfig>;
   seedOffset?: number;
+  isCustom?: boolean;
 }
 
 interface WhatIfResult {
@@ -335,6 +336,8 @@ export default function InventoryOptimizerPage() {
   const [whatIfResults, setWhatIfResults] = useState<WhatIfResult[]>([]);
   const [scenarioBusy, setScenarioBusy] = useState(false);
   const [selectedWhatIfId, setSelectedWhatIfId] = useState<WhatIfScenarioId | null>(null);
+  const [customScenarios, setCustomScenarios] = useState<WhatIfScenario[]>([]);
+  const [customShockLabel, setCustomShockLabel] = useState("");
 
   // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
@@ -469,6 +472,28 @@ export default function InventoryOptimizerPage() {
         : null;
   const runButtonLabel = !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
   const scenarioSet = useMemo(() => new Set(selectedScenarioIds), [selectedScenarioIds]);
+  const allScenarios = useMemo(() => [...WHAT_IF_SCENARIOS, ...customScenarios], [customScenarios]);
+
+  // A custom shock is a full snapshot of whatever is currently dialed into the Dataset Intake
+  // and Run Config forms -- reusing that form as the shock editor instead of building a second,
+  // parallel field picker. The full config (not a partial override) is stored so the shock always
+  // replays exactly what was captured, regardless of later edits to the live form.
+  function addCustomShock() {
+    const label = customShockLabel.trim();
+    if (!label) return;
+    const id = `custom-${Date.now()}`;
+    setCustomScenarios((current) => [
+      ...current,
+      { id, label, desc: "Custom shock: snapshot of the form settings at the time it was saved.", synthetic: { ...synthetic }, runConfig: { ...runConfig }, isCustom: true },
+    ]);
+    setSelectedScenarioIds((current) => (current.includes(id) ? current : [...current, id]));
+    setCustomShockLabel("");
+  }
+
+  function removeCustomShock(id: WhatIfScenarioId) {
+    setCustomScenarios((current) => current.filter((scenario) => scenario.id !== id));
+    setSelectedScenarioIds((current) => current.filter((value) => value !== id));
+  }
 
   const inventoryPreviewColumns: Column<IbalInventoryRow>[] = [
     { key: "id", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
@@ -751,26 +776,58 @@ export default function InventoryOptimizerPage() {
     }
   }
 
+  // Exports whichever result is currently on screen (the plain Base Case Run, or the selected
+  // What If scenario) rather than always the raw base run, so the download matches what the user
+  // is actually looking at.
   async function exportBundle() {
-    if (!dataset || !result) return;
+    if (!viewDataset || !viewResult) return;
     setBusy(true);
     setMessage(null);
     setActionIssues([]);
     try {
-      const blob = await exportIbalBundle(dataset, result);
+      const blob = await exportIbalBundle(viewDataset, viewResult);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = "ibal-result-bundle.zip";
+      const slug = viewLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      anchor.download = `ibal-result-bundle-${slug || "base-case"}.zip`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setMessage("Export bundle created.");
+      setMessage(`Export bundle created for ${viewLabel}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Export failed.");
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       setBusy(false);
     }
+  }
+
+  function exportScenarioComparisonCsv() {
+    if (!whatIfResults.length) return;
+    const header = ["Scenario", "Status", "Delta Value USD", "Vs Base USD", "Fill Ratio", "Avg Utilization", "Binding Constraints", "Net Allocation Shares", "Message"];
+    const rows = whatIfResults.map((row) => {
+      const vsBase = row.totalDeltaUsd != null && baselineScenario?.totalDeltaUsd != null ? row.totalDeltaUsd - baselineScenario.totalDeltaUsd : "";
+      return [
+        row.label,
+        row.status,
+        row.totalDeltaUsd ?? "",
+        vsBase,
+        row.fillRatio ?? "",
+        row.avgUtilization ?? "",
+        row.bindingConstraints ?? "",
+        row.netAllocation ?? "",
+        row.message ?? "",
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(",");
+    });
+    const csv = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const anchor = document.createElement("a");
+    anchor.href = URL.createObjectURL(blob);
+    anchor.download = `ibal-scenario-comparison-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(anchor.href);
   }
 
   function toggleScenario(id: WhatIfScenarioId) {
@@ -804,7 +861,7 @@ export default function InventoryOptimizerPage() {
   }
 
   async function runWhatIfScenarios() {
-    const scenarios = WHAT_IF_SCENARIOS.filter((scenario) => scenarioSet.has(scenario.id));
+    const scenarios = allScenarios.filter((scenario) => scenarioSet.has(scenario.id));
     if (!scenarios.length) return;
     setScenarioBusy(true);
     setBusy(true);
@@ -819,7 +876,10 @@ export default function InventoryOptimizerPage() {
           const scenarioSynthetic = {
             ...synthetic,
             ...(scenario.synthetic ?? {}),
-            seed: synthetic.seed + (scenario.seedOffset ?? 0),
+            // Presets carry a seedOffset and no explicit seed, so they derive one from the live
+            // form; a custom shock's captured synthetic snapshot already has its own seed, which
+            // must win so the shock always replays exactly what was captured.
+            seed: scenario.synthetic?.seed ?? synthetic.seed + (scenario.seedOffset ?? 0),
           } as SyntheticConfig;
           const scenarioRunConfig = { ...runConfig, ...(scenario.runConfig ?? {}) };
           const nextDataset = await generateSyntheticDataset(scenarioSynthetic);
@@ -1014,8 +1074,8 @@ export default function InventoryOptimizerPage() {
               >
                 <Play size={13} /> {runButtonLabel}
               </button>
-              <button className="term-btn justify-center" disabled={!dataset || !result || busy} onClick={exportBundle}>
-                <Download size={13} /> Export
+              <button className="term-btn justify-center" disabled={!viewDataset || !viewResult || busy} title={`Export ${viewLabel} result bundle`} onClick={exportBundle}>
+                <Download size={13} /> Export {viewLabel}
               </button>
             </div>
           </Panel>
@@ -1031,7 +1091,7 @@ export default function InventoryOptimizerPage() {
                 Scenario runs use the synthetic generator and current run config, then apply each selected shock.
               </div>
               <div className="grid gap-1">
-                {WHAT_IF_SCENARIOS.map((scenario) => (
+                {allScenarios.map((scenario) => (
                   <label key={scenario.id} className="flex cursor-pointer items-start gap-2 border border-term-border bg-term-panel-2 px-2 py-1 hover:border-term-amber/50">
                     <input
                       className="mt-0.5"
@@ -1040,12 +1100,46 @@ export default function InventoryOptimizerPage() {
                       disabled={scenarioBusy}
                       onChange={() => toggleScenario(scenario.id)}
                     />
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block font-semibold text-term-text">{scenario.label}</span>
                       <span className="block truncate text-term-text-mute" title={scenario.desc}>{scenario.desc}</span>
                     </span>
+                    {scenario.isCustom && (
+                      <button
+                        className="mt-0.5 text-term-text-mute hover:text-term-down"
+                        disabled={scenarioBusy}
+                        title="Remove this custom shock"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          removeCustomShock(scenario.id);
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
                   </label>
                 ))}
+              </div>
+              <div className="flex items-center gap-1 border border-dashed border-term-border bg-term-panel-2 px-2 py-1">
+                <input
+                  className="min-w-0 flex-1 border border-term-border bg-term-panel px-2 py-1 text-term-text"
+                  type="text"
+                  placeholder="Custom shock name..."
+                  value={customShockLabel}
+                  disabled={scenarioBusy}
+                  onChange={(event) => setCustomShockLabel(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") addCustomShock();
+                  }}
+                />
+                <button
+                  className="term-btn justify-center border-term-blue text-term-blue"
+                  disabled={scenarioBusy || !customShockLabel.trim()}
+                  title="Save the Dataset Intake and Run Config panels' current settings as a new selectable shock"
+                  onClick={addCustomShock}
+                >
+                  Save as Shock
+                </button>
               </div>
               <button className="term-btn justify-center border-term-blue text-term-blue" disabled={busy || scenarioBusy || selectedScenarioIds.length === 0} onClick={runWhatIfScenarios}>
                 <Play size={13} /> {scenarioBusy ? "Running Scenarios..." : "Run Scenarios"}
@@ -1072,14 +1166,42 @@ export default function InventoryOptimizerPage() {
             </div>
           </Panel>
 
-          {beforeAfterAnalytics && (
+          {whatIfResults.length > 0 && (
             <Panel
-              title="Base Case Before / After"
-              code={result?.run_id.slice(0, 10) ?? "ANALYTICS"}
+              title="Scenario Comparison"
+              code="SCENARIO"
               right={
                 <span className="flex items-center gap-1">
-                  <Tag tone={result?.verification?.passed ? "up" : "amber"}>
-                    {result?.verification?.passed ? "VERIFIED" : "CHECK"}
+                  <Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "failed") ? "down" : "up"}>{scenarioBusy ? "RUNNING" : "COMPLETE"}</Tag>
+                  <button className="term-btn" disabled={scenarioBusy} title="Export this comparison table as CSV" onClick={exportScenarioComparisonCsv}>
+                    <Download size={12} /> CSV
+                  </button>
+                </span>
+              }
+            >
+              <div className="px-2 pt-2 text-3xs text-term-text-mute">Select a row to view its full results and visuals below.</div>
+              <DataGrid
+                columns={whatIfColumns}
+                rows={whatIfResults}
+                rowKey={(row) => row.id}
+                maxHeight="260px"
+                initialSort={{ key: "delta", dir: "desc" }}
+                zebra
+                onRowClick={(row) => setSelectedWhatIfId(row.id)}
+                selectedKey={selectedWhatIf?.id ?? undefined}
+              />
+            </Panel>
+          )}
+
+          {beforeAfterAnalytics && (
+            <Panel
+              title={`${viewLabel} Before / After`}
+              code={viewResult?.run_id.slice(0, 10) ?? "ANALYTICS"}
+              right={
+                <span className="flex items-center gap-1">
+                  {whatIfResults.length > 0 && <Tag tone={activeView?.isBase ? "neutral" : "blue"}>{activeView?.isBase ? "BASE CASE" : "SCENARIO"}</Tag>}
+                  <Tag tone={viewResult?.verification?.passed ? "up" : "amber"}>
+                    {viewResult?.verification?.passed ? "VERIFIED" : "CHECK"}
                   </Tag>
                   <Tag tone={beforeAfterAnalytics.warningCount > 0 ? "amber" : "neutral"}>
                     {fmtInt(beforeAfterAnalytics.warningCount)} WARN
@@ -1135,7 +1257,7 @@ export default function InventoryOptimizerPage() {
                   <Stat
                     label="Active Routes"
                     value={fmtInt(beforeAfterAnalytics.activeRouteCount)}
-                    sub={`${fmtInt(result?.allocations.length ?? 0)} total`}
+                    sub={`${fmtInt(viewResult?.allocations.length ?? 0)} total`}
                   />
                   <Stat
                     label="Binding Rows"
@@ -1144,13 +1266,13 @@ export default function InventoryOptimizerPage() {
                   />
                   <Stat
                     label="Total Delta"
-                    value={fmtUsdAbbr(result?.economics?.total_delta_usd ?? 0)}
-                    tone={(result?.economics?.total_delta_usd ?? 0) >= 0 ? "up" : "down"}
+                    value={fmtUsdAbbr(viewResult?.economics?.total_delta_usd ?? 0)}
+                    tone={(viewResult?.economics?.total_delta_usd ?? 0) >= 0 ? "up" : "down"}
                   />
                   <Stat
                     label="Status"
-                    value={result?.status.toUpperCase() ?? "-"}
-                    tone={result?.status === "optimal" ? "up" : "amber"}
+                    value={viewResult?.status.toUpperCase() ?? "-"}
+                    tone={viewResult?.status === "optimal" ? "up" : "amber"}
                   />
                 </div>
 
@@ -1249,64 +1371,6 @@ export default function InventoryOptimizerPage() {
             </Panel>
           )}
 
-          {whatIfResults.length > 0 && (
-            <Panel
-              title="What If Comparison"
-              code="SCENARIO"
-              right={<Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "failed") ? "down" : "up"}>{scenarioBusy ? "RUNNING" : "COMPLETE"}</Tag>}
-            >
-              <DataGrid
-                columns={whatIfColumns}
-                rows={whatIfResults}
-                rowKey={(row) => row.id}
-                maxHeight="260px"
-                initialSort={{ key: "delta", dir: "desc" }}
-                zebra
-                onRowClick={(row) => setSelectedWhatIfId(row.id)}
-                selectedKey={selectedWhatIf?.id ?? undefined}
-              />
-            </Panel>
-          )}
-
-          {selectedWhatIf?.result && (
-            <Panel
-              title={`Scenario Detail - ${selectedWhatIf.label}`}
-              code={selectedWhatIf.runId?.slice(0, 10) ?? "DETAIL"}
-              right={<Tag tone="blue">{fmtInt(selectedWhatIfRoutes.length)} routes</Tag>}
-            >
-              <div className="grid gap-2 p-2">
-                <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
-                  <Stat label="Scenario Delta" value={fmtUsdAbbr(selectedWhatIf.totalDeltaUsd ?? 0)} tone={(selectedWhatIf.totalDeltaUsd ?? 0) >= 0 ? "up" : "down"} />
-                  <Stat label="Fill Ratio" value={selectedWhatIf.fillRatio == null ? "-" : pctFromDecimal(selectedWhatIf.fillRatio)} />
-                  <Stat label="Avg Utilization" value={selectedWhatIf.avgUtilization == null ? "-" : pctFromDecimal(selectedWhatIf.avgUtilization)} />
-                  <Stat label="Binding Rows" value={fmtInt(selectedWhatIf.bindingConstraints ?? 0)} />
-                </div>
-                <div>
-                  <div className="term-label mb-1">Inventory Balances</div>
-                  <DataGrid
-                    columns={whatIfInventoryColumns}
-                    rows={selectedWhatIfInventory}
-                    rowKey={(row) => row.inventory_id}
-                    maxHeight="180px"
-                    initialSort={{ key: "utilization", dir: "desc" }}
-                    zebra
-                  />
-                </div>
-                <div>
-                  <div className="term-label mb-1">Route Allocations</div>
-                  <DataGrid
-                    columns={whatIfRouteColumns}
-                    rows={selectedWhatIfRoutes}
-                    rowKey={(row) => row.route_id}
-                    maxHeight="320px"
-                    initialSort={{ key: "delta", dir: "desc" }}
-                    zebra
-                  />
-                </div>
-              </div>
-            </Panel>
-          )}
-
           {dataset && (
             <Panel
               title="Dataset Preview"
@@ -1371,24 +1435,27 @@ export default function InventoryOptimizerPage() {
           )}
 
           <Panel
-            title="Base Case Results"
-            code={result?.run_id.slice(0, 12) ?? "NOT RUN"}
+            title={`${viewLabel} Results`}
+            code={viewResult?.run_id.slice(0, 12) ?? "NOT RUN"}
             toolbar={<TermToggleGroup value={resultTab} onChange={setResultTab} options={RESULT_TABS} size="sm" />}
             right={
-              resultTab === "allocations" ? (
-                <Tag tone={result ? "up" : "neutral"}>{fmtAbbr(totals.allocationIncrease - totals.allocationDecrease)} net</Tag>
-              ) : resultTab === "diagnostics" ? (
-                <Tag tone={result?.verification?.passed ? "up" : result ? "down" : "neutral"}>
-                  {result?.verification?.passed ? "VERIFIED" : result ? "FAILED" : "-"}
-                </Tag>
-              ) : undefined
+              <span className="flex items-center gap-1">
+                {whatIfResults.length > 0 && <Tag tone={activeView?.isBase ? "neutral" : "blue"}>{activeView?.isBase ? "BASE CASE" : "SCENARIO"}</Tag>}
+                {resultTab === "allocations" ? (
+                  <Tag tone={viewResult ? "up" : "neutral"}>{fmtAbbr(totals.allocationIncrease - totals.allocationDecrease)} net</Tag>
+                ) : resultTab === "diagnostics" ? (
+                  <Tag tone={viewResult?.verification?.passed ? "up" : viewResult ? "down" : "neutral"}>
+                    {viewResult?.verification?.passed ? "VERIFIED" : viewResult ? "FAILED" : "-"}
+                  </Tag>
+                ) : undefined}
+              </span>
             }
           >
             {resultTab === "allocations" && (
               <>
                 <DataGrid
                   columns={allocationColumns}
-                  rows={result?.allocations ?? []}
+                  rows={viewResult?.allocations ?? []}
                   rowKey={(row) => row.route_id}
                   maxHeight="320px"
                   initialSort={{ key: "delta", dir: "desc" }}
@@ -1424,29 +1491,29 @@ export default function InventoryOptimizerPage() {
             )}
 
             {resultTab === "balances" && (
-              <DataGrid columns={balanceColumns} rows={result?.balances ?? []} rowKey={(row) => row.inventory_id} maxHeight="400px" initialSort={{ key: "utilization", dir: "desc" }} zebra />
+              <DataGrid columns={balanceColumns} rows={viewResult?.balances ?? []} rowKey={(row) => row.inventory_id} maxHeight="400px" initialSort={{ key: "utilization", dir: "desc" }} zebra />
             )}
 
             {resultTab === "demand" && (
-              <DataGrid columns={demandColumns} rows={result?.demand ?? []} rowKey={(row) => row.demand_group_id} maxHeight="400px" initialSort={{ key: "fill_ratio", dir: "asc" }} zebra />
+              <DataGrid columns={demandColumns} rows={viewResult?.demand ?? []} rowKey={(row) => row.demand_group_id} maxHeight="400px" initialSort={{ key: "fill_ratio", dir: "asc" }} zebra />
             )}
 
             {resultTab === "economics" && (
               <div className="grid gap-2 p-2">
                 <div className="grid grid-cols-2 divide-x divide-term-border border border-term-border">
-                  <Stat label="Total Value" value={fmtUsdAbbr(result?.economics?.total_value_usd ?? 0)} />
+                  <Stat label="Total Value" value={fmtUsdAbbr(viewResult?.economics?.total_value_usd ?? 0)} />
                   <Stat
                     label="Total Delta"
-                    value={fmtUsdAbbr(result?.economics?.total_delta_usd ?? 0)}
-                    tone={(result?.economics?.total_delta_usd ?? 0) >= 0 ? "up" : "down"}
+                    value={fmtUsdAbbr(viewResult?.economics?.total_delta_usd ?? 0)}
+                    tone={(viewResult?.economics?.total_delta_usd ?? 0) >= 0 ? "up" : "down"}
                   />
                 </div>
-                <DataGrid columns={economicsColumns} rows={result?.economics?.components ?? []} rowKey={(row) => row.component_name} maxHeight="300px" zebra />
+                <DataGrid columns={economicsColumns} rows={viewResult?.economics?.components ?? []} rowKey={(row) => row.component_name} maxHeight="300px" zebra />
               </div>
             )}
 
             {resultTab === "constraints" && (
-              <DataGrid columns={constraintColumns} rows={result?.constraints ?? []} rowKey={(row, i) => `${row.row.kind}-${row.row.scope_id}-${i}`} maxHeight="400px" initialSort={{ key: "slack", dir: "asc" }} zebra />
+              <DataGrid columns={constraintColumns} rows={viewResult?.constraints ?? []} rowKey={(row, i) => `${row.row.kind}-${row.row.scope_id}-${i}`} maxHeight="400px" initialSort={{ key: "slack", dir: "asc" }} zebra />
             )}
 
             {resultTab === "diagnostics" && (
@@ -1454,51 +1521,51 @@ export default function InventoryOptimizerPage() {
                 <div>
                   <div className="term-label mb-1">Run</div>
                   <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
-                    <Stat label="Status" value={result?.status?.toUpperCase() ?? "-"} tone={result?.status === "optimal" ? "up" : result ? "amber" : "neutral"} />
-                    <Stat label="Native Status" value={result?.native_status ?? "-"} />
-                    <Stat label="Strict" value={result ? (result.strict ? "YES" : "NO") : "-"} />
-                    <Stat label="Created" value={result ? new Date(result.created_at).toLocaleTimeString() : "-"} />
+                    <Stat label="Status" value={viewResult?.status?.toUpperCase() ?? "-"} tone={viewResult?.status === "optimal" ? "up" : viewResult ? "amber" : "neutral"} />
+                    <Stat label="Native Status" value={viewResult?.native_status ?? "-"} />
+                    <Stat label="Strict" value={viewResult ? (viewResult.strict ? "YES" : "NO") : "-"} />
+                    <Stat label="Created" value={viewResult ? new Date(viewResult.created_at).toLocaleTimeString() : "-"} />
                   </div>
                 </div>
                 <div>
                   <div className="term-label mb-1">Solver</div>
                   <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
-                    <Stat label="Backend" value={result?.solver ? `${result.solver.backend_name} ${result.solver.backend_version}` : "-"} />
-                    <Stat label="Runtime" value={result?.solver ? `${fmtInt((result.solver.runtime_seconds ?? 0) * 1000)}ms` : "-"} />
-                    <Stat label="Iterations" value={fmtInt(result?.solver?.iterations ?? 0)} />
-                    <Stat label="Termination" value={result?.solver?.termination_reason ?? result?.termination_reason ?? "-"} />
-                    <Stat label="Relative Gap" value={result?.solver?.relative_gap != null ? fmtAbbr(result.solver.relative_gap, 4) : "-"} />
-                    <Stat label="Best Bound" value={result?.solver?.best_bound != null ? fmtAbbr(result.solver.best_bound) : "-"} />
-                    <Stat label="Nodes" value={result?.solver?.nodes != null ? fmtInt(result.solver.nodes) : "-"} />
+                    <Stat label="Backend" value={viewResult?.solver ? `${viewResult.solver.backend_name} ${viewResult.solver.backend_version}` : "-"} />
+                    <Stat label="Runtime" value={viewResult?.solver ? `${fmtInt((viewResult.solver.runtime_seconds ?? 0) * 1000)}ms` : "-"} />
+                    <Stat label="Iterations" value={fmtInt(viewResult?.solver?.iterations ?? 0)} />
+                    <Stat label="Termination" value={viewResult?.solver?.termination_reason ?? viewResult?.termination_reason ?? "-"} />
+                    <Stat label="Relative Gap" value={viewResult?.solver?.relative_gap != null ? fmtAbbr(viewResult.solver.relative_gap, 4) : "-"} />
+                    <Stat label="Best Bound" value={viewResult?.solver?.best_bound != null ? fmtAbbr(viewResult.solver.best_bound) : "-"} />
+                    <Stat label="Nodes" value={viewResult?.solver?.nodes != null ? fmtInt(viewResult.solver.nodes) : "-"} />
                   </div>
                 </div>
                 <div>
                   <div className="term-label mb-1">Verification</div>
                   <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
-                    <Stat label="Passed" value={result?.verification?.passed ? "YES" : result ? "NO" : "-"} tone={result?.verification?.passed ? "up" : result ? "down" : "neutral"} />
-                    <Stat label="Has Primal" value={result?.verification ? (result.verification.has_primal ? "YES" : "NO") : "-"} />
-                    <Stat label="Row Violation" value={fmtAbbr(result?.verification?.max_row_violation ?? 0, 4)} />
-                    <Stat label="Bound Violation" value={fmtAbbr(result?.verification?.max_variable_bound_violation ?? 0, 4)} />
-                    <Stat label="Integrality Violation" value={fmtAbbr(result?.verification?.max_integrality_violation ?? 0, 4)} />
-                    <Stat label="Objective Delta" value={fmtAbbr(result?.verification?.objective_reconstruction_delta ?? 0, 4)} />
+                    <Stat label="Passed" value={viewResult?.verification?.passed ? "YES" : viewResult ? "NO" : "-"} tone={viewResult?.verification?.passed ? "up" : viewResult ? "down" : "neutral"} />
+                    <Stat label="Has Primal" value={viewResult?.verification ? (viewResult.verification.has_primal ? "YES" : "NO") : "-"} />
+                    <Stat label="Row Violation" value={fmtAbbr(viewResult?.verification?.max_row_violation ?? 0, 4)} />
+                    <Stat label="Bound Violation" value={fmtAbbr(viewResult?.verification?.max_variable_bound_violation ?? 0, 4)} />
+                    <Stat label="Integrality Violation" value={fmtAbbr(viewResult?.verification?.max_integrality_violation ?? 0, 4)} />
+                    <Stat label="Objective Delta" value={fmtAbbr(viewResult?.verification?.objective_reconstruction_delta ?? 0, 4)} />
                   </div>
                 </div>
                 <div>
                   <div className="term-label mb-1">Provenance</div>
                   <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
-                    <Stat label="Config Hash" value={result ? result.config_hash.slice(0, 12) : "-"} />
-                    <Stat label="Package Version" value={result?.package_version ?? "-"} />
-                    <Stat label="Problem Family" value={result?.desk?.problem_family ?? result?.platform?.problem_family ?? "-"} />
-                    <Stat label="Correlation ID" value={result?.platform ? result.platform.correlation_id.slice(0, 12) : "-"} />
+                    <Stat label="Config Hash" value={viewResult ? viewResult.config_hash.slice(0, 12) : "-"} />
+                    <Stat label="Package Version" value={viewResult?.package_version ?? "-"} />
+                    <Stat label="Problem Family" value={viewResult?.desk?.problem_family ?? viewResult?.platform?.problem_family ?? "-"} />
+                    <Stat label="Correlation ID" value={viewResult?.platform ? viewResult.platform.correlation_id.slice(0, 12) : "-"} />
                   </div>
                 </div>
                 <div>
                   <div className="term-label mb-1">Warnings</div>
-                  {!result?.warnings?.length ? (
+                  {!viewResult?.warnings?.length ? (
                     <div className="border border-term-border px-2 py-1 text-term-text-mute">None.</div>
                   ) : (
                     <div className="flex flex-wrap gap-1">
-                      {result.warnings.map((warning, i) => (
+                      {viewResult.warnings.map((warning, i) => (
                         <Tag key={`${warning}-${i}`} tone="amber">{warning}</Tag>
                       ))}
                     </div>
@@ -1511,13 +1578,13 @@ export default function InventoryOptimizerPage() {
               <div className="relative">
                 <button
                   className="term-btn absolute right-2 top-2 z-10"
-                  disabled={!result}
-                  onClick={() => result && navigator.clipboard?.writeText(JSON.stringify(result, null, 2))}
+                  disabled={!viewResult}
+                  onClick={() => viewResult && navigator.clipboard?.writeText(JSON.stringify(viewResult, null, 2))}
                 >
                   <Copy size={13} /> Copy
                 </button>
                 <pre className="analytics-scroll max-h-[420px] overflow-auto bg-term-panel-2 p-2 text-3xs text-term-text-dim">
-                  {result ? JSON.stringify(result, null, 2) : "No run yet."}
+                  {viewResult ? JSON.stringify(viewResult, null, 2) : "No run yet."}
                 </pre>
               </div>
             )}
