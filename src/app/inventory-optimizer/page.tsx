@@ -751,20 +751,24 @@ export default function InventoryOptimizerPage() {
     }
   }
 
+  // Exports whichever result is currently on screen (the plain Base Case Run, or the selected
+  // What If scenario) rather than always the raw base run, so the download matches what the user
+  // is actually looking at.
   async function exportBundle() {
-    if (!dataset || !result) return;
+    if (!viewDataset || !viewResult) return;
     setBusy(true);
     setMessage(null);
     setActionIssues([]);
     try {
-      const blob = await exportIbalBundle(dataset, result);
+      const blob = await exportIbalBundle(viewDataset, viewResult);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = "ibal-result-bundle.zip";
+      const slug = viewLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      anchor.download = `ibal-result-bundle-${slug || "base-case"}.zip`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setMessage("Export bundle created.");
+      setMessage(`Export bundle created for ${viewLabel}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Export failed.");
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
@@ -1014,8 +1018,8 @@ export default function InventoryOptimizerPage() {
               >
                 <Play size={13} /> {runButtonLabel}
               </button>
-              <button className="term-btn justify-center" disabled={!dataset || !result || busy} onClick={exportBundle}>
-                <Download size={13} /> Export
+              <button className="term-btn justify-center" disabled={!viewDataset || !viewResult || busy} title={`Export ${viewLabel} result bundle`} onClick={exportBundle}>
+                <Download size={13} /> Export {viewLabel}
               </button>
             </div>
           </Panel>
