@@ -68,9 +68,7 @@ shell" -- that was wrong (written without actually reading the file). It is a re
 synthetic/upload intake, run config, solve, export, a KPI strip, an allocations grid, a constraints
 grid, and a verification panel, all wired to the live API. What the spec's T-010-T-012 still call
 for and this page doesn't have: a reducer/state machine (it uses plain `useState`), an explicit
-Synthetic/Upload segmented control, a reroll action, result tabs for Balances/Demand/Economics/
-Diagnostics/Raw (only Allocations/Constraints/Verification exist, as stacked panels not tabs),
-evidence drill-down, and source/version/status badges.
+Synthetic/Upload segmented control, and a reroll action.
 
 First slice landed: `dataset.validation.issues` (and located issues from a failed upload/run/
 export) were never rendered anywhere -- fixed with a `DataGrid`-based Issues panel
@@ -93,6 +91,30 @@ covers the remaining rate/fraction fields; every slider now shows its live forma
 "profile-set" hint appears next to any field the selected profile silently overrides (mirroring
 `synthetic.py`'s `PROFILE_PRESETS`, which apply unconditionally) so a user isn't fooled into
 thinking an edit took effect when the backend will discard it. Verified the same route-mocked way.
+
+Third slice landed: the T-011 result tabs (Allocations/Balances/Demand/Economics/Constraints/
+Diagnostics/Raw), replacing the old stacked Allocations/Constraints/Verification panels with one
+tabbed `Results` panel (`TermToggleGroup`, reused from the existing `economics/rate-vol` page --
+no new tab component needed). Allocations gained evidence drill-down (click a row to see its
+`reason_codes` and full `explanation_evidence` map, previously never surfaced). Balances and
+Demand are new; `IbalDemand` didn't exist as a type before this -- the backend's real
+`result.demand` array had no TypeScript type at all. `IbalResult`/`IbalAllocation` were
+incomplete against the real backend response in several places (verified against a live solve,
+not guessed): missing `explanation_evidence`, `demand`, `native_status`, `strict`, `config_hash`,
+`package_version`, top-level `backend_version`/`termination_reason`, `desk`/`platform`
+provenance, and `verification.has_primal`/`max_integrality_violation`; `demand_cap_shares` was
+missing its `| null`. All fixed. Verified against real, live-captured HTTP responses (an actual
+solve's output, not a synthetic fixture) via Playwright route-mocking -- every tab's row count
+matched the real result exactly.
+
+**Local-run setup gap found and fixed while testing this against the live service** (not a code
+bug, a docs gap): `services/inventory_optimizer_api/README.md` said to start the service on port
+`8080`, but `inventoryOptimizerProxy.ts`'s default `INVENTORY_OPTIMIZER_API_URL` is
+`127.0.0.1:8013` -- fixed to `8013` in the README. `.env.example` had no IBAL section at all,
+so a reader had no pointer to `INVENTORY_OPTIMIZER_API_TOKEN` (required client-side) alongside
+the service's own token requirement -- added. To actually run IBAL end-to-end locally: start
+`services/inventory_optimizer_api` per its README, set the same `INVENTORY_OPTIMIZER_API_TOKEN`
+in the repo-root `.env`, and (re)start `npm run dev` (Vite only reads `.env` at startup).
 
 **HIGH PRIORITY -- QuantSmith Phase 4 (IBAL model-plugin pilot):** `docs/specs/spec005/SPEC.md`
 was revisited 2026-09-17 to add candidate synergy item 6 and Phase 4: registering `IBAL` with
