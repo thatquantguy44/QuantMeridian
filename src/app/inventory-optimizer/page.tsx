@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
@@ -40,11 +40,39 @@ function updateNumber<T extends object>(setter: (next: T) => void, current: T, k
   setter({ ...current, [key]: Number(value) });
 }
 
+// Mirrors synthetic.py's PROFILE_PRESETS: the backend applies these on top of whatever the
+// client sends, unconditionally, regardless of scale. Shown as a hint only -- the backend
+// resolution is authoritative; this never blocks an edit, it just avoids surprising a user whose
+// slider change silently had no effect server-side.
+const PROFILE_OVERRIDES: Record<SyntheticConfig["profile"], Partial<SyntheticConfig>> = {
+  balanced: {},
+  scarce: { starting_utilization: 0.62, utilization_cap: 0.92, fee_rate_mean: 0.045, fee_rate_dispersion: 0.02 },
+  concentrated: { borrower_concentration: 0.8, starting_utilization: 0.48 },
+  specials: { fee_rate_mean: 0.085, fee_rate_dispersion: 0.04, elasticity_mean: 0.25, discrete_route_fraction: 0.1 },
+};
+
+const PERCENT_FIELDS = new Set<keyof SyntheticConfig>([
+  "starting_utilization",
+  "utilization_cap",
+  "borrower_concentration",
+  "reserve_fraction",
+  "ineligible_fraction",
+  "discrete_route_fraction",
+]);
+
+function formatFieldValue(field: keyof SyntheticConfig, value: number): string {
+  if (PERCENT_FIELDS.has(field)) return `${(value * 100).toFixed(0)}%`;
+  if (field === "fee_rate_mean" || field === "fee_rate_dispersion") return `${(value * 100).toFixed(2)}%`;
+  if (field === "elasticity_mean") return value.toFixed(2);
+  return String(value);
+}
+
 export default function InventoryOptimizerPage() {
   const [health, setHealth] = useState<IbalHealth | null>(null);
   const [dataset, setDataset] = useState<DatasetEnvelope | null>(null);
   const [result, setResult] = useState<IbalResult | null>(null);
   const [synthetic, setSynthetic] = useState<SyntheticConfig>(DEFAULT_SYNTHETIC_CONFIG);
+  const [showAdvancedSynthetic, setShowAdvancedSynthetic] = useState(false);
   const [runConfig, setRunConfig] = useState<RunConfig>(DEFAULT_RUN_CONFIG);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -55,6 +83,58 @@ export default function InventoryOptimizerPage() {
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
   // dataset's own validation issues, if any.
   const issuesToShow = actionIssues.length > 0 ? actionIssues : dataset?.validation.issues ?? [];
+
+  function syntheticField(
+    label: string,
+    field: keyof SyntheticConfig,
+    opts: { min: number; max: number; step: number; integer?: boolean }
+  ) {
+    const value = Number(synthetic[field]);
+    const overrideValue = PROFILE_OVERRIDES[synthetic.profile][field];
+    return (
+      <label key={field} className="grid gap-1 text-term-text-dim">
+        <span className="flex items-center justify-between gap-2">
+          <span>{label}</span>
+          <span className="flex items-center gap-1">
+            {overrideValue !== undefined && (
+              <span
+                className="text-3xs text-term-amber"
+                title={`Profile "${synthetic.profile}" overrides this to ${formatFieldValue(field, Number(overrideValue))} regardless of the value set here.`}
+              >
+                profile-set
+              </span>
+            )}
+            <span className="tnum text-term-text">{formatFieldValue(field, value)}</span>
+          </span>
+        </span>
+        <input
+          type="range"
+          min={opts.min}
+          max={opts.max}
+          step={opts.step}
+          value={value}
+          onChange={(event) => updateNumber(setSynthetic, synthetic, field, event.target.value)}
+        />
+      </label>
+    );
+  }
+
+  function syntheticCountField(label: string, field: keyof SyntheticConfig, opts: { min: number; max: number }) {
+    return (
+      <label key={field} className="grid gap-1 text-term-text-dim">
+        {label}
+        <input
+          className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text"
+          type="number"
+          min={opts.min}
+          max={opts.max}
+          step={1}
+          value={Number(synthetic[field])}
+          onChange={(event) => updateNumber(setSynthetic, synthetic, field, event.target.value)}
+        />
+      </label>
+    );
+  }
 
   useEffect(() => {
     getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
@@ -254,14 +334,40 @@ export default function InventoryOptimizerPage() {
                 Seed
                 <input className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" type="number" value={synthetic.seed} onChange={(event) => updateNumber(setSynthetic, synthetic, "seed", event.target.value)} />
               </label>
-              <label className="grid gap-1 text-term-text-dim">
-                Borrower concentration
-                <input type="range" min={0} max={1} step={0.01} value={synthetic.borrower_concentration} onChange={(event) => updateNumber(setSynthetic, synthetic, "borrower_concentration", event.target.value)} />
-              </label>
-              <label className="grid gap-1 text-term-text-dim">
-                Utilization cap
-                <input type="range" min={0.25} max={1} step={0.01} value={synthetic.utilization_cap} onChange={(event) => updateNumber(setSynthetic, synthetic, "utilization_cap", event.target.value)} />
-              </label>
+              {syntheticField("Borrower concentration", "borrower_concentration", { min: 0, max: 1, step: 0.01 })}
+              {syntheticField("Utilization cap", "utilization_cap", { min: 0.25, max: 1, step: 0.01 })}
+
+              {synthetic.scale === "custom" && (
+                <div className="grid gap-2 border-t border-term-border pt-2">
+                  <span className="term-label">Custom shape</span>
+                  {syntheticCountField("Securities", "security_count", { min: 1, max: 100 })}
+                  {syntheticCountField("Inventory pools", "inventory_pool_count", { min: 1, max: 20 })}
+                  {syntheticCountField("Borrowers", "borrower_count", { min: 1, max: 100 })}
+                  {syntheticCountField("Parent groups", "parent_group_count", { min: 1, max: synthetic.borrower_count })}
+                  {syntheticCountField("Routes per security", "routes_per_security", { min: 1, max: 20 })}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="term-btn justify-between border-none bg-transparent px-0 text-term-text-dim hover:text-term-text"
+                onClick={() => setShowAdvancedSynthetic((v) => !v)}
+              >
+                Advanced
+                {showAdvancedSynthetic ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+              {showAdvancedSynthetic && (
+                <div className="grid gap-2 border-t border-term-border pt-2">
+                  {syntheticField("Starting utilization", "starting_utilization", { min: 0, max: 0.85, step: 0.01 })}
+                  {syntheticField("Fee rate mean", "fee_rate_mean", { min: 0.0001, max: 0.25, step: 0.0001 })}
+                  {syntheticField("Fee rate dispersion", "fee_rate_dispersion", { min: 0, max: 0.1, step: 0.001 })}
+                  {syntheticField("Elasticity mean", "elasticity_mean", { min: 0, max: 5, step: 0.01 })}
+                  {syntheticField("Reserve fraction", "reserve_fraction", { min: 0, max: 0.3, step: 0.01 })}
+                  {syntheticField("Ineligible fraction", "ineligible_fraction", { min: 0, max: 0.5, step: 0.01 })}
+                  {syntheticField("Discrete route fraction", "discrete_route_fraction", { min: 0, max: 0.5, step: 0.01 })}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <a className="term-btn justify-center" href="/api/inventory-optimizer/templates/starter-xlsx">
                   <Download size={13} /> XLSX
