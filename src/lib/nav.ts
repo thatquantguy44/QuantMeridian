@@ -42,7 +42,7 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   desc: string;
-  group: "MARKETS" | "FINANCE" | "OPTIMIZATION" | "DESK" | "TRADING_ASSISTANT" | "ECONOMICS" | "SIMULATIONS" | "INTELLIGENCE";
+  group: "MARKETS" | "FINANCE" | "OPTIMIZATION" | "DESK" | "TRADING_ASSISTANT" | "ECONOMICS" | "SIMULATIONS" | "INTELLIGENCE" | "DATAOPERATIONS";
 }
 
 const ALL_NAV: NavItem[] = [
@@ -93,8 +93,8 @@ const ALL_NAV: NavItem[] = [
   { code: "NEWS", label: "News & Signal Intel", href: "/news", icon: Newspaper, desc: "Market news, social & signal engine", group: "INTELLIGENCE" },
   { code: "SENT", label: "Investor Sentiment", href: "/sentiment", icon: Gauge, desc: "Survey + social fear/greed & positioning", group: "INTELLIGENCE" },
   { code: "AI", label: "AI Copilot", href: "/copilot", icon: Bot, desc: "Natural-language intelligence", group: "INTELLIGENCE" },
-  { code: "DATAOPS", label: "Data Ops", href: "/dataops", icon: Cpu, desc: "Provider health and lineage", group: "INTELLIGENCE" },
-  { code: "ALRT", label: "Alert Center", href: "/alerts", icon: BellRing, desc: "Streaming risk & ops alerts", group: "INTELLIGENCE" },
+  { code: "DATAOPS", label: "Data Ops", href: "/dataops", icon: Cpu, desc: "Provider health and lineage", group: "DATAOPERATIONS" },
+  { code: "ALRT", label: "Alert Center", href: "/alerts", icon: BellRing, desc: "Streaming risk & ops alerts", group: "DATAOPERATIONS" },
 ];
 
 export const NAV: NavItem[] = ALL_NAV.filter((n) => isModuleEnabled(n.code));
@@ -103,9 +103,10 @@ export const NAV_GROUPS: { id: NavItem["group"]; label: string }[] = [
   { id: "MARKETS", label: "Markets" },
   { id: "FINANCE", label: "Financing" },
   { id: "OPTIMIZATION", label: "Optimization" },
+    { id: "SIMULATIONS", label: "Simulations" },
   { id: "DESK", label: "Trading Desk" },
   { id: "TRADING_ASSISTANT", label: "Trading Assistant" },
   { id: "ECONOMICS", label: "Economics & Macro" },
-  { id: "SIMULATIONS", label: "Simulations" },
   { id: "INTELLIGENCE", label: "Intelligence" },
+  { id : "DATAOPERATIONS", label: "Data Operations & Alerts"},
 ];

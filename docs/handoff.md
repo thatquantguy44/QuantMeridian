@@ -23,26 +23,52 @@ conversion, NEWS persistence, and CPI component expansion. Detailed source docs 
 
 ## Current State
 
-IBAL / InventoryBallast integration is in PR #119 on `feature/ibal-inventory-optimizer`. The
-checkpoint adds a separate `IBAL` module at `/inventory-optimizer`, a pinned Python FastAPI
-service under `services/inventory_optimizer_api`, server-only proxy routes at
-`/api/inventory-optimizer/*`, synthetic/upload dataset preparation, solve invocation, and result
-bundle export. The existing `/optimization` / `OPT` page remains untouched.
+IBAL / InventoryBallast integration scaffold (PR #119) and its docs checkpoint (PR #120) are both
+merged to `main`. The `feature/ibal-inventory-optimizer` branch adds a separate `IBAL` module at
+`/inventory-optimizer`, a pinned Python FastAPI service under `services/inventory_optimizer_api`,
+server-only proxy routes at `/api/inventory-optimizer/*`, synthetic/upload dataset preparation,
+solve invocation, and result bundle export. The existing `/optimization` / `OPT` page remains
+untouched.
 
 The source-of-truth spec and task map live in the InventoryBallast repo at
 `specs/0013-market-terminal-integration/`; this Market Terminal handoff records only the terminal
-branch state. As of this update, Python service tests pass (`5 passed`, one upstream Starlette
-deprecation warning). `npm run typecheck` is still blocked by existing unrelated TypeScript errors
-in older econ/market modules plus sandbox denial writing `tsconfig.tsbuildinfo`. PR #119 was marked
-ready for review and GitHub reported it mergeable; Vercel was failing and two CI `verify` jobs were
-still in progress when checked.
+branch state. Both `verify` CI and Vercel have been failing on `main` across the last three merges
+(PR #118-#120); by explicit owner direction this is being deferred while IBAL work stays local-only
+-- no CI/Vercel fix is planned as part of this workstream right now.
 
-Immediate IBAL priorities: inspect/repair Vercel and any CI failures, add direct-facade parity and
-status/error matrix tests, finish upload rejection/property/redaction coverage, complete the
-workbench state machine/result tabs/dirty confirmation flows, wire Data Ops health and env/runbook
-docs, then run browser-to-solver E2E and screenshots before any production enablement. Production
-remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly
-configured.
+Python service test coverage is tracked in a master validation document:
+**`services/inventory_optimizer_api/tests/VALIDATION.md`** -- keep that file, not this paragraph,
+current going forward. It indexes every test file by what it protects, documents the shared
+edge-case framework (`tests/edge_cases.py`) and benchmark harness (`tests/benchmark.py`), maps
+AC-001 through AC-024 to concrete covering tests with a DONE/PARTIAL/TODO status, and keeps a
+running "bugs found and fixed" log with the *pattern* behind each bug, not just the instance.
+
+**Every backend item is now DONE.** Suite is `176 passed`, 0 failed, 0 xfail/skip,
+`ruff check tests/` clean, covering AC-002, AC-004 through AC-011 (frontend-only pieces of some
+excepted), AC-013, AC-014, AC-016, AC-019, AC-020 (backend half), AC-021, AC-022. Four real bugs
+were found and fixed along the way (full detail in VALIDATION.md): (1) XLSX/JSON starter templates
+weren't hash-identical -- unrounded synthetic fields losing precision through XLSX serialization;
+(2) independently-valid `starting_utilization`/`reserve_fraction`/`utilization_cap` values could
+jointly push share balances negative -- found immediately by the edge-case framework's first
+boundary config; (3) the generic `RequestValidationError` handler crashed on *every* malformed
+request body across *every* endpoint, silently turning a `422` into a `500` -- a FastAPI
+`errors()` signature mismatch invisible until a test finally exercised that code path; (4) a
+tampered `DatasetEnvelope.summary` (row counts/totals disclosed to a user/auditor) was accepted
+silently by `solve()`/`export_bundle()` as long as `request`/`request_hash` were left untouched --
+fixed by recomputing and comparing the summary the same way `request_hash` already was.
+
+This work lives on its own branch, **`feature/ibal-backend-test-coverage`**, cut from latest
+`origin/main` rather than continuing on `feature/ibal-inventory-optimizer` (already fully merged
+via PR #119/#120). Being pushed and opened as a PR against `main`.
+
+Remaining IBAL priorities, in order: (1) frontend workbench --
+`src/app/inventory-optimizer/page.tsx` is still a
+shell; the spec's T-010-T-012 reducer/state machine, result tabs (Allocations/Balances/Demand/
+Economics/Constraints/Diagnostics/Raw), dirty confirmation, and session-only result handling are
+not built; (2) Data Ops health + env/runbook docs (T-013/T-014); (3) browser-to-solver E2E and
+Playwright screenshots before any production enablement. Production remains off unless
+`IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly configured. CI/Vercel repair
+stays out of scope until the owner asks for it.
 
 Tier A production routes for econ, chart, and market data have been hardened to
 read the Gold DB or return explicit `ERR`/empty states. The old silent fallback

@@ -5,7 +5,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Annotated, Any, Literal
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Path, UploadFile, status
+from fastapi import Depends, FastAPI, File, Header, Path, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
@@ -74,7 +74,7 @@ async def request_validation_handler(_: Any, exc: RequestValidationError) -> JSO
             message=str(item["msg"]),
             location="$." + ".".join(str(part) for part in item["loc"]),
         )
-        for item in exc.errors(include_url=False, include_context=False, include_input=False)
+        for item in exc.errors()
     )
     return _error(422, "REQUEST_CONTRACT_INVALID", "validation", "Request contract is invalid.", issues=issues)
 

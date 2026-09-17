@@ -46,6 +46,8 @@ backend/.venv/
 services/**/.venv/
 **/__pycache__/
 *.pyc
+.hypothesis/
+services/inventory_optimizer_api/tests/benchmarks/
 
 # test artifacts
 /test-results/

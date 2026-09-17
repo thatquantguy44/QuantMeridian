@@ -91,10 +91,15 @@ def generate_request(config: SyntheticConfig) -> tuple[OptimizationRequest, dict
         inventory_id = f"SYN-INV-{sec_index + 1:03d}"
         pool_id = f"SYN-POOL-{(sec_index % pool_count) + 1:02d}"
         total = float(rng.integers(20, 250) * 1000)
-        reserve = float(round(total * float(resolved["reserve_fraction"]), 6))
+        reserve_fraction = float(resolved["reserve_fraction"])
+        reserve = float(round(total * reserve_fraction, 6))
         utilization_noise = float(rng.normal(0.0, 0.035))
+        # Both bounds below are independently valid SyntheticConfig fields, but combined they
+        # can push on_loan + reserve past total (negative available_to_lend_shares) unless
+        # starting_utilization is also capped against the room reserve_fraction leaves behind.
         starting_utilization = min(
             float(resolved["utilization_cap"]) - 0.08,
+            max(0.0, 1.0 - reserve_fraction - 0.02),
             max(0.0, float(resolved["starting_utilization"]) + utilization_noise),
         )
         on_loan = float(round(total * starting_utilization, 6))
@@ -143,13 +148,9 @@ def generate_request(config: SyntheticConfig) -> tuple[OptimizationRequest, dict
                 current = 0.0
             expansion = available / max(1, int(eligible_flags.sum()))
             maximum = float(round(current + expansion * rng.uniform(0.8, 1.5), 6)) if eligible else 0.0
-            fee = float(
-                np.clip(
-                    rng.normal(float(resolved["fee_rate_mean"]), float(resolved["fee_rate_dispersion"])),
-                    0.0001,
-                    0.25,
-                )
-            )
+            fee_mean = float(resolved["fee_rate_mean"])
+            fee_dispersion = float(resolved["fee_rate_dispersion"])
+            fee = float(round(np.clip(rng.normal(fee_mean, fee_dispersion), 0.0001, 0.25), 6))
             discrete = eligible and rng.random() < float(resolved["discrete_route_fraction"])
             routes.append(
                 {
@@ -185,7 +186,9 @@ def generate_request(config: SyntheticConfig) -> tuple[OptimizationRequest, dict
                     "as_of": as_of,
                     "reference_quantity_shares": maximum,
                     "reference_fee_rate": fee,
-                    "elasticity": max(0.0, float(rng.normal(float(resolved["elasticity_mean"]), 0.03))),
+                    "elasticity": max(
+                        0.0, float(round(rng.normal(float(resolved["elasticity_mean"]), 0.03), 6))
+                    ),
                     "forecast_std_shares": float(round(maximum * 0.10, 6)),
                     "hard_max_quantity_shares": maximum,
                     "source_model": "synthetic-pcg64",
@@ -207,7 +210,7 @@ def generate_request(config: SyntheticConfig) -> tuple[OptimizationRequest, dict
                 "borrower_id": "ENTITY-SCOPED",
                 "ultimate_parent_id": parent_id,
                 "effective_from": as_of,
-                "maximum_quantity_shares": max(1.0, scoped_max * 0.85),
+                "maximum_quantity_shares": round(max(1.0, scoped_max * 0.85), 6),
                 "hard": True,
                 "source": "synthetic",
                 "source_version": GENERATOR_VERSION,
@@ -238,7 +241,6 @@ def generate_request(config: SyntheticConfig) -> tuple[OptimizationRequest, dict
         "counterparty_limits": counterparty_limits,
         "utilization_policies": utilization_policies,
         "entity_relationships": relationships,
-        "metadata": {"source_mode": "synthetic", "generator_version": GENERATOR_VERSION},
     }
     return OptimizationRequest.model_validate(payload), resolved
 
