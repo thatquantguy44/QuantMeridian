@@ -1349,7 +1349,7 @@ export default function InventoryOptimizerPage() {
           )}
 
           <Panel
-            title="Results"
+            title="Base Case Results"
             code={result?.run_id.slice(0, 12) ?? "NOT RUN"}
             toolbar={<TermToggleGroup value={resultTab} onChange={setResultTab} options={RESULT_TABS} size="sm" />}
             right={
