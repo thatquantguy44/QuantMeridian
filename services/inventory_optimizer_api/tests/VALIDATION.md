@@ -8,7 +8,7 @@ actual test suite in this repo.
 
 Run everything: `cd services/inventory_optimizer_api && .venv/bin/python -m pytest -q`
 Lint: `.venv/bin/python -m ruff check tests/`
-Current state: **122 passed**, 0 failed, 0 xfail/skip.
+Current state: **141 passed**, 0 failed, 0 xfail/skip.
 
 ## How the suite is organized
 
@@ -29,6 +29,7 @@ source layout first.
 | `test_security.py` | 2 | Confidential values in a request never reach service logs on upload or solve rejection (only codes/counts are logged). |
 | `test_edge_cases.py` | 9 | Boundary-value sweep using the shared edge-case framework (see below) plus a pinned regression for the joint reserve/utilization bug. |
 | `test_economics.py` | 18 | Every `economics` total reconstructed from raw allocation/route/inventory data and checked against a real solved result -- not just internal component-sum bookkeeping, but that `fee_revenue`/`transition_cost` actually reconcile to the notional math, across day-count bases and at boundary configs. |
+| `test_exports.py` | 19 | Export bundle contents are exactly the expected files; `normalized-input.json`/`raw-result.json`/`validation-report.json` round-trip exactly; every result-table CSV, read back, matches `reporting.tables.result_tables()` cell-for-cell for the same result; `_table_csv` escaping/`None`/float-precision edge cases tested directly. |
 
 Shared infrastructure (not test files themselves, collected as 0 tests):
 
@@ -151,7 +152,7 @@ sync with this table -- trust this table for backend Python scope, not that file
 | AC-013 | Status/error matrix: optimal/feasible-limit/infeasible/timeout/numerical/internal | DONE | `test_status_matrix.py` |
 | AC-014 | Result-field lineage; economics reconciles to total | DONE (economics); PARTIAL (lineage) | `test_economics.py` reconciles `fee_revenue`/`transition_cost`/totals to raw allocation data. Result-field *lineage presentation* (source/version/status badges) is a frontend concern, not started. |
 | AC-015 | Allocations evidence, binding-constraint inspection, no invented trade fields | TODO | Frontend scope; not started. |
-| AC-016 | All exports round-trip and tables match engine | PARTIAL | `test_service.py` checks the export bundle contains the right files; no byte/content parity check against `reporting.tables.result_tables()` yet. |
+| AC-016 | All exports round-trip and tables match engine | DONE | `test_exports.py` -- every JSON file round-trips exactly, every CSV table matches `reporting.tables.result_tables()` cell-for-cell. |
 | AC-017 | Dirty-confirmation/session-reset; no server retrieval endpoint | PARTIAL | No server retrieval endpoint exists (nothing to test); frontend reducer state not started. |
 | AC-018 | Capability omission; disabled-feature rejection; altered-client-state | PARTIAL | `upload.py::_unsupported_feature_issues` exists and is exercised implicitly; no dedicated capability-omission test yet. |
 | AC-019 | Health response/service matrix; outage behavior | PARTIAL | `test_auth.py::test_end_to_end_health_endpoint_is_unauthenticated_even_when_disabled` covers one case; no matrix over engine-identity mismatch / unready states yet. |
@@ -165,14 +166,11 @@ sync with this table -- trust this table for backend Python scope, not that file
 
 Backend items with no test coverage yet, roughly in order of value:
 
-1. **AC-016**: full export round-trip parity -- compare exported CSV content byte-for-byte against
-   `reporting.tables.result_tables()` output for a real solved result, not just "the right files
-   exist in the zip".
-2. **AC-019**: health-endpoint matrix -- engine-identity mismatch (wrong version/commit/backend),
+1. **AC-019**: health-endpoint matrix -- engine-identity mismatch (wrong version/commit/backend),
    each surfaced independently, plus the `ready=False`/`error_category="incompatible_engine"` path.
-3. **AC-021**: a small benchmark harness (p50/p95/max generation+solve time across the boundary
+2. **AC-021**: a small benchmark harness (p50/p95/max generation+solve time across the boundary
    configs already defined in `edge_cases.py`) with a retained artifact, per the spec's intent.
-4. **AC-010**: a dedicated adversarial test that a tampered/mismatched `DatasetSummary` is actually
+3. **AC-010**: a dedicated adversarial test that a tampered/mismatched `DatasetSummary` is actually
    caught somewhere (currently only implicitly true because summaries are always self-generated).
 
 Beyond backend test coverage, the largest untouched piece of the spec remains the frontend

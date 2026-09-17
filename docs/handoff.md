@@ -42,8 +42,15 @@ current going forward. It indexes every test file by what it protects, documents
 edge-case framework (`tests/edge_cases.py`: named boundary-value `SyntheticConfig`s plus a
 Hypothesis-strategy pattern for sweeping cross-field combinations), maps AC-001 through AC-024 to
 concrete covering tests with a DONE/PARTIAL/TODO status, and keeps a running "bugs found and
-fixed" log with the *pattern* behind each bug, not just the instance. Suite is now `122 passed`,
+fixed" log with the *pattern* behind each bug, not just the instance. Suite is now `141 passed`,
 0 failed, 0 xfail/skip, `ruff check tests/` clean.
+
+This work now lives on its own branch, **`feature/ibal-backend-test-coverage`**, cut from latest
+`origin/main` rather than continuing on `feature/ibal-inventory-optimizer` (which is already fully
+merged into `main` via PR #119/#120 -- reusing it further would be confusing for review). Two
+commits so far: the test/bugfix work, and an unrelated one-line `src/lib/nav.ts` nav-group change
+that happened to be sitting in the same working tree, committed separately on request. Kept local
+by explicit owner direction -- not pushed, no PR opened yet.
 
 Three real bugs were found and fixed via this test-writing pass (full detail + patterns in
 VALIDATION.md's "Bugs found and fixed" section): (1) XLSX/JSON starter templates were not
@@ -70,9 +77,15 @@ results first (documented in the test file's module docstring) -- no bug found h
 formula-verification-before-asserting approach is itself recorded in VALIDATION.md as a pattern to
 repeat for other engine-owned computed fields.
 
+`test_exports.py` (AC-016) followed: the export bundle's JSON files round-trip exactly, and every
+result-table CSV, read back out of the zip, matches `reporting.tables.result_tables()` cell-for-
+cell for the same solved result -- not a re-derived value, the literal engine output. Also
+directly unit-tests the CSV serialization helper's escaping/`None`/float-precision behavior. No bug
+found; AC-016 is now DONE.
+
 Remaining IBAL priorities, in order: (1) backend test gaps listed in VALIDATION.md's "Next up"
-(AC-016 full export byte-parity, AC-019 health matrix, AC-021 benchmark harness, AC-010 dataset
-summary adversarial test); (2) frontend workbench -- `src/app/inventory-optimizer/page.tsx` is still a
+(AC-019 health matrix, AC-021 benchmark harness, AC-010 dataset summary adversarial test);
+(2) frontend workbench -- `src/app/inventory-optimizer/page.tsx` is still a
 shell; the spec's T-010-T-012 reducer/state machine, result tabs (Allocations/Balances/Demand/
 Economics/Constraints/Diagnostics/Raw), dirty confirmation, and session-only result handling are
 not built; (3) Data Ops health + env/runbook docs (T-013/T-014); (4) browser-to-solver E2E and
