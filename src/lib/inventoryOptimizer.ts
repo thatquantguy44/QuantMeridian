@@ -81,9 +81,12 @@ export interface IbalAllocation {
   increase_shares: number;
   decrease_shares: number;
   fee_rate: number;
-  demand_cap_shares: number;
+  demand_cap_shares: number | null;
   eligible: boolean;
   reason_codes: string[];
+  /** Per-allocation drill-down evidence (e.g. allocation_delta_shares, net_fee_coefficient) --
+   * scalar values only, keys vary by allocation. */
+  explanation_evidence: Record<string, number | string>;
 }
 
 export interface IbalBalance {
@@ -96,6 +99,17 @@ export interface IbalBalance {
   post_available_shares: number;
   post_on_loan_shares: number;
   utilization: number;
+}
+
+export interface IbalDemand {
+  demand_group_id: string;
+  reference_quantity_shares: number;
+  raw_demand_shares: number;
+  effective_cap_shares: number;
+  filled_shares: number;
+  unfilled_shares: number;
+  fill_ratio: number;
+  reason_code: string | null;
 }
 
 export interface IbalConstraint {
@@ -111,13 +125,20 @@ export interface IbalResult {
   request_id: string;
   run_id: string;
   status: string;
+  native_status: string | null;
+  termination_reason: string | null;
+  strict: boolean;
   input_hash: string;
+  config_hash: string;
+  package_version: string;
+  backend_version: string | null;
   created_at: string;
   allocations: IbalAllocation[];
   balances: IbalBalance[];
+  demand: IbalDemand[];
   constraints: IbalConstraint[];
   economics?: {
-    components: { component_name: string; unscaled_value_usd: number; baseline_value_usd: number; delta_usd: number }[];
+    components: { component_name: string; component_version: string; unscaled_value_usd: number; baseline_value_usd: number; delta_usd: number }[];
     total_value_usd: number;
     total_delta_usd: number;
   };
@@ -127,15 +148,35 @@ export interface IbalResult {
     runtime_seconds: number;
     iterations: number;
     nodes?: number | null;
+    best_bound?: number | null;
     relative_gap?: number | null;
     termination_reason: string;
   };
   verification?: {
     passed: boolean;
+    has_primal: boolean;
     max_variable_bound_violation: number;
     max_row_violation: number;
+    max_integrality_violation: number;
     objective_reconstruction_delta: number;
   };
+  desk?: {
+    problem_family: string;
+    legal_entity_id: string | null;
+    platform_tenant_id: string | null;
+    attribution_scope: string | null;
+    enabled_components: string[];
+  } | null;
+  platform?: {
+    request_id: string;
+    correlation_id: string;
+    idempotency_key: string;
+    problem_family: string;
+    schema_version: string;
+    authorization_reference: string;
+    platform_tenant_id: string | null;
+    actor_reference: string | null;
+  } | null;
   warnings?: string[];
 }
 

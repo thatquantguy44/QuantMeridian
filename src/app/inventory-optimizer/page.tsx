@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
+import { TermToggleGroup } from "@/components/ui/TermToggleGroup";
 import {
   DEFAULT_RUN_CONFIG,
   DEFAULT_SYNTHETIC_CONFIG,
@@ -16,7 +17,9 @@ import {
   uploadIbalDataset,
   type DatasetEnvelope,
   type IbalAllocation,
+  type IbalBalance,
   type IbalConstraint,
+  type IbalDemand,
   type IbalHealth,
   type IbalResult,
   type LocatedIssue,
@@ -26,6 +29,18 @@ import {
 import { fmtAbbr, fmtInt, fmtPct, fmtUsdAbbr } from "@/lib/format";
 
 type PendingAction = { kind: "synthetic" } | { kind: "upload"; file: File };
+
+type ResultTab = "allocations" | "balances" | "demand" | "economics" | "constraints" | "diagnostics" | "raw";
+
+const RESULT_TABS: { value: ResultTab; label: string }[] = [
+  { value: "allocations", label: "Allocations" },
+  { value: "balances", label: "Balances" },
+  { value: "demand", label: "Demand" },
+  { value: "economics", label: "Economics" },
+  { value: "constraints", label: "Constraints" },
+  { value: "diagnostics", label: "Diagnostics" },
+  { value: "raw", label: "Raw" },
+];
 
 function pctFromDecimal(value: number) {
   return fmtPct(value * 100, 2);
@@ -78,6 +93,8 @@ export default function InventoryOptimizerPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [actionIssues, setActionIssues] = useState<LocatedIssue[]>([]);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [resultTab, setResultTab] = useState<ResultTab>("allocations");
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
@@ -140,6 +157,11 @@ export default function InventoryOptimizerPage() {
     getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
   }, []);
 
+  const selectedAllocation = useMemo(
+    () => result?.allocations.find((row) => row.route_id === selectedRouteId) ?? null,
+    [result, selectedRouteId]
+  );
+
   const totals = useMemo(() => {
     const allocations = result?.allocations ?? [];
     const balances = result?.balances ?? [];
@@ -159,6 +181,35 @@ export default function InventoryOptimizerPage() {
     { key: "delta", header: "Delta", align: "right", render: (row) => <span className={row.increase_shares > 0 ? "text-term-up" : row.decrease_shares > 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.increase_shares - row.decrease_shares)}</span>, sortVal: (row) => row.increase_shares - row.decrease_shares },
     { key: "fee", header: "Fee", align: "right", render: (row) => pctFromDecimal(row.fee_rate), sortVal: (row) => row.fee_rate },
     { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_codes?.slice(0, 2).join(", ") || "-"}</span>, sortVal: (row) => row.reason_codes?.[0] ?? "" },
+  ];
+
+  const balanceColumns: Column<IbalBalance>[] = [
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
+    { key: "pre_total", header: "Pre Total", align: "right", render: (row) => fmtAbbr(row.pre_total_lendable_shares), sortVal: (row) => row.pre_total_lendable_shares },
+    { key: "pre_on_loan", header: "Pre On-Loan", align: "right", render: (row) => fmtAbbr(row.pre_on_loan_shares), sortVal: (row) => row.pre_on_loan_shares },
+    { key: "pre_available", header: "Pre Available", align: "right", render: (row) => fmtAbbr(row.pre_available_to_lend_shares), sortVal: (row) => row.pre_available_to_lend_shares },
+    { key: "post_on_loan", header: "Post On-Loan", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_on_loan_shares)}</span>, sortVal: (row) => row.post_on_loan_shares },
+    { key: "post_available", header: "Post Available", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_available_shares)}</span>, sortVal: (row) => row.post_available_shares },
+    { key: "utilization", header: "Utilization", align: "right", render: (row) => <span className={row.utilization >= 0.95 ? "text-term-down" : row.utilization >= 0.8 ? "text-term-amber" : "text-term-text"}>{pctFromDecimal(row.utilization)}</span>, sortVal: (row) => row.utilization },
+  ];
+
+  const demandColumns: Column<IbalDemand>[] = [
+    { key: "group", header: "Demand Group", render: (row) => <span className="text-term-text">{row.demand_group_id}</span>, sortVal: (row) => row.demand_group_id },
+    { key: "reference", header: "Reference", align: "right", render: (row) => fmtAbbr(row.reference_quantity_shares), sortVal: (row) => row.reference_quantity_shares },
+    { key: "raw", header: "Raw Demand", align: "right", render: (row) => fmtAbbr(row.raw_demand_shares), sortVal: (row) => row.raw_demand_shares },
+    { key: "cap", header: "Effective Cap", align: "right", render: (row) => fmtAbbr(row.effective_cap_shares), sortVal: (row) => row.effective_cap_shares },
+    { key: "filled", header: "Filled", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.filled_shares)}</span>, sortVal: (row) => row.filled_shares },
+    { key: "unfilled", header: "Unfilled", align: "right", render: (row) => <span className={row.unfilled_shares > 0 ? "text-term-amber" : "text-term-text-mute"}>{fmtAbbr(row.unfilled_shares)}</span>, sortVal: (row) => row.unfilled_shares },
+    { key: "fill_ratio", header: "Fill Ratio", align: "right", render: (row) => pctFromDecimal(row.fill_ratio), sortVal: (row) => row.fill_ratio },
+    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_code ?? "-"}</span>, sortVal: (row) => row.reason_code ?? "" },
+  ];
+
+  const economicsColumns: Column<NonNullable<IbalResult["economics"]>["components"][number]>[] = [
+    { key: "component", header: "Component", render: (row) => <span className="text-term-text">{row.component_name}</span>, sortVal: (row) => row.component_name },
+    { key: "version", header: "Version", render: (row) => <span className="text-term-text-mute">{row.component_version}</span>, sortVal: (row) => row.component_version },
+    { key: "unscaled", header: "Value", align: "right", render: (row) => fmtUsdAbbr(row.unscaled_value_usd), sortVal: (row) => row.unscaled_value_usd },
+    { key: "baseline", header: "Baseline", align: "right", render: (row) => fmtUsdAbbr(row.baseline_value_usd), sortVal: (row) => row.baseline_value_usd },
+    { key: "delta", header: "Delta", align: "right", render: (row) => <span className={row.delta_usd >= 0 ? "text-term-up" : "text-term-down"}>{fmtUsdAbbr(row.delta_usd)}</span>, sortVal: (row) => row.delta_usd },
   ];
 
   const issueColumns: Column<LocatedIssue>[] = [
@@ -242,6 +293,8 @@ export default function InventoryOptimizerPage() {
     setResult(null);
     setMessage(null);
     setActionIssues([]);
+    setSelectedRouteId(null);
+    setResultTab("allocations");
   }
 
   async function solveCurrent() {
@@ -249,6 +302,7 @@ export default function InventoryOptimizerPage() {
     setBusy(true);
     setMessage(null);
     setActionIssues([]);
+    setSelectedRouteId(null);
     try {
       const response = await runIbal(dataset, runConfig);
       setResult(response.result);
@@ -440,23 +494,158 @@ export default function InventoryOptimizerPage() {
             </Panel>
           )}
 
-          <Panel title="Allocations" code="ALLOC" right={<Tag tone={result ? "up" : "neutral"}>{fmtAbbr(totals.allocationIncrease - totals.allocationDecrease)} net</Tag>}>
-            <DataGrid columns={allocationColumns} rows={result?.allocations ?? []} rowKey={(row) => row.route_id} maxHeight="360px" initialSort={{ key: "delta", dir: "desc" }} zebra />
-          </Panel>
+          <Panel
+            title="Results"
+            code={result?.run_id.slice(0, 12) ?? "NOT RUN"}
+            toolbar={<TermToggleGroup value={resultTab} onChange={setResultTab} options={RESULT_TABS} size="sm" />}
+            right={
+              resultTab === "allocations" ? (
+                <Tag tone={result ? "up" : "neutral"}>{fmtAbbr(totals.allocationIncrease - totals.allocationDecrease)} net</Tag>
+              ) : resultTab === "diagnostics" ? (
+                <Tag tone={result?.verification?.passed ? "up" : result ? "down" : "neutral"}>
+                  {result?.verification?.passed ? "VERIFIED" : result ? "FAILED" : "-"}
+                </Tag>
+              ) : undefined
+            }
+          >
+            {resultTab === "allocations" && (
+              <>
+                <DataGrid
+                  columns={allocationColumns}
+                  rows={result?.allocations ?? []}
+                  rowKey={(row) => row.route_id}
+                  maxHeight="320px"
+                  initialSort={{ key: "delta", dir: "desc" }}
+                  zebra
+                  onRowClick={(row) => setSelectedRouteId((current) => (current === row.route_id ? null : row.route_id))}
+                  selectedKey={selectedRouteId ?? undefined}
+                />
+                {selectedAllocation && (
+                  <div className="border-t border-term-border p-2 text-2xs">
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="term-label">Evidence — {selectedAllocation.route_id}</span>
+                      <button className="text-term-text-mute hover:text-term-text" onClick={() => setSelectedRouteId(null)}>
+                        Clear
+                      </button>
+                    </div>
+                    <div className="mb-2 flex flex-wrap gap-1">
+                      {selectedAllocation.reason_codes.length === 0 && <span className="text-term-text-mute">No reason codes.</span>}
+                      {selectedAllocation.reason_codes.map((code) => (
+                        <Tag key={code} tone="blue">{code}</Tag>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 md:grid-cols-3">
+                      {Object.entries(selectedAllocation.explanation_evidence).map(([key, value]) => (
+                        <div key={key} className="flex justify-between gap-2">
+                          <span className="text-term-text-mute">{key}</span>
+                          <span className="tnum text-term-text">{typeof value === "number" ? fmtAbbr(value) : value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
-          <div className="grid min-h-0 grid-cols-1 gap-2 xl:grid-cols-2">
-            <Panel title="Constraints" code="DUAL">
-              <DataGrid columns={constraintColumns} rows={result?.constraints ?? []} rowKey={(row, i) => `${row.row.kind}-${row.row.scope_id}-${i}`} maxHeight="260px" initialSort={{ key: "slack", dir: "asc" }} zebra />
-            </Panel>
-            <Panel title="Verification" code="CHECK">
-              <div className="grid grid-cols-2 divide-x divide-y divide-term-border border-term-border">
-                <Stat label="Passed" value={result?.verification?.passed ? "YES" : result ? "NO" : "-"} tone={result?.verification?.passed ? "up" : result ? "down" : "neutral"} />
-                <Stat label="Termination" value={result?.solver?.termination_reason ?? "-"} />
-                <Stat label="Row Violation" value={fmtAbbr(result?.verification?.max_row_violation ?? 0, 3)} />
-                <Stat label="Objective Delta" value={fmtAbbr(result?.verification?.objective_reconstruction_delta ?? 0, 3)} />
+            {resultTab === "balances" && (
+              <DataGrid columns={balanceColumns} rows={result?.balances ?? []} rowKey={(row) => row.inventory_id} maxHeight="400px" initialSort={{ key: "utilization", dir: "desc" }} zebra />
+            )}
+
+            {resultTab === "demand" && (
+              <DataGrid columns={demandColumns} rows={result?.demand ?? []} rowKey={(row) => row.demand_group_id} maxHeight="400px" initialSort={{ key: "fill_ratio", dir: "asc" }} zebra />
+            )}
+
+            {resultTab === "economics" && (
+              <div className="grid gap-2 p-2">
+                <div className="grid grid-cols-2 divide-x divide-term-border border border-term-border">
+                  <Stat label="Total Value" value={fmtUsdAbbr(result?.economics?.total_value_usd ?? 0)} />
+                  <Stat
+                    label="Total Delta"
+                    value={fmtUsdAbbr(result?.economics?.total_delta_usd ?? 0)}
+                    tone={(result?.economics?.total_delta_usd ?? 0) >= 0 ? "up" : "down"}
+                  />
+                </div>
+                <DataGrid columns={economicsColumns} rows={result?.economics?.components ?? []} rowKey={(row) => row.component_name} maxHeight="300px" zebra />
               </div>
-            </Panel>
-          </div>
+            )}
+
+            {resultTab === "constraints" && (
+              <DataGrid columns={constraintColumns} rows={result?.constraints ?? []} rowKey={(row, i) => `${row.row.kind}-${row.row.scope_id}-${i}`} maxHeight="400px" initialSort={{ key: "slack", dir: "asc" }} zebra />
+            )}
+
+            {resultTab === "diagnostics" && (
+              <div className="grid gap-2 p-2 text-2xs">
+                <div>
+                  <div className="term-label mb-1">Run</div>
+                  <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
+                    <Stat label="Status" value={result?.status?.toUpperCase() ?? "-"} tone={result?.status === "optimal" ? "up" : result ? "amber" : "neutral"} />
+                    <Stat label="Native Status" value={result?.native_status ?? "-"} />
+                    <Stat label="Strict" value={result ? (result.strict ? "YES" : "NO") : "-"} />
+                    <Stat label="Created" value={result ? new Date(result.created_at).toLocaleTimeString() : "-"} />
+                  </div>
+                </div>
+                <div>
+                  <div className="term-label mb-1">Solver</div>
+                  <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
+                    <Stat label="Backend" value={result?.solver ? `${result.solver.backend_name} ${result.solver.backend_version}` : "-"} />
+                    <Stat label="Runtime" value={result?.solver ? `${fmtInt((result.solver.runtime_seconds ?? 0) * 1000)}ms` : "-"} />
+                    <Stat label="Iterations" value={fmtInt(result?.solver?.iterations ?? 0)} />
+                    <Stat label="Termination" value={result?.solver?.termination_reason ?? result?.termination_reason ?? "-"} />
+                    <Stat label="Relative Gap" value={result?.solver?.relative_gap != null ? fmtAbbr(result.solver.relative_gap, 4) : "-"} />
+                    <Stat label="Best Bound" value={result?.solver?.best_bound != null ? fmtAbbr(result.solver.best_bound) : "-"} />
+                    <Stat label="Nodes" value={result?.solver?.nodes != null ? fmtInt(result.solver.nodes) : "-"} />
+                  </div>
+                </div>
+                <div>
+                  <div className="term-label mb-1">Verification</div>
+                  <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
+                    <Stat label="Passed" value={result?.verification?.passed ? "YES" : result ? "NO" : "-"} tone={result?.verification?.passed ? "up" : result ? "down" : "neutral"} />
+                    <Stat label="Has Primal" value={result?.verification ? (result.verification.has_primal ? "YES" : "NO") : "-"} />
+                    <Stat label="Row Violation" value={fmtAbbr(result?.verification?.max_row_violation ?? 0, 4)} />
+                    <Stat label="Bound Violation" value={fmtAbbr(result?.verification?.max_variable_bound_violation ?? 0, 4)} />
+                    <Stat label="Integrality Violation" value={fmtAbbr(result?.verification?.max_integrality_violation ?? 0, 4)} />
+                    <Stat label="Objective Delta" value={fmtAbbr(result?.verification?.objective_reconstruction_delta ?? 0, 4)} />
+                  </div>
+                </div>
+                <div>
+                  <div className="term-label mb-1">Provenance</div>
+                  <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
+                    <Stat label="Config Hash" value={result ? result.config_hash.slice(0, 12) : "-"} />
+                    <Stat label="Package Version" value={result?.package_version ?? "-"} />
+                    <Stat label="Problem Family" value={result?.desk?.problem_family ?? result?.platform?.problem_family ?? "-"} />
+                    <Stat label="Correlation ID" value={result?.platform ? result.platform.correlation_id.slice(0, 12) : "-"} />
+                  </div>
+                </div>
+                <div>
+                  <div className="term-label mb-1">Warnings</div>
+                  {!result?.warnings?.length ? (
+                    <div className="border border-term-border px-2 py-1 text-term-text-mute">None.</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {result.warnings.map((warning, i) => (
+                        <Tag key={`${warning}-${i}`} tone="amber">{warning}</Tag>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {resultTab === "raw" && (
+              <div className="relative">
+                <button
+                  className="term-btn absolute right-2 top-2 z-10"
+                  disabled={!result}
+                  onClick={() => result && navigator.clipboard?.writeText(JSON.stringify(result, null, 2))}
+                >
+                  <Copy size={13} /> Copy
+                </button>
+                <pre className="analytics-scroll max-h-[420px] overflow-auto bg-term-panel-2 p-2 text-3xs text-term-text-dim">
+                  {result ? JSON.stringify(result, null, 2) : "No run yet."}
+                </pre>
+              </div>
+            )}
+          </Panel>
         </div>
       </div>
 
