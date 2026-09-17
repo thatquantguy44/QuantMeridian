@@ -63,7 +63,7 @@ const DATASET_TABS: { value: DatasetTab; label: string }[] = [
   { value: "raw", label: "Raw" },
 ];
 
-type WhatIfScenarioId = "base" | "scarce" | "specials" | "concentration" | "confidence" | "capacity";
+type WhatIfScenarioId = string;
 
 interface WhatIfScenario {
   id: WhatIfScenarioId;
@@ -72,6 +72,7 @@ interface WhatIfScenario {
   synthetic?: Partial<SyntheticConfig>;
   runConfig?: Partial<RunConfig>;
   seedOffset?: number;
+  isCustom?: boolean;
 }
 
 interface WhatIfResult {
@@ -335,6 +336,8 @@ export default function InventoryOptimizerPage() {
   const [whatIfResults, setWhatIfResults] = useState<WhatIfResult[]>([]);
   const [scenarioBusy, setScenarioBusy] = useState(false);
   const [selectedWhatIfId, setSelectedWhatIfId] = useState<WhatIfScenarioId | null>(null);
+  const [customScenarios, setCustomScenarios] = useState<WhatIfScenario[]>([]);
+  const [customShockLabel, setCustomShockLabel] = useState("");
 
   // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
@@ -469,6 +472,28 @@ export default function InventoryOptimizerPage() {
         : null;
   const runButtonLabel = !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
   const scenarioSet = useMemo(() => new Set(selectedScenarioIds), [selectedScenarioIds]);
+  const allScenarios = useMemo(() => [...WHAT_IF_SCENARIOS, ...customScenarios], [customScenarios]);
+
+  // A custom shock is a full snapshot of whatever is currently dialed into the Dataset Intake
+  // and Run Config forms -- reusing that form as the shock editor instead of building a second,
+  // parallel field picker. The full config (not a partial override) is stored so the shock always
+  // replays exactly what was captured, regardless of later edits to the live form.
+  function addCustomShock() {
+    const label = customShockLabel.trim();
+    if (!label) return;
+    const id = `custom-${Date.now()}`;
+    setCustomScenarios((current) => [
+      ...current,
+      { id, label, desc: "Custom shock: snapshot of the form settings at the time it was saved.", synthetic: { ...synthetic }, runConfig: { ...runConfig }, isCustom: true },
+    ]);
+    setSelectedScenarioIds((current) => (current.includes(id) ? current : [...current, id]));
+    setCustomShockLabel("");
+  }
+
+  function removeCustomShock(id: WhatIfScenarioId) {
+    setCustomScenarios((current) => current.filter((scenario) => scenario.id !== id));
+    setSelectedScenarioIds((current) => current.filter((value) => value !== id));
+  }
 
   const inventoryPreviewColumns: Column<IbalInventoryRow>[] = [
     { key: "id", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
@@ -777,6 +802,34 @@ export default function InventoryOptimizerPage() {
     }
   }
 
+  function exportScenarioComparisonCsv() {
+    if (!whatIfResults.length) return;
+    const header = ["Scenario", "Status", "Delta Value USD", "Vs Base USD", "Fill Ratio", "Avg Utilization", "Binding Constraints", "Net Allocation Shares", "Message"];
+    const rows = whatIfResults.map((row) => {
+      const vsBase = row.totalDeltaUsd != null && baselineScenario?.totalDeltaUsd != null ? row.totalDeltaUsd - baselineScenario.totalDeltaUsd : "";
+      return [
+        row.label,
+        row.status,
+        row.totalDeltaUsd ?? "",
+        vsBase,
+        row.fillRatio ?? "",
+        row.avgUtilization ?? "",
+        row.bindingConstraints ?? "",
+        row.netAllocation ?? "",
+        row.message ?? "",
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(",");
+    });
+    const csv = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const anchor = document.createElement("a");
+    anchor.href = URL.createObjectURL(blob);
+    anchor.download = `ibal-scenario-comparison-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(anchor.href);
+  }
+
   function toggleScenario(id: WhatIfScenarioId) {
     setSelectedScenarioIds((current) => {
       if (current.includes(id)) return current.length === 1 ? current : current.filter((value) => value !== id);
@@ -808,7 +861,7 @@ export default function InventoryOptimizerPage() {
   }
 
   async function runWhatIfScenarios() {
-    const scenarios = WHAT_IF_SCENARIOS.filter((scenario) => scenarioSet.has(scenario.id));
+    const scenarios = allScenarios.filter((scenario) => scenarioSet.has(scenario.id));
     if (!scenarios.length) return;
     setScenarioBusy(true);
     setBusy(true);
@@ -823,7 +876,10 @@ export default function InventoryOptimizerPage() {
           const scenarioSynthetic = {
             ...synthetic,
             ...(scenario.synthetic ?? {}),
-            seed: synthetic.seed + (scenario.seedOffset ?? 0),
+            // Presets carry a seedOffset and no explicit seed, so they derive one from the live
+            // form; a custom shock's captured synthetic snapshot already has its own seed, which
+            // must win so the shock always replays exactly what was captured.
+            seed: scenario.synthetic?.seed ?? synthetic.seed + (scenario.seedOffset ?? 0),
           } as SyntheticConfig;
           const scenarioRunConfig = { ...runConfig, ...(scenario.runConfig ?? {}) };
           const nextDataset = await generateSyntheticDataset(scenarioSynthetic);
@@ -1035,7 +1091,7 @@ export default function InventoryOptimizerPage() {
                 Scenario runs use the synthetic generator and current run config, then apply each selected shock.
               </div>
               <div className="grid gap-1">
-                {WHAT_IF_SCENARIOS.map((scenario) => (
+                {allScenarios.map((scenario) => (
                   <label key={scenario.id} className="flex cursor-pointer items-start gap-2 border border-term-border bg-term-panel-2 px-2 py-1 hover:border-term-amber/50">
                     <input
                       className="mt-0.5"
@@ -1044,12 +1100,46 @@ export default function InventoryOptimizerPage() {
                       disabled={scenarioBusy}
                       onChange={() => toggleScenario(scenario.id)}
                     />
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block font-semibold text-term-text">{scenario.label}</span>
                       <span className="block truncate text-term-text-mute" title={scenario.desc}>{scenario.desc}</span>
                     </span>
+                    {scenario.isCustom && (
+                      <button
+                        className="mt-0.5 text-term-text-mute hover:text-term-down"
+                        disabled={scenarioBusy}
+                        title="Remove this custom shock"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          removeCustomShock(scenario.id);
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
                   </label>
                 ))}
+              </div>
+              <div className="flex items-center gap-1 border border-dashed border-term-border bg-term-panel-2 px-2 py-1">
+                <input
+                  className="min-w-0 flex-1 border border-term-border bg-term-panel px-2 py-1 text-term-text"
+                  type="text"
+                  placeholder="Custom shock name..."
+                  value={customShockLabel}
+                  disabled={scenarioBusy}
+                  onChange={(event) => setCustomShockLabel(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") addCustomShock();
+                  }}
+                />
+                <button
+                  className="term-btn justify-center border-term-blue text-term-blue"
+                  disabled={scenarioBusy || !customShockLabel.trim()}
+                  title="Save the Dataset Intake and Run Config panels' current settings as a new selectable shock"
+                  onClick={addCustomShock}
+                >
+                  Save as Shock
+                </button>
               </div>
               <button className="term-btn justify-center border-term-blue text-term-blue" disabled={busy || scenarioBusy || selectedScenarioIds.length === 0} onClick={runWhatIfScenarios}>
                 <Play size={13} /> {scenarioBusy ? "Running Scenarios..." : "Run Scenarios"}
@@ -1078,9 +1168,16 @@ export default function InventoryOptimizerPage() {
 
           {whatIfResults.length > 0 && (
             <Panel
-              title="What If Scenarios"
+              title="Scenario Comparison"
               code="SCENARIO"
-              right={<Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "failed") ? "down" : "up"}>{scenarioBusy ? "RUNNING" : "COMPLETE"}</Tag>}
+              right={
+                <span className="flex items-center gap-1">
+                  <Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "failed") ? "down" : "up"}>{scenarioBusy ? "RUNNING" : "COMPLETE"}</Tag>
+                  <button className="term-btn" disabled={scenarioBusy} title="Export this comparison table as CSV" onClick={exportScenarioComparisonCsv}>
+                    <Download size={12} /> CSV
+                  </button>
+                </span>
+              }
             >
               <div className="px-2 pt-2 text-3xs text-term-text-mute">Select a row to view its full results and visuals below.</div>
               <DataGrid
