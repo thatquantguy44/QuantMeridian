@@ -60,6 +60,9 @@ test("IBAL loads data, runs optimizer, and exposes results", async ({ page }) =>
 
   await expect(page.getByText(/returned optimal/i)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("OPTIMAL").first()).toBeVisible();
+  await expect(page.getByText("Base Case Before / After")).toBeVisible();
+  await expect(page.getByText("Top Route Movers")).toBeVisible();
+  await expect(page.getByText("Demand Shortfall")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Export$/i })).toBeEnabled();
 
   const scenarioButton = page.getByRole("button", { name: /^Run Scenarios$/i });

@@ -98,6 +98,64 @@ interface WhatIfInventoryDrillRow extends IbalBalance {
   vs_base_utilization: number | null;
 }
 
+interface BaseRouteAnalyticsRow extends IbalAllocation {
+  security_id: string;
+  borrower_id: string;
+  delta_shares: number;
+  delta_notional_usd: number;
+}
+
+interface BaseInventoryAnalyticsRow extends IbalBalance {
+  security_id: string;
+  delta_on_loan_shares: number;
+  delta_available_shares: number;
+  pre_utilization: number;
+  utilization_delta: number;
+}
+
+interface BaseDemandAnalyticsRow extends IbalDemand {
+  security_id: string;
+  borrower_id: string;
+  shortfall_shares: number;
+}
+
+interface ReasonCodeAnalyticsRow {
+  reason_code: string;
+  route_count: number;
+  net_delta_shares: number;
+  gross_delta_shares: number;
+}
+
+interface BeforeAfterAnalytics {
+  preOnLoanShares: number;
+  postOnLoanShares: number;
+  deltaOnLoanShares: number;
+  preAvailableShares: number;
+  postAvailableShares: number;
+  deltaAvailableShares: number;
+  totalLendableShares: number;
+  preUtilization: number;
+  postUtilization: number;
+  utilizationDelta: number;
+  filledShares: number;
+  unfilledShares: number;
+  effectiveDemandShares: number;
+  fillRatio: number;
+  fillShortfallRatio: number;
+  grossIncreaseShares: number;
+  grossDecreaseShares: number;
+  netAllocationShares: number;
+  changedRouteCount: number;
+  unchangedRouteCount: number;
+  activeRouteCount: number;
+  bindingConstraintCount: number;
+  warningCount: number;
+  routeMovers: BaseRouteAnalyticsRow[];
+  inventoryMovers: BaseInventoryAnalyticsRow[];
+  demandDrivers: BaseDemandAnalyticsRow[];
+  reasonCodes: ReasonCodeAnalyticsRow[];
+}
+
 const WHAT_IF_SCENARIOS: WhatIfScenario[] = [
   { id: "base", label: "Base Case", desc: "Current synthetic settings and run config." },
   { id: "scarce", label: "Scarce Supply", desc: "Higher utilization and tighter lendable supply.", synthetic: { profile: "scarce" }, seedOffset: 11 },
@@ -116,8 +174,126 @@ function sourceFor(dataset: DatasetEnvelope | null, health: IbalHealth | null) {
   return "ERR";
 }
 
+function DevelopmentBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-sm border border-term-amber/40 bg-term-amber/10 px-1.5 py-px text-3xs font-semibold text-term-amber"
+      title="InventoryBallast is under active local development."
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-term-amber" />
+      In Development
+    </span>
+  );
+}
+
 function updateNumber<T extends object>(setter: (next: T) => void, current: T, key: keyof T, value: string) {
   setter({ ...current, [key]: Number(value) });
+}
+
+function utilization(onLoan: number, total: number) {
+  return total > 0 ? onLoan / total : 0;
+}
+
+function buildBeforeAfterAnalytics(dataset: DatasetEnvelope | null, result: IbalResult | null): BeforeAfterAnalytics | null {
+  if (!dataset || !result) return null;
+
+  const inventoryById = new Map(dataset.request.inventory.map((row) => [row.inventory_id, row]));
+  const routeById = new Map(dataset.request.routes.map((row) => [row.route_id, row]));
+  const demandById = new Map(dataset.request.demand.map((row) => [row.demand_group_id, row]));
+  const constraintTolerance = 1e-8;
+
+  const totalLendableShares = result.balances.reduce((sum, row) => sum + row.pre_total_lendable_shares, 0);
+  const preOnLoanShares = result.balances.reduce((sum, row) => sum + row.pre_on_loan_shares, 0);
+  const postOnLoanShares = result.balances.reduce((sum, row) => sum + row.post_on_loan_shares, 0);
+  const preAvailableShares = result.balances.reduce((sum, row) => sum + row.pre_available_to_lend_shares, 0);
+  const postAvailableShares = result.balances.reduce((sum, row) => sum + row.post_available_shares, 0);
+  const filledShares = result.demand.reduce((sum, row) => sum + row.filled_shares, 0);
+  const unfilledShares = result.demand.reduce((sum, row) => sum + row.unfilled_shares, 0);
+  const effectiveDemandShares = result.demand.reduce((sum, row) => sum + row.effective_cap_shares, 0);
+
+  const routeMovers = result.allocations.map((row) => {
+    const route = routeById.get(row.route_id);
+    const inventory = inventoryById.get(row.inventory_id);
+    const deltaShares = row.increase_shares - row.decrease_shares;
+    return {
+      ...row,
+      security_id: route?.security_id ?? inventory?.security_id ?? "-",
+      borrower_id: route?.borrower_id ?? "-",
+      delta_shares: deltaShares,
+      delta_notional_usd: deltaShares * (inventory?.price_usd ?? 0),
+    };
+  });
+
+  const inventoryMovers = result.balances.map((row) => {
+    const inventory = inventoryById.get(row.inventory_id);
+    const preUtilization = utilization(row.pre_on_loan_shares, row.pre_total_lendable_shares);
+    return {
+      ...row,
+      security_id: inventory?.security_id ?? "-",
+      delta_on_loan_shares: row.post_on_loan_shares - row.pre_on_loan_shares,
+      delta_available_shares: row.post_available_shares - row.pre_available_to_lend_shares,
+      pre_utilization: preUtilization,
+      utilization_delta: row.utilization - preUtilization,
+    };
+  });
+
+  const demandDrivers = result.demand.map((row) => {
+    const demand = demandById.get(row.demand_group_id);
+    return {
+      ...row,
+      security_id: demand?.security_id ?? "-",
+      borrower_id: demand?.borrower_id ?? "-",
+      shortfall_shares: row.unfilled_shares,
+    };
+  });
+
+  const reasonCodeMap = new Map<string, ReasonCodeAnalyticsRow>();
+  for (const row of result.allocations) {
+    const codes = row.reason_codes.length ? row.reason_codes : ["NO_REASON_CODE"];
+    const netDelta = row.increase_shares - row.decrease_shares;
+    for (const reasonCode of codes) {
+      const current = reasonCodeMap.get(reasonCode) ?? {
+        reason_code: reasonCode,
+        route_count: 0,
+        net_delta_shares: 0,
+        gross_delta_shares: 0,
+      };
+      current.route_count += 1;
+      current.net_delta_shares += netDelta;
+      current.gross_delta_shares += Math.abs(netDelta);
+      reasonCodeMap.set(reasonCode, current);
+    }
+  }
+
+  return {
+    preOnLoanShares,
+    postOnLoanShares,
+    deltaOnLoanShares: postOnLoanShares - preOnLoanShares,
+    preAvailableShares,
+    postAvailableShares,
+    deltaAvailableShares: postAvailableShares - preAvailableShares,
+    totalLendableShares,
+    preUtilization: utilization(preOnLoanShares, totalLendableShares),
+    postUtilization: utilization(postOnLoanShares, totalLendableShares),
+    utilizationDelta: utilization(postOnLoanShares, totalLendableShares) - utilization(preOnLoanShares, totalLendableShares),
+    filledShares,
+    unfilledShares,
+    effectiveDemandShares,
+    fillRatio: effectiveDemandShares > 0 ? filledShares / effectiveDemandShares : 0,
+    fillShortfallRatio: effectiveDemandShares > 0 ? unfilledShares / effectiveDemandShares : 0,
+    grossIncreaseShares: result.allocations.reduce((sum, row) => sum + row.increase_shares, 0),
+    grossDecreaseShares: result.allocations.reduce((sum, row) => sum + row.decrease_shares, 0),
+    netAllocationShares: result.allocations.reduce((sum, row) => sum + row.increase_shares - row.decrease_shares, 0),
+    changedRouteCount: result.allocations.filter((row) => Math.abs(row.increase_shares - row.decrease_shares) > 1e-8).length,
+    unchangedRouteCount: result.allocations.filter((row) => Math.abs(row.increase_shares - row.decrease_shares) <= 1e-8).length,
+    activeRouteCount: result.allocations.filter((row) => row.post_quantity_shares > 0).length,
+    bindingConstraintCount: result.constraints.filter((row) => Math.abs(row.slack ?? 0) <= constraintTolerance).length,
+    warningCount: result.warnings?.length ?? 0,
+    routeMovers,
+    inventoryMovers,
+    demandDrivers,
+    reasonCodes: Array.from(reasonCodeMap.values()),
+  };
 }
 
 // Mirrors synthetic.py's PROFILE_PRESETS: the backend applies these on top of whatever the
@@ -242,6 +418,7 @@ export default function InventoryOptimizerPage() {
       bindingConstraints: (result?.constraints ?? []).filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
     };
   }, [result]);
+  const beforeAfterAnalytics = useMemo(() => buildBeforeAfterAnalytics(dataset, result), [dataset, result]);
   const datasetReady = Boolean(dataset?.validation.valid);
   const runDisabledReason = !dataset
     ? "Load synthetic data or upload a dataset before running."
@@ -397,6 +574,48 @@ export default function InventoryOptimizerPage() {
     { key: "activity", header: "Activity", align: "right", render: (row) => fmtAbbr(row.activity), sortVal: (row) => row.activity },
     { key: "slack", header: "Slack", align: "right", render: (row) => <span className={Math.abs(row.slack ?? 0) < 1e-8 ? "text-term-amber" : "text-term-text-dim"}>{fmtAbbr(row.slack ?? 0)}</span>, sortVal: (row) => row.slack ?? 0 },
     { key: "dual", header: "Dual", align: "right", render: (row) => fmtAbbr(row.dual_value ?? 0), sortVal: (row) => row.dual_value ?? 0 },
+  ];
+
+  const baseRouteAnalyticsColumns: Column<BaseRouteAnalyticsRow>[] = [
+    { key: "route", header: "Route", render: (row) => <span className="text-term-text">{row.route_id}</span>, sortVal: (row) => row.route_id, width: "120" },
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text-dim">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id, width: "120" },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-mute">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "current", header: "Before", align: "right", render: (row) => fmtAbbr(row.current_quantity_shares), sortVal: (row) => row.current_quantity_shares },
+    { key: "post", header: "After", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_quantity_shares)}</span>, sortVal: (row) => row.post_quantity_shares },
+    { key: "delta", header: "Delta", align: "right", render: (row) => <span className={row.delta_shares > 0 ? "text-term-up" : row.delta_shares < 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.delta_shares)}</span>, sortVal: (row) => Math.abs(row.delta_shares) },
+    { key: "notional", header: "Delta Notional", align: "right", render: (row) => <span className={row.delta_notional_usd >= 0 ? "text-term-up" : "text-term-down"}>{fmtUsdAbbr(row.delta_notional_usd)}</span>, sortVal: (row) => Math.abs(row.delta_notional_usd) },
+    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_codes.slice(0, 3).join(", ") || "-"}</span>, sortVal: (row) => row.reason_codes[0] ?? "" },
+  ];
+
+  const baseInventoryAnalyticsColumns: Column<BaseInventoryAnalyticsRow>[] = [
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "before_on_loan", header: "Before Loan", align: "right", render: (row) => fmtAbbr(row.pre_on_loan_shares), sortVal: (row) => row.pre_on_loan_shares },
+    { key: "after_on_loan", header: "After Loan", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_on_loan_shares)}</span>, sortVal: (row) => row.post_on_loan_shares },
+    { key: "loan_delta", header: "Loan Delta", align: "right", render: (row) => <span className={row.delta_on_loan_shares > 0 ? "text-term-up" : row.delta_on_loan_shares < 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.delta_on_loan_shares)}</span>, sortVal: (row) => Math.abs(row.delta_on_loan_shares) },
+    { key: "available_delta", header: "Avail Delta", align: "right", render: (row) => <span className={row.delta_available_shares >= 0 ? "text-term-up" : "text-term-down"}>{fmtAbbr(row.delta_available_shares)}</span>, sortVal: (row) => Math.abs(row.delta_available_shares) },
+    { key: "util_before", header: "Before Util", align: "right", render: (row) => pctFromDecimal(row.pre_utilization), sortVal: (row) => row.pre_utilization },
+    { key: "util_after", header: "After Util", align: "right", render: (row) => <span className={row.utilization >= 0.95 ? "text-term-down" : row.utilization >= 0.8 ? "text-term-amber" : "text-term-text"}>{pctFromDecimal(row.utilization)}</span>, sortVal: (row) => row.utilization },
+    { key: "util_delta", header: "Util Delta", align: "right", render: (row) => <span className={row.utilization_delta >= 0 ? "text-term-up" : "text-term-down"}>{fmtPct(row.utilization_delta * 100, 2)}</span>, sortVal: (row) => Math.abs(row.utilization_delta) },
+  ];
+
+  const baseDemandAnalyticsColumns: Column<BaseDemandAnalyticsRow>[] = [
+    { key: "demand", header: "Demand Group", render: (row) => <span className="text-term-text">{row.demand_group_id}</span>, sortVal: (row) => row.demand_group_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-mute">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "cap", header: "Demand Cap", align: "right", render: (row) => fmtAbbr(row.effective_cap_shares), sortVal: (row) => row.effective_cap_shares },
+    { key: "filled", header: "Filled", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.filled_shares)}</span>, sortVal: (row) => row.filled_shares },
+    { key: "shortfall", header: "Shortfall", align: "right", render: (row) => <span className={row.shortfall_shares > 0 ? "text-term-amber" : "text-term-text-mute"}>{fmtAbbr(row.shortfall_shares)}</span>, sortVal: (row) => row.shortfall_shares },
+    { key: "fill", header: "Fill", align: "right", render: (row) => pctFromDecimal(row.fill_ratio), sortVal: (row) => row.fill_ratio },
+    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_code ?? "-"}</span>, sortVal: (row) => row.reason_code ?? "" },
+  ];
+
+  const reasonCodeAnalyticsColumns: Column<ReasonCodeAnalyticsRow>[] = [
+    { key: "reason", header: "Reason Code", render: (row) => <span className="text-term-text">{row.reason_code}</span>, sortVal: (row) => row.reason_code },
+    { key: "routes", header: "Routes", align: "right", render: (row) => fmtInt(row.route_count), sortVal: (row) => row.route_count },
+    { key: "net", header: "Net Delta", align: "right", render: (row) => <span className={row.net_delta_shares > 0 ? "text-term-up" : row.net_delta_shares < 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.net_delta_shares)}</span>, sortVal: (row) => Math.abs(row.net_delta_shares) },
+    { key: "gross", header: "Gross Delta", align: "right", render: (row) => fmtAbbr(row.gross_delta_shares), sortVal: (row) => row.gross_delta_shares },
   ];
 
   const whatIfColumns: Column<WhatIfResult>[] = [
@@ -659,8 +878,14 @@ export default function InventoryOptimizerPage() {
         asOf={dataset?.summary.as_of ?? null}
         right={
           <span className="flex items-center gap-1">
-            <ProvenanceBadge source={sourceFor(dataset, health)} />
-            <Tag tone={health?.ready ? "up" : "down"}>{health?.ready ? "READY" : "SERVICE"}</Tag>
+            {health?.ready ? (
+              <>
+                <ProvenanceBadge source={sourceFor(dataset, health)} />
+                <Tag tone="up">READY</Tag>
+              </>
+            ) : (
+              <DevelopmentBadge />
+            )}
           </span>
         }
       />
@@ -864,6 +1089,143 @@ export default function InventoryOptimizerPage() {
               <Stat label="Source" value={dataset?.source.mode.toUpperCase() ?? "-"} sub={dataset?.source.filename ?? (dataset?.source.seed != null ? `seed ${dataset.source.seed}` : undefined)} />
             </div>
           </Panel>
+
+          {beforeAfterAnalytics && (
+            <Panel
+              title="Base Case Before / After"
+              code={result?.run_id.slice(0, 10) ?? "ANALYTICS"}
+              right={
+                <span className="flex items-center gap-1">
+                  <Tag tone={result?.verification?.passed ? "up" : "amber"}>
+                    {result?.verification?.passed ? "VERIFIED" : "CHECK"}
+                  </Tag>
+                  <Tag tone={beforeAfterAnalytics.warningCount > 0 ? "amber" : "neutral"}>
+                    {fmtInt(beforeAfterAnalytics.warningCount)} WARN
+                  </Tag>
+                </span>
+              }
+            >
+              <div className="grid gap-2 p-2">
+                <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4 xl:grid-cols-6">
+                  <Stat
+                    label="On Loan"
+                    value={fmtAbbr(beforeAfterAnalytics.postOnLoanShares)}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.preOnLoanShares)} before`}
+                  />
+                  <Stat
+                    label="Loan Delta"
+                    value={fmtAbbr(beforeAfterAnalytics.deltaOnLoanShares)}
+                    tone={beforeAfterAnalytics.deltaOnLoanShares >= 0 ? "up" : "down"}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.netAllocationShares)} net route`}
+                  />
+                  <Stat
+                    label="Available"
+                    value={fmtAbbr(beforeAfterAnalytics.postAvailableShares)}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.preAvailableShares)} before`}
+                  />
+                  <Stat
+                    label="Utilization"
+                    value={pctFromDecimal(beforeAfterAnalytics.postUtilization)}
+                    tone={beforeAfterAnalytics.postUtilization >= 0.95 ? "down" : beforeAfterAnalytics.postUtilization >= 0.8 ? "amber" : "neutral"}
+                    sub={`${fmtPct(beforeAfterAnalytics.utilizationDelta * 100, 2)} delta`}
+                  />
+                  <Stat
+                    label="Demand Fill"
+                    value={pctFromDecimal(beforeAfterAnalytics.fillRatio)}
+                    tone={beforeAfterAnalytics.fillShortfallRatio > 0.1 ? "amber" : "up"}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.unfilledShares)} unfilled`}
+                  />
+                  <Stat
+                    label="Route Moves"
+                    value={fmtInt(beforeAfterAnalytics.changedRouteCount)}
+                    sub={`${fmtInt(beforeAfterAnalytics.unchangedRouteCount)} unchanged`}
+                  />
+                  <Stat
+                    label="Gross Increase"
+                    value={fmtAbbr(beforeAfterAnalytics.grossIncreaseShares)}
+                    tone="up"
+                  />
+                  <Stat
+                    label="Gross Decrease"
+                    value={fmtAbbr(beforeAfterAnalytics.grossDecreaseShares)}
+                    tone={beforeAfterAnalytics.grossDecreaseShares > 0 ? "down" : "neutral"}
+                  />
+                  <Stat
+                    label="Active Routes"
+                    value={fmtInt(beforeAfterAnalytics.activeRouteCount)}
+                    sub={`${fmtInt(result?.allocations.length ?? 0)} total`}
+                  />
+                  <Stat
+                    label="Binding Rows"
+                    value={fmtInt(beforeAfterAnalytics.bindingConstraintCount)}
+                    tone={beforeAfterAnalytics.bindingConstraintCount > 0 ? "amber" : "neutral"}
+                  />
+                  <Stat
+                    label="Total Delta"
+                    value={fmtUsdAbbr(result?.economics?.total_delta_usd ?? 0)}
+                    tone={(result?.economics?.total_delta_usd ?? 0) >= 0 ? "up" : "down"}
+                  />
+                  <Stat
+                    label="Status"
+                    value={result?.status.toUpperCase() ?? "-"}
+                    tone={result?.status === "optimal" ? "up" : "amber"}
+                  />
+                </div>
+
+                <div className="grid gap-2 xl:grid-cols-2">
+                  <div>
+                    <div className="term-label mb-1">Top Route Movers</div>
+                    <DataGrid
+                      columns={baseRouteAnalyticsColumns}
+                      rows={beforeAfterAnalytics.routeMovers}
+                      rowKey={(row) => row.route_id}
+                      maxHeight="260px"
+                      initialSort={{ key: "delta", dir: "desc" }}
+                      zebra
+                      onRowClick={(row) => setSelectedRouteId((current) => (current === row.route_id ? null : row.route_id))}
+                      selectedKey={selectedRouteId ?? undefined}
+                    />
+                  </div>
+                  <div>
+                    <div className="term-label mb-1">Inventory Impact</div>
+                    <DataGrid
+                      columns={baseInventoryAnalyticsColumns}
+                      rows={beforeAfterAnalytics.inventoryMovers}
+                      rowKey={(row) => row.inventory_id}
+                      maxHeight="260px"
+                      initialSort={{ key: "loan_delta", dir: "desc" }}
+                      zebra
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2 xl:grid-cols-[1fr_22rem]">
+                  <div>
+                    <div className="term-label mb-1">Demand Shortfall</div>
+                    <DataGrid
+                      columns={baseDemandAnalyticsColumns}
+                      rows={beforeAfterAnalytics.demandDrivers}
+                      rowKey={(row) => row.demand_group_id}
+                      maxHeight="220px"
+                      initialSort={{ key: "shortfall", dir: "desc" }}
+                      zebra
+                    />
+                  </div>
+                  <div>
+                    <div className="term-label mb-1">Reason Codes</div>
+                    <DataGrid
+                      columns={reasonCodeAnalyticsColumns}
+                      rows={beforeAfterAnalytics.reasonCodes}
+                      rowKey={(row) => row.reason_code}
+                      maxHeight="220px"
+                      initialSort={{ key: "gross", dir: "desc" }}
+                      zebra
+                    />
+                  </div>
+                </div>
+              </div>
+            </Panel>
+          )}
 
           {whatIfResults.length > 0 && (
             <Panel
