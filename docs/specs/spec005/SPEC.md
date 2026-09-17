@@ -418,23 +418,20 @@ Phase 3, not yet proven unattended enough to wire into `MPUB` live.
   a material-change detector (item 3) or a `DashboardSpec` chart-authoring
   adapter (item 4) is worth building, each requiring its own spec.
 
-### Phase 4: IBAL model-plugin pilot (item 6) — scoped 2026-09-17, not started
+### Phase 4: IBAL model-plugin pilot (item 6) — completed 2026-09-17, PR #94
 
-- Owner confirmed the boundary is worth revisiting for `IBAL` specifically
-  (this document's 2026-09-17 revisit note); not yet a go on implementation.
-- Blocked on QuantSmith shipping spec `0026`'s executable dispatcher (that
-  repo's own open work, not Market Terminal's) — or, to unblock sooner,
-  running the first pilot invocation manually/by script per item 6's
-  "proposed narrow first pilot," matching how Phase 2 stayed manual before
-  any automation was justified.
-- When run: register `IBAL` in QuantSmith's local `model_plugins.yml`,
-  produce one `model_plugin_registration` understanding brief, invoke `IBAL`
-  for one real solve, and independently re-verify every number the agent
-  reports about that run against `IBAL`'s own API response before writing up
-  findings — same discipline as `PHASE2_PILOT_VERIFICATION.md`.
-- Deliverable: a written pilot report (mirroring Phase 2's shape), not a
-  shipped feature or live wiring, until that pilot itself recommends further
-  investment.
+- QuantSmith branch `feature/ibal-model-plugin-pilot` registered `IBAL` in
+  local, gitignored `model_plugins.yml`, produced one
+  `model_plugin_registration` understanding brief, invoked the real IBAL REST
+  API once with synthetic data, independently re-verified the reported numbers
+  against IBAL's own API response, and produced a written pilot report.
+- The deliverable stayed artifact-only, matching the intended Phase 2 pilot
+  shape: no shipped feature, no live wiring, no dispatcher, no real book/request
+  data in QuantSmith, and no QuantSmith-originated number accepted without
+  rechecking against the IBAL response.
+- Remaining QuantSmith-side decision: whether a future spec should add an
+  executable `model_plugin` dispatcher now that IBAL exists as a concrete REST
+  target.
 
 ## Decisions Before Implementation
 

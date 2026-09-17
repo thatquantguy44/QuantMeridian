@@ -25,3 +25,17 @@ To wire this into Market Terminal's own dev server: set the same
 `INVENTORY_OPTIMIZER_API_TOKEN` value in the repo root's `.env` (see `.env.example`), then
 (re)start `npm run dev` -- Vite only reads `.env` at startup, so an already-running dev server
 needs a restart to pick up a newly added token.
+
+## Production gate
+
+Market Terminal's server-side proxy refuses to call this service in production unless all of the
+following are true:
+
+- `INVENTORY_OPTIMIZER_API_TOKEN` or `IBAL_API_TOKEN` is set in Market Terminal.
+- `IBAL_PRODUCTION_ENABLED=true` is set by the operator.
+- `IBAL_TRUSTED_ACCESS_BOUNDARY` identifies the approved server-side boundary protecting the
+  service.
+
+`/api/dataops/health` reports the resulting IBAL state as `LIVE`, `STALE`, or `ERROR` with
+sanitized diagnostics only. It never returns the service base URL, bearer token, uploaded rows,
+normalized request, or solve result values.

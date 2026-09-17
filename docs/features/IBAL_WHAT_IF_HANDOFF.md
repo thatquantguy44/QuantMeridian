@@ -15,6 +15,11 @@
   - Presets include Base Case, Scarce Supply, Specials Squeeze, Borrower Concentration, Strict Entity Confidence, and More Balance Sheet.
   - The comparison table shows scenario-level value, value delta, fill rate, utilization, binding constraints, net allocation, and status.
   - Selecting a scenario shows scenario-specific detail at the inventory route level, including inventory balance changes and route allocation rows.
+  - Scenario intent and interpretation notes live in `docs/scenarios/IBAL_WHAT_IF_SCENARIOS.md`.
+- Added custom what-if shocks and scenario export follow-through.
+  - Users can save the current Dataset Intake and Run Config settings as named custom shocks.
+  - The comparison table can be exported as CSV.
+  - The primary result-bundle export follows the currently viewed base/scenario result and includes the selected scenario's engine-owned result tables.
 - Added focused Playwright browser verification for IBAL in `test/ibal.spec.ts`.
   - Covers load-data gating, synthetic dataset preparation, `Base Case Run`, result rendering, export enablement, what-if runs, scenario comparison, and scenario route detail.
   - Asserts that `REQUEST_HASH_MISMATCH` does not appear in the browser flow.
@@ -55,7 +60,7 @@ PLAYWRIGHT_CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google 
   npx playwright test test/ibal.spec.ts --config=playwright.local.config.ts --reporter=line
 ```
 
-Use the standalone server for this IBAL Playwright flow right now. In this local sandbox, the Vite dev server path can hang browser POSTs to `/api/inventory-optimizer/datasets/synthetic` even when `curl` and the standalone server respond normally.
+Use the standalone server for this IBAL Playwright flow right now. In this local sandbox, the Vite dev server path can hang browser POSTs to `/api/inventory-optimizer/datasets/synthetic` even when `curl` and the standalone server respond normally. Current investigation notes live in `docs/features/IBAL_VITE_POST_HANG_INVESTIGATION.md`.
 
 ## Verification Results
 
@@ -67,6 +72,7 @@ Use the standalone server for this IBAL Playwright flow right now. In this local
 
 ## Suggested Next Work
 
-1. Add user-editable custom shocks for what-if scenarios instead of preset-only scenario generation.
-2. Add scenario export, ideally including the selected scenario detail and route-level allocation rows.
-3. Investigate the Vite dev-server browser POST hang so the focused Playwright test can run against `npm run dev`, not only standalone `npm start`.
+1. Review and harden the reducer/state-machine/session polish started on `feature/ibal-handoff-followthrough`.
+2. Review the Data Ops `IBAL` health row and production env/runbook hardening started on `feature/ibal-handoff-followthrough`.
+3. Continue the Vite dev-server browser POST hang investigation from `docs/features/IBAL_VITE_POST_HANG_INVESTIGATION.md` so the focused Playwright test can run against `npm run dev`, not only standalone `npm start`.
+4. Keep CI/Vercel repair scoped out unless the owner explicitly asks for that platform track.

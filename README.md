@@ -786,7 +786,9 @@ no second source of truth:
 
 - **`/api/dataops/health`** — probes each provider; the `FRED` entry makes one real call and
   reports `LIVE` (reachable), `SIM` (no key in this runtime), or `ERROR` with the exact reason
-  (HTTP status / network error). Fastest way to see why econ is `SIM`.
+  (HTTP status / network error). `IBAL` reports the InventoryBallast service gate and readiness
+  without exposing the service URL, bearer token, uploaded rows, or result values. Fastest way to
+  see why econ is `SIM` or the optimizer is unavailable.
 - **`/api/_ping`** (Vercel only) — a zero-dependency function that returns `{ fredKeyPresent, … }`,
   to confirm serverless functions run and the env var is bound on a deployment.
 
@@ -833,7 +835,13 @@ PLAYWRIGHT_CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google 
 Use the standalone server for this IBAL Playwright flow for now; the Vite dev
 server path can hang browser POSTs to the IBAL proxy in this local setup even
 when `curl` and the standalone server are healthy. Full notes live in
-`docs/features/IBAL_WHAT_IF_HANDOFF.md`.
+`docs/features/IBAL_WHAT_IF_HANDOFF.md` and
+`docs/features/IBAL_VITE_POST_HANG_INVESTIGATION.md`.
+
+For protected staging or production, leave IBAL disabled until both
+`IBAL_PRODUCTION_ENABLED=true` and `IBAL_TRUSTED_ACCESS_BOUNDARY` are set by the operator. These
+gates are separate from the bearer token: they prevent an accidental production proxy from reaching
+the solver before there is an approved server-side access boundary and book-data policy.
 
 **Optional — live economics data via Gold DB (2026-07-17+).** Set `MACRO_DB_URL` and all economic modules
 switch to use live data from the Gold layer; without it they use the committed snapshot/SIM:
