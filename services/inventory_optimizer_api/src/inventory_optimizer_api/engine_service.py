@@ -25,6 +25,7 @@ from .contracts import (
     RunResponse,
     ValidationReport,
 )
+from .datasets import summarize
 
 
 class DatasetValidationError(ValueError):
@@ -60,6 +61,16 @@ def validated_request(dataset: DatasetEnvelope, *, max_staleness_hours: float) -
         request = OptimizationRequest.model_validate(dataset.request)
     except ValidationError as exc:
         raise DatasetValidationError(_contract_issues(exc)) from exc
+    if summarize(request) != dataset.summary:
+        raise DatasetValidationError(
+            (
+                LocatedIssue(
+                    code="SUMMARY_MISMATCH",
+                    message="Disclosed dataset summary no longer matches its request.",
+                    location="dataset.summary",
+                ),
+            )
+        )
     issues = tuple(
         LocatedIssue(code=item.code, message=item.message, location=item.location)
         for item in validate_request(request, max_staleness_hours=max_staleness_hours)

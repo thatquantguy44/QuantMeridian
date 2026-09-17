@@ -36,68 +36,36 @@ branch state. Both `verify` CI and Vercel have been failing on `main` across the
 (PR #118-#120); by explicit owner direction this is being deferred while IBAL work stays local-only
 -- no CI/Vercel fix is planned as part of this workstream right now.
 
-Python service test coverage is now tracked in a master validation document:
+Python service test coverage is tracked in a master validation document:
 **`services/inventory_optimizer_api/tests/VALIDATION.md`** -- keep that file, not this paragraph,
 current going forward. It indexes every test file by what it protects, documents the shared
-edge-case framework (`tests/edge_cases.py`: named boundary-value `SyntheticConfig`s plus a
-Hypothesis-strategy pattern for sweeping cross-field combinations), maps AC-001 through AC-024 to
-concrete covering tests with a DONE/PARTIAL/TODO status, and keeps a running "bugs found and
-fixed" log with the *pattern* behind each bug, not just the instance. Suite is now `151 passed`,
-0 failed, 0 xfail/skip, `ruff check tests/` clean.
+edge-case framework (`tests/edge_cases.py`) and benchmark harness (`tests/benchmark.py`), maps
+AC-001 through AC-024 to concrete covering tests with a DONE/PARTIAL/TODO status, and keeps a
+running "bugs found and fixed" log with the *pattern* behind each bug, not just the instance.
 
-This work now lives on its own branch, **`feature/ibal-backend-test-coverage`**, cut from latest
-`origin/main` rather than continuing on `feature/ibal-inventory-optimizer` (which is already fully
-merged into `main` via PR #119/#120 -- reusing it further would be confusing for review). Two
-commits so far: the test/bugfix work, and an unrelated one-line `src/lib/nav.ts` nav-group change
-that happened to be sitting in the same working tree, committed separately on request. Kept local
-by explicit owner direction -- not pushed, no PR opened yet.
+**Every backend item is now DONE.** Suite is `176 passed`, 0 failed, 0 xfail/skip,
+`ruff check tests/` clean, covering AC-002, AC-004 through AC-011 (frontend-only pieces of some
+excepted), AC-013, AC-014, AC-016, AC-019, AC-020 (backend half), AC-021, AC-022. Four real bugs
+were found and fixed along the way (full detail in VALIDATION.md): (1) XLSX/JSON starter templates
+weren't hash-identical -- unrounded synthetic fields losing precision through XLSX serialization;
+(2) independently-valid `starting_utilization`/`reserve_fraction`/`utilization_cap` values could
+jointly push share balances negative -- found immediately by the edge-case framework's first
+boundary config; (3) the generic `RequestValidationError` handler crashed on *every* malformed
+request body across *every* endpoint, silently turning a `422` into a `500` -- a FastAPI
+`errors()` signature mismatch invisible until a test finally exercised that code path; (4) a
+tampered `DatasetEnvelope.summary` (row counts/totals disclosed to a user/auditor) was accepted
+silently by `solve()`/`export_bundle()` as long as `request`/`request_hash` were left untouched --
+fixed by recomputing and comparing the summary the same way `request_hash` already was.
 
-Three real bugs were found and fixed via this test-writing pass (full detail + patterns in
-VALIDATION.md's "Bugs found and fixed" section): (1) XLSX/JSON starter templates were not
-hash-identical because `fee_rate`/`elasticity` were generated unrounded in `synthetic.py`, losing
-precision through XLSX float serialization -- fixed by rounding to 6dp like every other synthetic
-field, and dropping a redundant unread `metadata` key; (2) independently-valid
-`starting_utilization`/`reserve_fraction`/`utilization_cap` values could combine to produce
-negative `available_to_lend_shares` and `current > maximum` routes -- found immediately by the new
-edge-case framework's `EDGE_MAX_EVERYTHING` boundary config, fixed by also capping
-`starting_utilization` against the room `reserve_fraction` leaves behind; (3) the generic
-`RequestValidationError` handler in `app.py` crashed on *every* malformed request body across
-*every* endpoint (wrong type, extra field, missing field, malformed JSON), silently downgrading
-what should be a `422 REQUEST_CONTRACT_INVALID` into a generic `500` -- FastAPI's own
-`RequestValidationError.errors()` takes no keyword arguments in the pinned 0.116.1, unlike
-pydantic's `ValidationError.errors()` the handler was written against. This was invisible until a
-test finally sent a body that failed FastAPI's own parsing layer. Fixed, and pinned broadly across
-endpoints/shapes in `test_request_validation.py` so it can't silently regress again.
+This work lives on its own branch, **`feature/ibal-backend-test-coverage`**, cut from latest
+`origin/main` rather than continuing on `feature/ibal-inventory-optimizer` (already fully merged
+via PR #119/#120). Being pushed and opened as a PR against `main`.
 
-`test_economics.py` (AC-014) was added next: every `economics` total in a solved result is
-reconstructed from raw allocation/route/inventory data and checked against the engine's own
-numbers, not just internal component-sum bookkeeping. The `fee_revenue`/`transition_cost` formulas
-were not documented anywhere and had to be reverse-engineered empirically against real solved
-results first (documented in the test file's module docstring) -- no bug found here, but the
-formula-verification-before-asserting approach is itself recorded in VALIDATION.md as a pattern to
-repeat for other engine-owned computed fields.
-
-`test_exports.py` (AC-016) followed: the export bundle's JSON files round-trip exactly, and every
-result-table CSV, read back out of the zip, matches `reporting.tables.result_tables()` cell-for-
-cell for the same solved result -- not a re-derived value, the literal engine output. Also
-directly unit-tests the CSV serialization helper's escaping/`None`/float-precision behavior. No bug
-found; AC-016 is now DONE.
-
-`test_benchmark.py` + `benchmark.py` (AC-021) added the benchmark harness: a reusable
-`run_benchmark_suite()` timing generation and solve at every scale preset (small/medium/large)
-plus JSON/XLSX upload parsing, writing a retained JSON manifest to
-`tests/benchmarks/latest.json` (gitignored -- machine-specific numbers, not meant to be versioned)
-and a curated baseline snapshot committed in VALIDATION.md. Everything is comfortably sub-100ms
-even at `large` scale (100 securities, 2,000 routes) on a dev laptop; sanity thresholds are set
-5-15x above baseline so the test catches a real regression without being flaky on ordinary machine
-noise. AC-021 is now DONE.
-
-Remaining IBAL priorities, in order: (1) the last two backend test gaps in VALIDATION.md's
-"Next up" (AC-019 health matrix, AC-010 dataset summary adversarial test); (2) frontend
-workbench -- `src/app/inventory-optimizer/page.tsx` is still a
+Remaining IBAL priorities, in order: (1) frontend workbench --
+`src/app/inventory-optimizer/page.tsx` is still a
 shell; the spec's T-010-T-012 reducer/state machine, result tabs (Allocations/Balances/Demand/
 Economics/Constraints/Diagnostics/Raw), dirty confirmation, and session-only result handling are
-not built; (3) Data Ops health + env/runbook docs (T-013/T-014); (4) browser-to-solver E2E and
+not built; (2) Data Ops health + env/runbook docs (T-013/T-014); (3) browser-to-solver E2E and
 Playwright screenshots before any production enablement. Production remains off unless
 `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly configured. CI/Vercel repair
 stays out of scope until the owner asks for it.

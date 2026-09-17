@@ -8,7 +8,9 @@ actual test suite in this repo.
 
 Run everything: `cd services/inventory_optimizer_api && .venv/bin/python -m pytest -q`
 Lint: `.venv/bin/python -m ruff check tests/`
-Current state: **151 passed**, 0 failed, 0 xfail/skip.
+Current state: **176 passed**, 0 failed, 0 xfail/skip. Every backend item in this document's
+coverage map is now DONE or PARTIAL-for-frontend-reasons-only; the only remaining gaps are
+frontend/E2E scope (see "Next up").
 
 ## How the suite is organized
 
@@ -31,6 +33,8 @@ source layout first.
 | `test_economics.py` | 18 | Every `economics` total reconstructed from raw allocation/route/inventory data and checked against a real solved result -- not just internal component-sum bookkeeping, but that `fee_revenue`/`transition_cost` actually reconcile to the notional math, across day-count bases and at boundary configs. |
 | `test_exports.py` | 19 | Export bundle contents are exactly the expected files; `normalized-input.json`/`raw-result.json`/`validation-report.json` round-trip exactly; every result-table CSV, read back, matches `reporting.tables.result_tables()` cell-for-cell for the same result; `_table_csv` escaping/`None`/float-precision edge cases tested directly. |
 | `test_benchmark.py` | 10 | Runs the benchmark harness (see below), writes the retained runtime manifest, and asserts every operation's p95 stays under a generous sanity threshold -- catches a severe (10x+) performance regression, not day-to-day machine noise. |
+| `test_health.py` | 14 | `engine_identity()`'s full mismatch matrix (wrong package version, package not found, missing backend, wrong commit), `/health`'s ready/unready + `error_category` reflect it exactly, `/v1/capabilities`' `engine_compatible` tracks it too, and `solve()`/`require_compatible_engine()` actually refuse to run on a real (not monkeypatched) mismatch. |
+| `test_dataset_summary_integrity.py` | 11 | Regression suite for a real gap this file found: a tampered `DatasetEnvelope.summary` (left `request`/`request_hash` untouched) was previously accepted by `solve()`/`export_bundle()` unnoticed. See "Bugs found" below. |
 
 Shared infrastructure (not test files themselves, collected as 0 tests):
 
@@ -162,15 +166,31 @@ feature's tests should also check for -- patterns, not just instances.
    a pydantic error") can silently have a different method signature -- verify against the
    installed version, don't assume by name.**
 
-No new bug surfaced while building `test_economics.py` (AC-014, 2026-09-17), but the formulas
-themselves were not documented anywhere and had to be reverse-engineered empirically against a
-real solved result before any assertion could be written with confidence (see the module
-docstring in `test_economics.py` for the exact formulas and how they were derived). Worth noting
-as its own pattern: **for engine-owned computed fields with no public formula documentation,
-verify the relationship empirically against several real solved results before writing a
-"reconciliation" assertion -- a plausible-looking guess (e.g. `shares * fee_rate` without price or
-day-count) will pass a shallow eyeball check and then fail immediately against real data, or worse,
-silently encode the wrong formula as "passing".**
+No new bug surfaced while building `test_economics.py` (AC-014, 2026-09-17) or `test_exports.py`
+(AC-016, 2026-09-17), but the `economics` formulas themselves were not documented anywhere and had
+to be reverse-engineered empirically against a real solved result before any assertion could be
+written with confidence (see the module docstring in `test_economics.py` for the exact formulas
+and how they were derived). Worth noting as its own pattern: **for engine-owned computed fields
+with no public formula documentation, verify the relationship empirically against several real
+solved results before writing a "reconciliation" assertion -- a plausible-looking guess (e.g.
+`shares * fee_rate` without price or day-count) will pass a shallow eyeball check and then fail
+immediately against real data, or worse, silently encode the wrong formula as "passing".**
+
+4. **A tampered `DatasetEnvelope.summary` was accepted silently** (found while building
+   `test_dataset_summary_integrity.py`, AC-010, 2026-09-17). `validated_request()`
+   (`engine_service.py`) verified `request_hash` against `dataset.request`, but never checked
+   `dataset.summary` against anything -- it isn't part of the canonical hash. A caller could leave
+   `request`/`request_hash` untouched and tamper only with `summary` (the row counts/totals/
+   borrower-and-security-counts disclosure a user or auditor is meant to trust), and `solve()`/
+   `export_bundle()` would run correctly on the real request while the disclosed summary described
+   a different book entirely. Fixed by recomputing `datasets.summarize(request)` inside
+   `validated_request()` and rejecting a mismatch with a new `SUMMARY_MISMATCH` code, mirroring the
+   existing `REQUEST_HASH_MISMATCH` pattern -- applies uniformly to `solve()`, `validation_report()`,
+   and `export_bundle()` since all three call `validated_request()`. Pattern: **a hash/integrity
+   check on one field of an envelope does not protect sibling fields -- when a model discloses a
+   derived value (a summary, a total, a count) alongside the source data it was derived from,
+   check whether anything actually re-derives and compares it, or whether the disclosure is
+   trusted on faith.**
 
 ## Acceptance-criteria coverage map
 
@@ -191,7 +211,7 @@ sync with this table -- trust this table for backend Python scope, not that file
 | AC-007 | Templates are registry-complete; starter artifacts validate | DONE | `test_service.py::test_templates_round_trip_through_upload_parser`, `test_upload_validation.py::test_equivalent_xlsx_and_json_hash_match` |
 | AC-008 | Equivalent XLSX/JSON hash match; parser rejection matrix | DONE | `test_upload_validation.py` (full rejection matrix + hash match) |
 | AC-009 | Located issues aggregate without repair/row-drop | DONE | `test_upload_validation.py::test_upload_aggregates_located_independent_errors_without_repair_or_row_drop` |
-| AC-010 | Dataset envelope summary matches normalized request | PARTIAL | Implicit in every `generate_dataset`/`envelope_from_request` test (summary is always derived from the same request); no dedicated adversarial test yet. |
+| AC-010 | Dataset envelope summary matches normalized request | DONE | `test_dataset_summary_integrity.py` -- a real gap found and fixed (`SUMMARY_MISMATCH`); see "Bugs found" #4. |
 | AC-011 | RunConfig allowlist maps 1:1; unknown-setting/MIP-QP conflict tests | DONE | `test_run_config.py` |
 | AC-012 | Run revalidates after prepare | PARTIAL | `test_security.py`/`test_status_matrix.py` cover the stale-hash rejection path; proxy/UI solve-readiness (frontend) not started. |
 | AC-013 | Status/error matrix: optimal/feasible-limit/infeasible/timeout/numerical/internal | DONE | `test_status_matrix.py` |
@@ -200,7 +220,7 @@ sync with this table -- trust this table for backend Python scope, not that file
 | AC-016 | All exports round-trip and tables match engine | DONE | `test_exports.py` -- every JSON file round-trips exactly, every CSV table matches `reporting.tables.result_tables()` cell-for-cell. |
 | AC-017 | Dirty-confirmation/session-reset; no server retrieval endpoint | PARTIAL | No server retrieval endpoint exists (nothing to test); frontend reducer state not started. |
 | AC-018 | Capability omission; disabled-feature rejection; altered-client-state | PARTIAL | `upload.py::_unsupported_feature_issues` exists and is exercised implicitly; no dedicated capability-omission test yet. |
-| AC-019 | Health response/service matrix; outage behavior | PARTIAL | `test_auth.py::test_end_to_end_health_endpoint_is_unauthenticated_even_when_disabled` covers one case; no matrix over engine-identity mismatch / unready states yet. |
+| AC-019 | Health response/service matrix; outage behavior | DONE | `test_health.py` -- full `engine_identity()` mismatch matrix, `/health`/`/v1/capabilities` reflect it, `solve()` refuses to run on a real mismatch. |
 | AC-020 | Module-disabled build/runtime; unauthenticated proxy; kill-switch smoke | DONE (backend) | `test_auth.py` full kill-switch + auth matrix. Frontend module-disabled build test not started. |
 | AC-021 | Generation/parsing/solve benchmark suite | DONE | `test_benchmark.py` + `benchmark.py`; retained manifest at `tests/benchmarks/latest.json`, baseline snapshot in this doc's "Benchmark harness" section. |
 | AC-022 | Confidential sentinels absent from service logs | DONE | `test_security.py` |
@@ -209,13 +229,14 @@ sync with this table -- trust this table for backend Python scope, not that file
 
 ## Next up
 
-Backend items with no test coverage yet, roughly in order of value:
+Every backend item identified in this document is now DONE. What remains is either genuinely
+frontend/E2E scope (marked PARTIAL/TODO above with "frontend" in the note) or explicitly deferred
+(AC-024's clean-checkout CI job, out of scope per the local-only-work directive). The largest
+untouched piece of the spec is the frontend workbench (T-010-T-012: reducer/state machine, result
+tabs, dirty confirmation) -- see `docs/handoff.md` for the full remaining-priorities list.
 
-1. **AC-019**: health-endpoint matrix -- engine-identity mismatch (wrong version/commit/backend),
-   each surfaced independently, plus the `ready=False`/`error_category="incompatible_engine"` path.
-2. **AC-010**: a dedicated adversarial test that a tampered/mismatched `DatasetSummary` is actually
-   caught somewhere (currently only implicitly true because summaries are always self-generated).
-
-Beyond backend test coverage, the largest untouched piece of the spec remains the frontend
-workbench (T-010-T-012: reducer/state machine, result tabs, dirty confirmation) -- see
-`docs/handoff.md` for the full remaining-priorities list.
+If new backend surface area is added later (a new endpoint, a new computed field, a new upload
+capability), extend this document and the edge-case/benchmark frameworks the same way this session
+did: real tests against real solved results, formulas verified empirically before asserting, new
+boundary cases added to `edge_cases.py` rather than inlined, and any bug found recorded here with
+its pattern, not just its instance.
