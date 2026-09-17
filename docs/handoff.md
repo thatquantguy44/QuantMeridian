@@ -1,14 +1,16 @@
 # Market Terminal Handoff
 
-**Updated:** 2026-08-30
-**Branch:** `MVOL-Implementation`
-**Latest pushed branch commit:** `8f121e3` — `Clarify MVOL Gold-only data boundary`
+**Updated:** 2026-09-16
+**Branch:** `feature/ibal-inventory-optimizer`
+**Latest pushed branch commit:** `017094d` — `Add InventoryBallast integration scaffold`
 
 ## Current Focus
 
-The active workstreams are MVOL implementation, Gold DB conversion, NEWS
-persistence, and CPI component expansion. Detailed source docs live in:
+The active workstreams are IBAL InventoryBallast integration, MVOL follow-through, Gold DB
+conversion, NEWS persistence, and CPI component expansion. Detailed source docs live in:
 
+- InventoryBallast source-of-truth spec: `thatquantguy44/InventoryBallast` /
+  `specs/0013-market-terminal-integration/`
 - `docs/features/GOLD_DB_MIGRATION_HANDOFF.md`
 - `docs/gold-db/MODULE_DATA_AUDIT.md`
 - `docs/specs/spec001/`
@@ -20,6 +22,27 @@ persistence, and CPI component expansion. Detailed source docs live in:
 - `docs/features/completed/Feature Completion - NEWS NLP (Attention, Clusters, Signals).md`
 
 ## Current State
+
+IBAL / InventoryBallast integration is in PR #119 on `feature/ibal-inventory-optimizer`. The
+checkpoint adds a separate `IBAL` module at `/inventory-optimizer`, a pinned Python FastAPI
+service under `services/inventory_optimizer_api`, server-only proxy routes at
+`/api/inventory-optimizer/*`, synthetic/upload dataset preparation, solve invocation, and result
+bundle export. The existing `/optimization` / `OPT` page remains untouched.
+
+The source-of-truth spec and task map live in the InventoryBallast repo at
+`specs/0013-market-terminal-integration/`; this Market Terminal handoff records only the terminal
+branch state. As of this update, Python service tests pass (`5 passed`, one upstream Starlette
+deprecation warning). `npm run typecheck` is still blocked by existing unrelated TypeScript errors
+in older econ/market modules plus sandbox denial writing `tsconfig.tsbuildinfo`. PR #119 was marked
+ready for review and GitHub reported it mergeable; Vercel was failing and two CI `verify` jobs were
+still in progress when checked.
+
+Immediate IBAL priorities: inspect/repair Vercel and any CI failures, add direct-facade parity and
+status/error matrix tests, finish upload rejection/property/redaction coverage, complete the
+workbench state machine/result tabs/dirty confirmation flows, wire Data Ops health and env/runbook
+docs, then run browser-to-solver E2E and screenshots before any production enablement. Production
+remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly
+configured.
 
 Tier A production routes for econ, chart, and market data have been hardened to
 read the Gold DB or return explicit `ERR`/empty states. The old silent fallback
