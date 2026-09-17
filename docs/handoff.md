@@ -11,6 +11,8 @@ conversion, NEWS persistence, and CPI component expansion. Detailed source docs 
 
 - InventoryBallast source-of-truth spec: `thatquantguy44/InventoryBallast` /
   `specs/0013-market-terminal-integration/`
+- `docs/specs/spec005/SPEC.md` — QuantSmith integration layer, incl. Phase 4
+  (IBAL as a QuantSmith model plugin, spec `0026`) -- see Current State below
 - `docs/features/GOLD_DB_MIGRATION_HANDOFF.md`
 - `docs/gold-db/MODULE_DATA_AUDIT.md`
 - `docs/specs/spec001/`
@@ -85,11 +87,27 @@ session with the network layer route-mocked using captured real response payload
 browser-to-live-backend POSTs hit an environment-specific networking limitation in this sandbox
 (unrelated to the diff; ruled out cold-compile, CORS, keepalive, DNS). Not yet pushed/PR'd.
 
-Remaining IBAL priorities, in order: (1) continue the frontend workbench -- reducer/state machine,
-full synthetic-config controls, result tabs, evidence drill-down (T-010/T-011), then session/
-download wiring (T-012); (2) Data Ops health + env/runbook docs (T-013/T-014); (3) browser-to-
-solver E2E and Playwright screenshots before any production enablement. Production remains off
-unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly configured. CI/Vercel
+**HIGH PRIORITY -- QuantSmith Phase 4 (IBAL model-plugin pilot):** `docs/specs/spec005/SPEC.md`
+was revisited 2026-09-17 to add candidate synergy item 6 and Phase 4: registering `IBAL` with
+QuantSmith's `model_plugin` adapter (spec `0026`) so a QuantSmith review agent
+(`agents/optimization/inventory_supply_chain/` or `solver_diagnostics_sensitivity/`) can invoke a
+real `IBAL` solve and produce an independent review/report -- not a second solver, a second pair of
+eyes, same re-verification discipline as the already-completed Phase 2 narrative pilot
+(`PHASE2_PILOT_DRAFT.md`/`PHASE2_PILOT_VERIFICATION.md`). QuantSmith's own securities-lending
+runtime (spec `0023`) is explicitly not adopted -- confirmed less mature than `IBAL`. The general
+optimization/portfolio/trading agent-family exclusion for Market Terminal is reaffirmed; this is a
+narrow, single-purpose exception. **Scoped, not started.** Two blockers before this can move:
+spec `0026` itself has no executable dispatcher yet (QuantSmith-repo work), and any first pilot
+should stay manual/scripted (mirroring Phase 2's shape) with synthetic `IBAL` data only -- real
+book/request data must never enter QuantSmith's repo. Read spec005's item 6 and Phase 4 sections in
+full before starting; check `Related Documents` there for the exact QuantSmith spec paths.
+
+Remaining IBAL priorities, in order: (1) QuantSmith Phase 4 pilot (above); (2) continue the frontend
+workbench -- reducer/state machine, full synthetic-config controls, result tabs, evidence
+drill-down (T-010/T-011), then session/download wiring (T-012); (3) Data Ops health + env/runbook
+docs (T-013/T-014); (4) browser-to-solver E2E and Playwright screenshots before any production
+enablement. Production remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary
+are explicitly configured. CI/Vercel
 repair stays out of scope until the owner asks for it.
 
 Tier A production routes for econ, chart, and market data have been hardened to
