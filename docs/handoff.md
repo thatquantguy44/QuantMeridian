@@ -57,18 +57,40 @@ tampered `DatasetEnvelope.summary` (row counts/totals disclosed to a user/audito
 silently by `solve()`/`export_bundle()` as long as `request`/`request_hash` were left untouched --
 fixed by recomputing and comparing the summary the same way `request_hash` already was.
 
-This work lives on its own branch, **`feature/ibal-backend-test-coverage`**, cut from latest
-`origin/main` rather than continuing on `feature/ibal-inventory-optimizer` (already fully merged
-via PR #119/#120). Being pushed and opened as a PR against `main`.
+The backend test-coverage work merged to `main` as PR #121.
 
-Remaining IBAL priorities, in order: (1) frontend workbench --
-`src/app/inventory-optimizer/page.tsx` is still a
-shell; the spec's T-010-T-012 reducer/state machine, result tabs (Allocations/Balances/Demand/
-Economics/Constraints/Diagnostics/Raw), dirty confirmation, and session-only result handling are
-not built; (2) Data Ops health + env/runbook docs (T-013/T-014); (3) browser-to-solver E2E and
-Playwright screenshots before any production enablement. Production remains off unless
-`IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly configured. CI/Vercel repair
-stays out of scope until the owner asks for it.
+**Frontend workbench** is now in progress on its own branch, **`feature/ibal-frontend-workbench`**
+(cut from latest `origin/main`, not the merged/retired `feature/ibal-inventory-optimizer`). First
+correction: `src/app/inventory-optimizer/page.tsx` was previously described here as "still a
+shell" -- that was wrong (written without actually reading the file). It is a real, working MVP:
+synthetic/upload intake, run config, solve, export, a KPI strip, an allocations grid, a constraints
+grid, and a verification panel, all wired to the live API. What the spec's T-010-T-012 still call
+for and this page doesn't have: a reducer/state machine (it uses plain `useState`), an explicit
+Synthetic/Upload segmented control, full `SyntheticConfig` field coverage in the UI (only 5 of 16
+fields have controls -- `scale: "custom"` is effectively unreachable today), a reroll action,
+result tabs for Balances/Demand/Economics/Diagnostics/Raw (only Allocations/Constraints/
+Verification exist, as stacked panels not tabs), evidence drill-down, and source/version/status
+badges.
+
+First slice landed: `dataset.validation.issues` (and located issues from a failed upload/run/
+export) were never rendered anywhere -- fixed with a `DataGrid`-based Issues panel
+(Severity/Code/Location/Message) and a new `IbalRequestError` class
+(`src/lib/inventoryOptimizer.ts`) that preserves the service's issue list instead of flattening
+failures to a string. Preparing a new dataset also silently discarded whatever was already
+prepared/solved -- fixed with a confirm dialog (`src/components/ui/ConfirmDialog.tsx`, built on the
+existing `Modal` primitive; no generic confirm dialog existed to reuse) gating Synthetic/Upload
+once a dataset exists, plus an explicit Reset action and a Run-button readiness gate on dataset
+validity. Verified against the real service (curl + Node fetch) and against a live Chromium
+session with the network layer route-mocked using captured real response payloads -- direct
+browser-to-live-backend POSTs hit an environment-specific networking limitation in this sandbox
+(unrelated to the diff; ruled out cold-compile, CORS, keepalive, DNS). Not yet pushed/PR'd.
+
+Remaining IBAL priorities, in order: (1) continue the frontend workbench -- reducer/state machine,
+full synthetic-config controls, result tabs, evidence drill-down (T-010/T-011), then session/
+download wiring (T-012); (2) Data Ops health + env/runbook docs (T-013/T-014); (3) browser-to-
+solver E2E and Playwright screenshots before any production enablement. Production remains off
+unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly configured. CI/Vercel
+repair stays out of scope until the owner asks for it.
 
 Tier A production routes for econ, chart, and market data have been hardened to
 read the Gold DB or return explicit `ERR`/empty states. The old silent fallback
