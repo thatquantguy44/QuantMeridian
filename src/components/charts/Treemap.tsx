@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { fmtSignedPct } from "@/lib/format";
 
 export interface TreeCell {
@@ -39,10 +39,31 @@ interface Tooltip {
   py: number;
 }
 
-/** Squarified-ish treemap (slice-and-dice rows) with optional group labels. */
+/**
+ * Squarified-ish treemap (slice-and-dice rows) with optional group labels.
+ *
+ * Layout runs in real pixel space (W = measured container width via
+ * ResizeObserver, H = the `height` prop) rather than an abstract 0-100
+ * square — stretching a square viewBox to fit an arbitrary rectangle via
+ * preserveAspectRatio="none" scales text/strokes horizontally more than
+ * vertically, which reads as blurry and also distorts cell proportions.
+ */
 export function Treemap({ cells, height = 260, className, maxAbs = 4 }: TreemapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<Tooltip | null>(null);
+  const [width, setWidth] = useState(600);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setWidth(w);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const hasGroups = cells.some((c) => c.group);
 
@@ -60,8 +81,8 @@ export function Treemap({ cells, height = 260, className, maxAbs = 4 }: TreemapP
     : [{ group: "", items: [...cells].sort((a, b) => b.weight - a.weight), weight: cells.reduce((a, c) => a + c.weight, 0) }];
 
   const total = grouped.reduce((a, g) => a + g.weight, 0) || 1;
-  const W = 100;
-  const H = 100;
+  const W = width;
+  const H = height;
 
   const out: LayoutRect[] = [];
   const groupBounds: { x: number; y: number; w: number; h: number; group: string }[] = [];
@@ -155,27 +176,25 @@ export function Treemap({ cells, height = 260, className, maxAbs = 4 }: TreemapP
 
   const handleMouseLeave = useCallback(() => setTip(null), []);
 
-  // Compute pixel scale factors so we can set font-size thresholds based on
-  // approximate rendered pixel sizes rather than viewBox units.
-  // The SVG is 100×100 viewBox stretched to container width × `height` px.
-  // pxPerUnit tells us how many CSS pixels one viewBox unit maps to.
-  const containerRef = useRef<HTMLDivElement>(null);
-
   return (
     <div ref={containerRef} className="relative" style={{ height }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         className={className}
-        preserveAspectRatio="none"
         style={{ width: "100%", height: "100%" }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {out.map((o, i) => {
-          const showLabel = o.w > 5 && o.h > 5;
-          const showPct = o.w > 5 && o.h > 9;
-          const showGroup = o.cell.group && o.w > 10 && o.h > 16;
+          const showLabel = o.w > 40 && o.h > 18;
+          const showPct = o.w > 40 && o.h > 32;
+          const showGroup = Boolean(o.cell.group) && o.w > 50 && o.h > 46;
+          const cx = o.x + o.w / 2;
+          const cy = o.y + o.h / 2;
+          const labelY = showGroup ? cy - 8 : showPct ? cy - 4 : cy + 4;
+          const pctY = showGroup ? cy + 7 : cy + 11;
+          const groupY = cy + 19;
           return (
             <g key={i}>
               <rect
@@ -185,14 +204,14 @@ export function Treemap({ cells, height = 260, className, maxAbs = 4 }: TreemapP
                 height={o.h}
                 fill={color(o.cell.value, maxAbs)}
                 stroke="#0A0A0A"
-                strokeWidth={0.4}
+                strokeWidth={1}
               />
               {showLabel && (
                 <text
-                  x={o.x + o.w / 2}
-                  y={o.y + o.h / 2 + (showPct ? -1.2 : 0.8)}
+                  x={cx}
+                  y={labelY}
                   textAnchor="middle"
-                  fontSize={Math.min(3.6, o.w / 3.5)}
+                  fontSize={Math.min(13, o.w / 6)}
                   fill="#fff"
                   fontFamily="var(--font-mono)"
                   fontWeight={600}
@@ -203,10 +222,10 @@ export function Treemap({ cells, height = 260, className, maxAbs = 4 }: TreemapP
               )}
               {showPct && (
                 <text
-                  x={o.x + o.w / 2}
-                  y={o.y + o.h / 2 + (showGroup ? 2.8 : 3)}
+                  x={cx}
+                  y={pctY}
                   textAnchor="middle"
-                  fontSize={Math.min(2.8, o.w / 4)}
+                  fontSize={Math.min(11, o.w / 7)}
                   fill="rgba(255,255,255,0.85)"
                   fontFamily="var(--font-mono)"
                   fontWeight={500}
@@ -217,10 +236,10 @@ export function Treemap({ cells, height = 260, className, maxAbs = 4 }: TreemapP
               )}
               {showGroup && (
                 <text
-                  x={o.x + o.w / 2}
-                  y={o.y + o.h / 2 + 6}
+                  x={cx}
+                  y={groupY}
                   textAnchor="middle"
-                  fontSize={Math.min(2, o.w / 7)}
+                  fontSize={Math.min(9, o.w / 10)}
                   fill="rgba(255,255,255,0.4)"
                   fontFamily="var(--font-mono)"
                   style={{ pointerEvents: "none" }}
@@ -240,12 +259,12 @@ export function Treemap({ cells, height = 260, className, maxAbs = 4 }: TreemapP
         </defs>
         {groupBounds.map((gb, i) => (
           <g key={`g-${i}`}>
-            <rect x={gb.x} y={gb.y} width={gb.w} height={gb.h} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.5} />
-            {gb.w > 10 && gb.h > 6 && (
+            <rect x={gb.x} y={gb.y} width={gb.w} height={gb.h} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1} />
+            {gb.w > 60 && gb.h > 20 && (
               <text
-                x={gb.x + 1}
-                y={gb.y + 3}
-                fontSize={Math.min(2.4, gb.w / 6)}
+                x={gb.x + 4}
+                y={gb.y + 13}
+                fontSize={Math.min(10, gb.w / 14)}
                 fill="rgba(255,255,255,0.55)"
                 fontFamily="var(--font-mono)"
                 fontWeight={600}

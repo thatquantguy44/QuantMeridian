@@ -6,6 +6,9 @@ import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { TermToggleGroup } from "@/components/ui/TermToggleGroup";
+import { Waterfall } from "@/components/charts/Waterfall";
+import { Treemap } from "@/components/charts/Treemap";
+import { Donut } from "@/components/charts/Radial";
 import {
   DEFAULT_RUN_CONFIG,
   DEFAULT_SYNTHETIC_CONFIG,
@@ -107,6 +110,7 @@ interface BaseRouteAnalyticsRow extends IbalAllocation {
 
 interface BaseInventoryAnalyticsRow extends IbalBalance {
   security_id: string;
+  inventory_pool_id: string;
   delta_on_loan_shares: number;
   delta_available_shares: number;
   pre_utilization: number;
@@ -230,6 +234,7 @@ function buildBeforeAfterAnalytics(dataset: DatasetEnvelope | null, result: Ibal
     return {
       ...row,
       security_id: inventory?.security_id ?? "-",
+      inventory_pool_id: inventory?.inventory_pool_id ?? "-",
       delta_on_loan_shares: row.post_on_loan_shares - row.pre_on_loan_shares,
       delta_available_shares: row.post_available_shares - row.pre_available_to_lend_shares,
       pre_utilization: preUtilization,
@@ -419,6 +424,31 @@ export default function InventoryOptimizerPage() {
     };
   }, [result]);
   const beforeAfterAnalytics = useMemo(() => buildBeforeAfterAnalytics(dataset, result), [dataset, result]);
+  const onLoanBridgeSteps = useMemo(() => {
+    if (!beforeAfterAnalytics) return [];
+    return [
+      { label: "Pre On-Loan", value: beforeAfterAnalytics.preOnLoanShares, total: true },
+      { label: "Increases", value: beforeAfterAnalytics.grossIncreaseShares },
+      { label: "Decreases", value: -beforeAfterAnalytics.grossDecreaseShares },
+      { label: "Post On-Loan", value: beforeAfterAnalytics.postOnLoanShares, total: true },
+    ];
+  }, [beforeAfterAnalytics]);
+  const demandFillSegments = useMemo(() => {
+    if (!beforeAfterAnalytics) return [];
+    return [
+      { value: beforeAfterAnalytics.filledShares, color: "#2ECC71", label: "Filled" },
+      { value: beforeAfterAnalytics.unfilledShares, color: "#FF3B3B", label: "Unfilled" },
+    ];
+  }, [beforeAfterAnalytics]);
+  const inventoryTreemapCells = useMemo(() => {
+    if (!beforeAfterAnalytics) return [];
+    return beforeAfterAnalytics.inventoryMovers.map((row) => ({
+      label: row.security_id,
+      weight: row.pre_total_lendable_shares,
+      value: row.utilization_delta * 100,
+      group: row.inventory_pool_id,
+    }));
+  }, [beforeAfterAnalytics]);
   const datasetReady = Boolean(dataset?.validation.valid);
   const runDisabledReason = !dataset
     ? "Load synthetic data or upload a dataset before running."
@@ -1170,6 +1200,46 @@ export default function InventoryOptimizerPage() {
                     value={result?.status.toUpperCase() ?? "-"}
                     tone={result?.status === "optimal" ? "up" : "amber"}
                   />
+                </div>
+
+                <div className="grid gap-2 xl:grid-cols-[1fr_22rem]">
+                  <div>
+                    <div className="term-label mb-1">On-Loan Bridge</div>
+                    <div className="mx-auto max-w-lg border border-term-border bg-term-panel-2 p-2">
+                      <Waterfall steps={onLoanBridgeSteps} height={180} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="term-label mb-1">Demand Fill</div>
+                    <div className="flex items-center justify-center gap-4 border border-term-border bg-term-panel-2 p-2" style={{ height: 180 }}>
+                      <Donut
+                        segments={demandFillSegments}
+                        size={110}
+                        thickness={16}
+                        center={pctFromDecimal(beforeAfterAnalytics.fillRatio)}
+                        centerSub="filled"
+                      />
+                      <div className="flex flex-col gap-1.5 text-2xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 shrink-0" style={{ background: "#2ECC71" }} />
+                          <span className="text-term-text-dim">Filled</span>
+                          <span className="tnum ml-auto text-term-text">{fmtAbbr(beforeAfterAnalytics.filledShares)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 shrink-0" style={{ background: "#FF3B3B" }} />
+                          <span className="text-term-text-dim">Unfilled</span>
+                          <span className="tnum ml-auto text-term-text">{fmtAbbr(beforeAfterAnalytics.unfilledShares)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="term-label mb-1">Inventory Concentration</div>
+                  <div className="border border-term-border bg-term-panel-2 p-2">
+                    <Treemap cells={inventoryTreemapCells} height={220} maxAbs={15} />
+                  </div>
                 </div>
 
                 <div className="grid gap-2 xl:grid-cols-2">
