@@ -431,6 +431,13 @@ Use this section as the running handoff log whenever a feature moves from planni
 - Checkpoint verification: Python service tests passed (`5 passed`, one upstream Starlette deprecation warning) and a direct synthetic starter smoke solved to `optimal` with a non-empty export bundle. Remaining before final close-out: PR #119 Vercel/CI, broader parity/error/security tests, full workbench state/result tabs, Data Ops health, ops docs, and browser E2E/screenshots.
 - Source-of-truth product/spec handoff lives in InventoryBallast: `specs/0013-market-terminal-integration/`.
 
+#### 2026-09-17 - IBAL workbench what-if and browser verification checkpoint
+
+- Fixed a browser JSON round-trip hash mismatch so prepared datasets still run after numeric normalization.
+- Made dataset readiness explicit in the workbench and renamed the ready solve action to **Base Case Run**.
+- Added preset what-if scenarios plus scenario-level comparison and scenario-specific route/inventory detail.
+- Added focused Playwright coverage for the live IBAL browser path; see `docs/features/IBAL_WHAT_IF_HANDOFF.md` for the exact runbook and current caveats.
+
 #### 2026-07-17 — Gold DB migration: DB-first economics & macro (all 22 economic modules)
 
 - **Gold DB (fred-bronze-to-gold-pipeline) is now the primary Tier A data source** for all series/economic data — replacing the live FRED API, committed snapshots, and SIM generators.
@@ -803,6 +810,30 @@ Production build & serve (the standalone server runs the SPA **and** `/api/*`):
 ```bash
 npm run build && npm start  # → http://localhost:3000
 ```
+
+**Optional - IBAL end-to-end verification.** Start the pinned Python service on
+`127.0.0.1:8013`, set the same `INVENTORY_OPTIMIZER_API_TOKEN` in the repo-root
+environment, then run the standalone server before the focused browser test:
+
+```bash
+cd services/inventory_optimizer_api
+INVENTORY_OPTIMIZER_API_TOKEN=<same-token-as-market-terminal-env> \
+  .venv/bin/uvicorn inventory_optimizer_api.app:app --host 127.0.0.1 --port 8013
+
+# In another terminal, from the repo root:
+npm run build:client
+npm run build:server
+INVENTORY_OPTIMIZER_API_TOKEN=<same-token-as-service> PORT=3010 HOST=127.0.0.1 npm start
+
+PLAYWRIGHT_CHROMIUM_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  BASE_URL=http://127.0.0.1:3010 \
+  npx playwright test test/ibal.spec.ts --config=playwright.local.config.ts --reporter=line
+```
+
+Use the standalone server for this IBAL Playwright flow for now; the Vite dev
+server path can hang browser POSTs to the IBAL proxy in this local setup even
+when `curl` and the standalone server are healthy. Full notes live in
+`docs/features/IBAL_WHAT_IF_HANDOFF.md`.
 
 **Optional — live economics data via Gold DB (2026-07-17+).** Set `MACRO_DB_URL` and all economic modules
 switch to use live data from the Gold layer; without it they use the committed snapshot/SIM:

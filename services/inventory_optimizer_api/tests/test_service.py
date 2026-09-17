@@ -27,6 +27,17 @@ def _headers(*, idempotency: bool = False) -> dict[str, str]:
     return headers
 
 
+def _browser_json_round_trip(value):
+    """Simulate JSON.parse(JSON.stringify(value)) for integral floats."""
+    if isinstance(value, dict):
+        return {key: _browser_json_round_trip(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_browser_json_round_trip(item) for item in value]
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
 def test_synthetic_solve_and_export_bundle() -> None:
     dataset = generate_dataset(SyntheticConfig(seed=42, profile="balanced", scale="small"))
 
@@ -119,3 +130,28 @@ def test_api_requires_auth_and_runs_solver(monkeypatch: pytest.MonkeyPatch) -> N
         )
         assert export_response.status_code == 200
         assert export_response.headers["content-type"] == "application/zip"
+
+
+def test_api_runs_solver_after_browser_json_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("INVENTORY_OPTIMIZER_API_TOKEN", "test-token")
+    monkeypatch.setenv("IBAL_ENV", "local")
+
+    with TestClient(app) as client:
+        dataset_response = client.post(
+            "/v1/datasets/synthetic",
+            json={"seed": 42, "profile": "balanced", "scale": "small"},
+            headers=_headers(),
+        )
+        assert dataset_response.status_code == 200
+
+        dataset = _browser_json_round_trip(dataset_response.json())
+        assert isinstance(dataset["request"]["inventory"][0]["committed_out_shares"], int)
+
+        run_response = client.post(
+            "/v1/runs",
+            json={"dataset": dataset, "run_config": {"solver_time_limit_seconds": 30}},
+            headers=_headers(idempotency=True),
+        )
+
+        assert run_response.status_code == 200
+        assert run_response.json()["result"]["status"] == "optimal"

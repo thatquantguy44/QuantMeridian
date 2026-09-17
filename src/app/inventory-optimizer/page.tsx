@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Copy, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Copy, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
@@ -60,6 +60,111 @@ const DATASET_TABS: { value: DatasetTab; label: string }[] = [
   { value: "raw", label: "Raw" },
 ];
 
+type WhatIfScenarioId = "base" | "scarce" | "specials" | "concentration" | "confidence" | "capacity";
+
+interface WhatIfScenario {
+  id: WhatIfScenarioId;
+  label: string;
+  desc: string;
+  synthetic?: Partial<SyntheticConfig>;
+  runConfig?: Partial<RunConfig>;
+  seedOffset?: number;
+}
+
+interface WhatIfResult {
+  id: WhatIfScenarioId;
+  label: string;
+  status: "pending" | "running" | "optimal" | "failed";
+  message?: string;
+  requestHash?: string;
+  runId?: string;
+  totalDeltaUsd?: number;
+  avgUtilization?: number;
+  fillRatio?: number;
+  bindingConstraints?: number;
+  netAllocation?: number;
+  dataset?: DatasetEnvelope;
+  result?: IbalResult;
+}
+
+interface WhatIfRouteRow extends IbalAllocation {
+  security_id: string;
+  borrower_id: string;
+  vs_base_post_shares: number | null;
+}
+
+interface WhatIfInventoryDrillRow extends IbalBalance {
+  security_id: string;
+  vs_base_utilization: number | null;
+}
+
+interface BaseRouteAnalyticsRow extends IbalAllocation {
+  security_id: string;
+  borrower_id: string;
+  delta_shares: number;
+  delta_notional_usd: number;
+}
+
+interface BaseInventoryAnalyticsRow extends IbalBalance {
+  security_id: string;
+  delta_on_loan_shares: number;
+  delta_available_shares: number;
+  pre_utilization: number;
+  utilization_delta: number;
+}
+
+interface BaseDemandAnalyticsRow extends IbalDemand {
+  security_id: string;
+  borrower_id: string;
+  shortfall_shares: number;
+}
+
+interface ReasonCodeAnalyticsRow {
+  reason_code: string;
+  route_count: number;
+  net_delta_shares: number;
+  gross_delta_shares: number;
+}
+
+interface BeforeAfterAnalytics {
+  preOnLoanShares: number;
+  postOnLoanShares: number;
+  deltaOnLoanShares: number;
+  preAvailableShares: number;
+  postAvailableShares: number;
+  deltaAvailableShares: number;
+  totalLendableShares: number;
+  preUtilization: number;
+  postUtilization: number;
+  utilizationDelta: number;
+  filledShares: number;
+  unfilledShares: number;
+  effectiveDemandShares: number;
+  fillRatio: number;
+  fillShortfallRatio: number;
+  grossIncreaseShares: number;
+  grossDecreaseShares: number;
+  netAllocationShares: number;
+  changedRouteCount: number;
+  unchangedRouteCount: number;
+  activeRouteCount: number;
+  bindingConstraintCount: number;
+  warningCount: number;
+  routeMovers: BaseRouteAnalyticsRow[];
+  inventoryMovers: BaseInventoryAnalyticsRow[];
+  demandDrivers: BaseDemandAnalyticsRow[];
+  reasonCodes: ReasonCodeAnalyticsRow[];
+}
+
+const WHAT_IF_SCENARIOS: WhatIfScenario[] = [
+  { id: "base", label: "Base Case", desc: "Current synthetic settings and run config." },
+  { id: "scarce", label: "Scarce Supply", desc: "Higher utilization and tighter lendable supply.", synthetic: { profile: "scarce" }, seedOffset: 11 },
+  { id: "specials", label: "Specials Squeeze", desc: "Higher fee dispersion and special-borrow demand.", synthetic: { profile: "specials" }, seedOffset: 23 },
+  { id: "concentration", label: "Borrower Concentration", desc: "Demand concentrated into fewer parent groups.", synthetic: { profile: "concentrated" }, seedOffset: 37 },
+  { id: "confidence", label: "Strict Entity Confidence", desc: "Raises minimum entity confidence to 95%.", runConfig: { minimum_entity_confidence: 0.95 }, seedOffset: 41 },
+  { id: "capacity", label: "More Balance Sheet", desc: "Looser utilization cap and smaller reserve buffer.", synthetic: { utilization_cap: 0.98, reserve_fraction: 0.02 }, seedOffset: 53 },
+];
+
 function pctFromDecimal(value: number) {
   return fmtPct(value * 100, 2);
 }
@@ -69,8 +174,126 @@ function sourceFor(dataset: DatasetEnvelope | null, health: IbalHealth | null) {
   return "ERR";
 }
 
+function DevelopmentBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-sm border border-term-amber/40 bg-term-amber/10 px-1.5 py-px text-3xs font-semibold text-term-amber"
+      title="InventoryBallast is under active local development."
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-term-amber" />
+      In Development
+    </span>
+  );
+}
+
 function updateNumber<T extends object>(setter: (next: T) => void, current: T, key: keyof T, value: string) {
   setter({ ...current, [key]: Number(value) });
+}
+
+function utilization(onLoan: number, total: number) {
+  return total > 0 ? onLoan / total : 0;
+}
+
+function buildBeforeAfterAnalytics(dataset: DatasetEnvelope | null, result: IbalResult | null): BeforeAfterAnalytics | null {
+  if (!dataset || !result) return null;
+
+  const inventoryById = new Map(dataset.request.inventory.map((row) => [row.inventory_id, row]));
+  const routeById = new Map(dataset.request.routes.map((row) => [row.route_id, row]));
+  const demandById = new Map(dataset.request.demand.map((row) => [row.demand_group_id, row]));
+  const constraintTolerance = 1e-8;
+
+  const totalLendableShares = result.balances.reduce((sum, row) => sum + row.pre_total_lendable_shares, 0);
+  const preOnLoanShares = result.balances.reduce((sum, row) => sum + row.pre_on_loan_shares, 0);
+  const postOnLoanShares = result.balances.reduce((sum, row) => sum + row.post_on_loan_shares, 0);
+  const preAvailableShares = result.balances.reduce((sum, row) => sum + row.pre_available_to_lend_shares, 0);
+  const postAvailableShares = result.balances.reduce((sum, row) => sum + row.post_available_shares, 0);
+  const filledShares = result.demand.reduce((sum, row) => sum + row.filled_shares, 0);
+  const unfilledShares = result.demand.reduce((sum, row) => sum + row.unfilled_shares, 0);
+  const effectiveDemandShares = result.demand.reduce((sum, row) => sum + row.effective_cap_shares, 0);
+
+  const routeMovers = result.allocations.map((row) => {
+    const route = routeById.get(row.route_id);
+    const inventory = inventoryById.get(row.inventory_id);
+    const deltaShares = row.increase_shares - row.decrease_shares;
+    return {
+      ...row,
+      security_id: route?.security_id ?? inventory?.security_id ?? "-",
+      borrower_id: route?.borrower_id ?? "-",
+      delta_shares: deltaShares,
+      delta_notional_usd: deltaShares * (inventory?.price_usd ?? 0),
+    };
+  });
+
+  const inventoryMovers = result.balances.map((row) => {
+    const inventory = inventoryById.get(row.inventory_id);
+    const preUtilization = utilization(row.pre_on_loan_shares, row.pre_total_lendable_shares);
+    return {
+      ...row,
+      security_id: inventory?.security_id ?? "-",
+      delta_on_loan_shares: row.post_on_loan_shares - row.pre_on_loan_shares,
+      delta_available_shares: row.post_available_shares - row.pre_available_to_lend_shares,
+      pre_utilization: preUtilization,
+      utilization_delta: row.utilization - preUtilization,
+    };
+  });
+
+  const demandDrivers = result.demand.map((row) => {
+    const demand = demandById.get(row.demand_group_id);
+    return {
+      ...row,
+      security_id: demand?.security_id ?? "-",
+      borrower_id: demand?.borrower_id ?? "-",
+      shortfall_shares: row.unfilled_shares,
+    };
+  });
+
+  const reasonCodeMap = new Map<string, ReasonCodeAnalyticsRow>();
+  for (const row of result.allocations) {
+    const codes = row.reason_codes.length ? row.reason_codes : ["NO_REASON_CODE"];
+    const netDelta = row.increase_shares - row.decrease_shares;
+    for (const reasonCode of codes) {
+      const current = reasonCodeMap.get(reasonCode) ?? {
+        reason_code: reasonCode,
+        route_count: 0,
+        net_delta_shares: 0,
+        gross_delta_shares: 0,
+      };
+      current.route_count += 1;
+      current.net_delta_shares += netDelta;
+      current.gross_delta_shares += Math.abs(netDelta);
+      reasonCodeMap.set(reasonCode, current);
+    }
+  }
+
+  return {
+    preOnLoanShares,
+    postOnLoanShares,
+    deltaOnLoanShares: postOnLoanShares - preOnLoanShares,
+    preAvailableShares,
+    postAvailableShares,
+    deltaAvailableShares: postAvailableShares - preAvailableShares,
+    totalLendableShares,
+    preUtilization: utilization(preOnLoanShares, totalLendableShares),
+    postUtilization: utilization(postOnLoanShares, totalLendableShares),
+    utilizationDelta: utilization(postOnLoanShares, totalLendableShares) - utilization(preOnLoanShares, totalLendableShares),
+    filledShares,
+    unfilledShares,
+    effectiveDemandShares,
+    fillRatio: effectiveDemandShares > 0 ? filledShares / effectiveDemandShares : 0,
+    fillShortfallRatio: effectiveDemandShares > 0 ? unfilledShares / effectiveDemandShares : 0,
+    grossIncreaseShares: result.allocations.reduce((sum, row) => sum + row.increase_shares, 0),
+    grossDecreaseShares: result.allocations.reduce((sum, row) => sum + row.decrease_shares, 0),
+    netAllocationShares: result.allocations.reduce((sum, row) => sum + row.increase_shares - row.decrease_shares, 0),
+    changedRouteCount: result.allocations.filter((row) => Math.abs(row.increase_shares - row.decrease_shares) > 1e-8).length,
+    unchangedRouteCount: result.allocations.filter((row) => Math.abs(row.increase_shares - row.decrease_shares) <= 1e-8).length,
+    activeRouteCount: result.allocations.filter((row) => row.post_quantity_shares > 0).length,
+    bindingConstraintCount: result.constraints.filter((row) => Math.abs(row.slack ?? 0) <= constraintTolerance).length,
+    warningCount: result.warnings?.length ?? 0,
+    routeMovers,
+    inventoryMovers,
+    demandDrivers,
+    reasonCodes: Array.from(reasonCodeMap.values()),
+  };
 }
 
 // Mirrors synthetic.py's PROFILE_PRESETS: the backend applies these on top of whatever the
@@ -114,6 +337,10 @@ export default function InventoryOptimizerPage() {
   const [resultTab, setResultTab] = useState<ResultTab>("allocations");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [datasetTab, setDatasetTab] = useState<DatasetTab>("inventory");
+  const [selectedScenarioIds, setSelectedScenarioIds] = useState<WhatIfScenarioId[]>(["base", "scarce", "specials", "concentration"]);
+  const [whatIfResults, setWhatIfResults] = useState<WhatIfResult[]>([]);
+  const [scenarioBusy, setScenarioBusy] = useState(false);
+  const [selectedWhatIfId, setSelectedWhatIfId] = useState<WhatIfScenarioId | null>(null);
 
   // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
@@ -191,6 +418,51 @@ export default function InventoryOptimizerPage() {
       bindingConstraints: (result?.constraints ?? []).filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
     };
   }, [result]);
+  const beforeAfterAnalytics = useMemo(() => buildBeforeAfterAnalytics(dataset, result), [dataset, result]);
+  const datasetReady = Boolean(dataset?.validation.valid);
+  const runDisabledReason = !dataset
+    ? "Load synthetic data or upload a dataset before running."
+    : !dataset.validation.valid
+      ? "Resolve dataset validation issues before running."
+      : busy
+        ? "Another IBAL action is still running."
+        : null;
+  const runButtonLabel = !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
+  const scenarioSet = useMemo(() => new Set(selectedScenarioIds), [selectedScenarioIds]);
+  const baselineScenario = whatIfResults.find((row) => row.id === "base" && row.status === "optimal");
+  const selectedWhatIf = useMemo(
+    () => whatIfResults.find((row) => row.id === selectedWhatIfId) ?? whatIfResults.find((row) => row.status === "optimal") ?? null,
+    [selectedWhatIfId, whatIfResults]
+  );
+  const selectedWhatIfRoutes = useMemo<WhatIfRouteRow[]>(() => {
+    if (!selectedWhatIf?.result || !selectedWhatIf.dataset) return [];
+    const routeById = new Map(selectedWhatIf.dataset.request.routes.map((row) => [row.route_id, row]));
+    const baseByRoute = new Map((baselineScenario?.result?.allocations ?? []).map((row) => [row.route_id, row]));
+    return selectedWhatIf.result.allocations.map((row) => {
+      const route = routeById.get(row.route_id);
+      const base = baseByRoute.get(row.route_id);
+      return {
+        ...row,
+        security_id: route?.security_id ?? "-",
+        borrower_id: route?.borrower_id ?? "-",
+        vs_base_post_shares: base ? row.post_quantity_shares - base.post_quantity_shares : null,
+      };
+    });
+  }, [baselineScenario?.result?.allocations, selectedWhatIf]);
+  const selectedWhatIfInventory = useMemo<WhatIfInventoryDrillRow[]>(() => {
+    if (!selectedWhatIf?.result || !selectedWhatIf.dataset) return [];
+    const inventoryById = new Map(selectedWhatIf.dataset.request.inventory.map((row) => [row.inventory_id, row]));
+    const baseByInventory = new Map((baselineScenario?.result?.balances ?? []).map((row) => [row.inventory_id, row]));
+    return selectedWhatIf.result.balances.map((row) => {
+      const inventory = inventoryById.get(row.inventory_id);
+      const base = baseByInventory.get(row.inventory_id);
+      return {
+        ...row,
+        security_id: inventory?.security_id ?? "-",
+        vs_base_utilization: base ? row.utilization - base.utilization : null,
+      };
+    });
+  }, [baselineScenario?.result?.balances, selectedWhatIf]);
 
   const inventoryPreviewColumns: Column<IbalInventoryRow>[] = [
     { key: "id", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
@@ -304,6 +576,110 @@ export default function InventoryOptimizerPage() {
     { key: "dual", header: "Dual", align: "right", render: (row) => fmtAbbr(row.dual_value ?? 0), sortVal: (row) => row.dual_value ?? 0 },
   ];
 
+  const baseRouteAnalyticsColumns: Column<BaseRouteAnalyticsRow>[] = [
+    { key: "route", header: "Route", render: (row) => <span className="text-term-text">{row.route_id}</span>, sortVal: (row) => row.route_id, width: "120" },
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text-dim">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id, width: "120" },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-mute">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "current", header: "Before", align: "right", render: (row) => fmtAbbr(row.current_quantity_shares), sortVal: (row) => row.current_quantity_shares },
+    { key: "post", header: "After", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_quantity_shares)}</span>, sortVal: (row) => row.post_quantity_shares },
+    { key: "delta", header: "Delta", align: "right", render: (row) => <span className={row.delta_shares > 0 ? "text-term-up" : row.delta_shares < 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.delta_shares)}</span>, sortVal: (row) => Math.abs(row.delta_shares) },
+    { key: "notional", header: "Delta Notional", align: "right", render: (row) => <span className={row.delta_notional_usd >= 0 ? "text-term-up" : "text-term-down"}>{fmtUsdAbbr(row.delta_notional_usd)}</span>, sortVal: (row) => Math.abs(row.delta_notional_usd) },
+    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_codes.slice(0, 3).join(", ") || "-"}</span>, sortVal: (row) => row.reason_codes[0] ?? "" },
+  ];
+
+  const baseInventoryAnalyticsColumns: Column<BaseInventoryAnalyticsRow>[] = [
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "before_on_loan", header: "Before Loan", align: "right", render: (row) => fmtAbbr(row.pre_on_loan_shares), sortVal: (row) => row.pre_on_loan_shares },
+    { key: "after_on_loan", header: "After Loan", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_on_loan_shares)}</span>, sortVal: (row) => row.post_on_loan_shares },
+    { key: "loan_delta", header: "Loan Delta", align: "right", render: (row) => <span className={row.delta_on_loan_shares > 0 ? "text-term-up" : row.delta_on_loan_shares < 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.delta_on_loan_shares)}</span>, sortVal: (row) => Math.abs(row.delta_on_loan_shares) },
+    { key: "available_delta", header: "Avail Delta", align: "right", render: (row) => <span className={row.delta_available_shares >= 0 ? "text-term-up" : "text-term-down"}>{fmtAbbr(row.delta_available_shares)}</span>, sortVal: (row) => Math.abs(row.delta_available_shares) },
+    { key: "util_before", header: "Before Util", align: "right", render: (row) => pctFromDecimal(row.pre_utilization), sortVal: (row) => row.pre_utilization },
+    { key: "util_after", header: "After Util", align: "right", render: (row) => <span className={row.utilization >= 0.95 ? "text-term-down" : row.utilization >= 0.8 ? "text-term-amber" : "text-term-text"}>{pctFromDecimal(row.utilization)}</span>, sortVal: (row) => row.utilization },
+    { key: "util_delta", header: "Util Delta", align: "right", render: (row) => <span className={row.utilization_delta >= 0 ? "text-term-up" : "text-term-down"}>{fmtPct(row.utilization_delta * 100, 2)}</span>, sortVal: (row) => Math.abs(row.utilization_delta) },
+  ];
+
+  const baseDemandAnalyticsColumns: Column<BaseDemandAnalyticsRow>[] = [
+    { key: "demand", header: "Demand Group", render: (row) => <span className="text-term-text">{row.demand_group_id}</span>, sortVal: (row) => row.demand_group_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-mute">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "cap", header: "Demand Cap", align: "right", render: (row) => fmtAbbr(row.effective_cap_shares), sortVal: (row) => row.effective_cap_shares },
+    { key: "filled", header: "Filled", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.filled_shares)}</span>, sortVal: (row) => row.filled_shares },
+    { key: "shortfall", header: "Shortfall", align: "right", render: (row) => <span className={row.shortfall_shares > 0 ? "text-term-amber" : "text-term-text-mute"}>{fmtAbbr(row.shortfall_shares)}</span>, sortVal: (row) => row.shortfall_shares },
+    { key: "fill", header: "Fill", align: "right", render: (row) => pctFromDecimal(row.fill_ratio), sortVal: (row) => row.fill_ratio },
+    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_code ?? "-"}</span>, sortVal: (row) => row.reason_code ?? "" },
+  ];
+
+  const reasonCodeAnalyticsColumns: Column<ReasonCodeAnalyticsRow>[] = [
+    { key: "reason", header: "Reason Code", render: (row) => <span className="text-term-text">{row.reason_code}</span>, sortVal: (row) => row.reason_code },
+    { key: "routes", header: "Routes", align: "right", render: (row) => fmtInt(row.route_count), sortVal: (row) => row.route_count },
+    { key: "net", header: "Net Delta", align: "right", render: (row) => <span className={row.net_delta_shares > 0 ? "text-term-up" : row.net_delta_shares < 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.net_delta_shares)}</span>, sortVal: (row) => Math.abs(row.net_delta_shares) },
+    { key: "gross", header: "Gross Delta", align: "right", render: (row) => fmtAbbr(row.gross_delta_shares), sortVal: (row) => row.gross_delta_shares },
+  ];
+
+  const whatIfColumns: Column<WhatIfResult>[] = [
+    { key: "scenario", header: "Scenario", render: (row) => <span className="font-semibold text-term-text">{row.label}</span>, sortVal: (row) => row.label, width: "170" },
+    {
+      key: "status",
+      header: "Status",
+      align: "center",
+      render: (row) => (
+        <Tag tone={row.status === "optimal" ? "up" : row.status === "failed" ? "down" : row.status === "running" ? "amber" : "neutral"}>
+          {row.status}
+        </Tag>
+      ),
+      sortVal: (row) => row.status,
+      width: "90",
+    },
+    {
+      key: "delta",
+      header: "Delta Value",
+      align: "right",
+      render: (row) => row.totalDeltaUsd == null ? <span className="text-term-text-mute">-</span> : <span className={row.totalDeltaUsd >= 0 ? "text-term-up" : "text-term-down"}>{fmtUsdAbbr(row.totalDeltaUsd)}</span>,
+      sortVal: (row) => row.totalDeltaUsd ?? Number.NEGATIVE_INFINITY,
+    },
+    {
+      key: "vs_base",
+      header: "Vs Base",
+      align: "right",
+      render: (row) => {
+        const diff = row.totalDeltaUsd != null && baselineScenario?.totalDeltaUsd != null ? row.totalDeltaUsd - baselineScenario.totalDeltaUsd : null;
+        return diff == null ? <span className="text-term-text-mute">-</span> : <span className={diff >= 0 ? "text-term-up" : "text-term-down"}>{fmtUsdAbbr(diff)}</span>;
+      },
+      sortVal: (row) => row.totalDeltaUsd != null && baselineScenario?.totalDeltaUsd != null ? row.totalDeltaUsd - baselineScenario.totalDeltaUsd : Number.NEGATIVE_INFINITY,
+    },
+    { key: "fill", header: "Fill", align: "right", render: (row) => row.fillRatio == null ? "-" : pctFromDecimal(row.fillRatio), sortVal: (row) => row.fillRatio ?? -1 },
+    { key: "util", header: "Avg Util", align: "right", render: (row) => row.avgUtilization == null ? "-" : pctFromDecimal(row.avgUtilization), sortVal: (row) => row.avgUtilization ?? -1 },
+    { key: "binding", header: "Binding", align: "right", render: (row) => row.bindingConstraints == null ? "-" : fmtInt(row.bindingConstraints), sortVal: (row) => row.bindingConstraints ?? -1 },
+    { key: "net", header: "Net Allocation", align: "right", render: (row) => row.netAllocation == null ? "-" : fmtAbbr(row.netAllocation), sortVal: (row) => row.netAllocation ?? Number.NEGATIVE_INFINITY },
+    { key: "message", header: "Message", render: (row) => <span className="text-term-text-mute">{row.message ?? row.requestHash?.slice(0, 12) ?? "-"}</span>, sortVal: (row) => row.message ?? row.requestHash ?? "" },
+  ];
+
+  const whatIfRouteColumns: Column<WhatIfRouteRow>[] = [
+    { key: "route", header: "Route", render: (row) => <span className="text-term-text">{row.route_id}</span>, sortVal: (row) => row.route_id, width: "120" },
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text-dim">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id, width: "120" },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-mute">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "current", header: "Current", align: "right", render: (row) => fmtAbbr(row.current_quantity_shares), sortVal: (row) => row.current_quantity_shares },
+    { key: "post", header: "Post", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_quantity_shares)}</span>, sortVal: (row) => row.post_quantity_shares },
+    { key: "delta", header: "Delta", align: "right", render: (row) => <span className={row.increase_shares > row.decrease_shares ? "text-term-up" : row.decrease_shares > row.increase_shares ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.increase_shares - row.decrease_shares)}</span>, sortVal: (row) => row.increase_shares - row.decrease_shares },
+    { key: "vs_base", header: "Vs Base", align: "right", render: (row) => row.vs_base_post_shares == null ? "-" : <span className={row.vs_base_post_shares >= 0 ? "text-term-up" : "text-term-down"}>{fmtAbbr(row.vs_base_post_shares)}</span>, sortVal: (row) => row.vs_base_post_shares ?? 0 },
+    { key: "fee", header: "Fee", align: "right", render: (row) => pctFromDecimal(row.fee_rate), sortVal: (row) => row.fee_rate },
+    { key: "cap", header: "Demand Cap", align: "right", render: (row) => row.demand_cap_shares == null ? "-" : fmtAbbr(row.demand_cap_shares), sortVal: (row) => row.demand_cap_shares ?? 0 },
+    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_codes?.slice(0, 3).join(", ") || "-"}</span>, sortVal: (row) => row.reason_codes?.[0] ?? "" },
+  ];
+
+  const whatIfInventoryColumns: Column<WhatIfInventoryDrillRow>[] = [
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "pre_on_loan", header: "Pre Loan", align: "right", render: (row) => fmtAbbr(row.pre_on_loan_shares), sortVal: (row) => row.pre_on_loan_shares },
+    { key: "post_on_loan", header: "Post Loan", align: "right", render: (row) => fmtAbbr(row.post_on_loan_shares), sortVal: (row) => row.post_on_loan_shares },
+    { key: "post_available", header: "Post Available", align: "right", render: (row) => fmtAbbr(row.post_available_shares), sortVal: (row) => row.post_available_shares },
+    { key: "utilization", header: "Utilization", align: "right", render: (row) => <span className={row.utilization >= 0.95 ? "text-term-down" : row.utilization >= 0.8 ? "text-term-amber" : "text-term-text"}>{pctFromDecimal(row.utilization)}</span>, sortVal: (row) => row.utilization },
+    { key: "vs_base", header: "Vs Base Util", align: "right", render: (row) => row.vs_base_utilization == null ? "-" : <span className={row.vs_base_utilization >= 0 ? "text-term-up" : "text-term-down"}>{fmtPct(row.vs_base_utilization * 100, 2)}</span>, sortVal: (row) => row.vs_base_utilization ?? 0 },
+  ];
+
   async function doRefreshSynthetic() {
     setBusy(true);
     setMessage(null);
@@ -415,6 +791,83 @@ export default function InventoryOptimizerPage() {
     }
   }
 
+  function toggleScenario(id: WhatIfScenarioId) {
+    setSelectedScenarioIds((current) => {
+      if (current.includes(id)) return current.length === 1 ? current : current.filter((value) => value !== id);
+      return [...current, id];
+    });
+  }
+
+  function summarizeScenarioResult(scenario: WhatIfScenario, nextDataset: DatasetEnvelope, nextResult: IbalResult): WhatIfResult {
+    const filled = nextResult.demand.reduce((sum, row) => sum + row.filled_shares, 0);
+    const effectiveCap = nextResult.demand.reduce((sum, row) => sum + row.effective_cap_shares, 0);
+    const avgUtilization = nextResult.balances.length
+      ? nextResult.balances.reduce((sum, row) => sum + row.utilization, 0) / nextResult.balances.length
+      : 0;
+    return {
+      id: scenario.id,
+      label: scenario.label,
+      status: nextResult.status === "optimal" ? "optimal" : "failed",
+      message: nextResult.status,
+      requestHash: nextDataset.request_hash,
+      runId: nextResult.run_id,
+      totalDeltaUsd: nextResult.economics?.total_delta_usd ?? 0,
+      avgUtilization,
+      fillRatio: effectiveCap > 0 ? filled / effectiveCap : 0,
+      bindingConstraints: nextResult.constraints.filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
+      netAllocation: nextResult.allocations.reduce((sum, row) => sum + row.increase_shares - row.decrease_shares, 0),
+      dataset: nextDataset,
+      result: nextResult,
+    };
+  }
+
+  async function runWhatIfScenarios() {
+    const scenarios = WHAT_IF_SCENARIOS.filter((scenario) => scenarioSet.has(scenario.id));
+    if (!scenarios.length) return;
+    setScenarioBusy(true);
+    setBusy(true);
+    setMessage(null);
+    setActionIssues([]);
+    setSelectedWhatIfId(scenarios[0]?.id ?? null);
+    setWhatIfResults(scenarios.map((scenario) => ({ id: scenario.id, label: scenario.label, status: "pending" })));
+    try {
+      for (const scenario of scenarios) {
+        setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? { ...row, status: "running", message: "Solving..." } : row));
+        try {
+          const scenarioSynthetic = {
+            ...synthetic,
+            ...(scenario.synthetic ?? {}),
+            seed: synthetic.seed + (scenario.seedOffset ?? 0),
+          } as SyntheticConfig;
+          const scenarioRunConfig = { ...runConfig, ...(scenario.runConfig ?? {}) };
+          const nextDataset = await generateSyntheticDataset(scenarioSynthetic);
+          if (!nextDataset.validation.valid) {
+            setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? {
+              ...row,
+              status: "failed",
+              message: nextDataset.validation.issues[0]?.message ?? "Dataset validation failed.",
+              requestHash: nextDataset.request_hash,
+            } : row));
+            continue;
+          }
+          const response = await runIbal(nextDataset, scenarioRunConfig);
+          setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? summarizeScenarioResult(scenario, nextDataset, response.result) : row));
+        } catch (error) {
+          setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? {
+            ...row,
+            status: "failed",
+            message: error instanceof Error ? error.message : "Scenario failed.",
+          } : row));
+          if (error instanceof IbalRequestError && error.issues.length) setActionIssues(error.issues);
+        }
+      }
+      setMessage(`Completed ${scenarios.length} what-if ${scenarios.length === 1 ? "scenario" : "scenarios"}.`);
+    } finally {
+      setScenarioBusy(false);
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
@@ -425,8 +878,14 @@ export default function InventoryOptimizerPage() {
         asOf={dataset?.summary.as_of ?? null}
         right={
           <span className="flex items-center gap-1">
-            <ProvenanceBadge source={sourceFor(dataset, health)} />
-            <Tag tone={health?.ready ? "up" : "down"}>{health?.ready ? "READY" : "SERVICE"}</Tag>
+            {health?.ready ? (
+              <>
+                <ProvenanceBadge source={sourceFor(dataset, health)} />
+                <Tag tone="up">READY</Tag>
+              </>
+            ) : (
+              <DevelopmentBadge />
+            )}
           </span>
         }
       />
@@ -448,8 +907,31 @@ export default function InventoryOptimizerPage() {
 
       <div className="grid flex-1 grid-cols-1 gap-2 p-2 xl:grid-cols-[24rem_1fr]">
         <div className="flex min-h-0 flex-col gap-2">
-          <Panel title="Dataset Intake" code="DATA" accent resizable={false}>
+          <Panel
+            title="Dataset Intake"
+            code="DATA"
+            accent
+            resizable={false}
+            right={
+              <Tag tone={!dataset ? "neutral" : dataset.validation.valid ? "up" : "down"}>
+                {!dataset ? "NO DATA" : dataset.validation.valid ? "LOADED" : "INVALID"}
+              </Tag>
+            }
+          >
             <div className="grid gap-2 p-2 text-2xs">
+              <div className={`flex items-start gap-2 border px-2 py-1.5 ${datasetReady ? "border-term-up/30 bg-term-up/10 text-term-up" : dataset ? "border-term-down/30 bg-term-down/10 text-term-down" : "border-term-border bg-term-panel-2 text-term-text-dim"}`}>
+                {datasetReady ? <CheckCircle2 className="mt-0.5 shrink-0" size={13} /> : <AlertCircle className="mt-0.5 shrink-0" size={13} />}
+                <div className="min-w-0">
+                  <div className="font-semibold uppercase tracking-wide">
+                    {datasetReady ? "Dataset loaded successfully" : dataset ? "Dataset loaded with issues" : "No dataset loaded"}
+                  </div>
+                  <div className="truncate text-term-text-mute" title={dataset ? `${dataset.source.label} ${dataset.request_hash}` : "Generate synthetic data or upload a JSON/XLSX dataset before running."}>
+                    {dataset
+                      ? `${dataset.source.label} · ${dataset.request_hash.slice(0, 12)} · ${fmtInt(dataset.summary.row_counts.inventory)} inventory / ${fmtInt(dataset.summary.row_counts.routes)} routes`
+                      : "Generate Synthetic or Upload JSON/XLSX before running."}
+                  </div>
+                </div>
+              </div>
               <label className="grid gap-1 text-term-text-dim">
                 Profile
                 <select className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" value={synthetic.profile} onChange={(event) => setSynthetic({ ...synthetic, profile: event.target.value as SyntheticConfig["profile"] })}>
@@ -525,6 +1007,15 @@ export default function InventoryOptimizerPage() {
 
           <Panel title="Run Config" code="SOLVE" resizable={false}>
             <div className="grid gap-2 p-2 text-2xs">
+              <div className="flex items-center justify-between gap-2 border border-term-border bg-term-panel-2 px-2 py-1.5">
+                <div className="min-w-0">
+                  <div className="term-label">Run readiness</div>
+                  <div className="truncate text-term-text-mute" title={runDisabledReason ?? "Dataset is valid and ready to run."}>
+                    {runDisabledReason ?? "Dataset is valid and ready to run."}
+                  </div>
+                </div>
+                <Tag tone={datasetReady && !busy ? "up" : dataset ? "amber" : "neutral"}>{datasetReady && !busy ? "READY" : "WAIT"}</Tag>
+              </div>
               <label className="grid gap-1 text-term-text-dim">
                 Time limit seconds
                 <input className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" type="number" min={1} max={60} value={runConfig.solver_time_limit_seconds} onChange={(event) => updateNumber(setRunConfig, runConfig, "solver_time_limit_seconds", event.target.value)} />
@@ -533,11 +1024,49 @@ export default function InventoryOptimizerPage() {
                 Minimum entity confidence
                 <input type="range" min={0} max={1} step={0.01} value={runConfig.minimum_entity_confidence} onChange={(event) => updateNumber(setRunConfig, runConfig, "minimum_entity_confidence", event.target.value)} />
               </label>
-              <button className="term-btn justify-center border-term-amber text-term-amber" disabled={!dataset || !dataset.validation.valid || busy} onClick={solveCurrent}>
-                <Play size={13} /> Run
+              <button
+                className="term-btn justify-center border-term-amber text-term-amber disabled:border-term-border disabled:text-term-text-mute"
+                disabled={!dataset || !dataset.validation.valid || busy}
+                title={runDisabledReason ?? "Run optimizer"}
+                onClick={solveCurrent}
+              >
+                <Play size={13} /> {runButtonLabel}
               </button>
               <button className="term-btn justify-center" disabled={!dataset || !result || busy} onClick={exportBundle}>
                 <Download size={13} /> Export
+              </button>
+            </div>
+          </Panel>
+
+          <Panel
+            title="What If Scenarios"
+            code="WIF"
+            resizable={false}
+            right={<Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "optimal") ? "up" : "neutral"}>{scenarioBusy ? "RUNNING" : `${selectedScenarioIds.length} SELECTED`}</Tag>}
+          >
+            <div className="grid gap-2 p-2 text-2xs">
+              <div className="border border-term-border bg-term-panel-2 px-2 py-1.5 text-term-text-mute">
+                Scenario runs use the synthetic generator and current run config, then apply each selected shock.
+              </div>
+              <div className="grid gap-1">
+                {WHAT_IF_SCENARIOS.map((scenario) => (
+                  <label key={scenario.id} className="flex cursor-pointer items-start gap-2 border border-term-border bg-term-panel-2 px-2 py-1 hover:border-term-amber/50">
+                    <input
+                      className="mt-0.5"
+                      type="checkbox"
+                      checked={scenarioSet.has(scenario.id)}
+                      disabled={scenarioBusy}
+                      onChange={() => toggleScenario(scenario.id)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-term-text">{scenario.label}</span>
+                      <span className="block truncate text-term-text-mute" title={scenario.desc}>{scenario.desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <button className="term-btn justify-center border-term-blue text-term-blue" disabled={busy || scenarioBusy || selectedScenarioIds.length === 0} onClick={runWhatIfScenarios}>
+                <Play size={13} /> {scenarioBusy ? "Running Scenarios..." : "Run Scenarios"}
               </button>
             </div>
           </Panel>
@@ -560,6 +1089,201 @@ export default function InventoryOptimizerPage() {
               <Stat label="Source" value={dataset?.source.mode.toUpperCase() ?? "-"} sub={dataset?.source.filename ?? (dataset?.source.seed != null ? `seed ${dataset.source.seed}` : undefined)} />
             </div>
           </Panel>
+
+          {beforeAfterAnalytics && (
+            <Panel
+              title="Base Case Before / After"
+              code={result?.run_id.slice(0, 10) ?? "ANALYTICS"}
+              right={
+                <span className="flex items-center gap-1">
+                  <Tag tone={result?.verification?.passed ? "up" : "amber"}>
+                    {result?.verification?.passed ? "VERIFIED" : "CHECK"}
+                  </Tag>
+                  <Tag tone={beforeAfterAnalytics.warningCount > 0 ? "amber" : "neutral"}>
+                    {fmtInt(beforeAfterAnalytics.warningCount)} WARN
+                  </Tag>
+                </span>
+              }
+            >
+              <div className="grid gap-2 p-2">
+                <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4 xl:grid-cols-6">
+                  <Stat
+                    label="On Loan"
+                    value={fmtAbbr(beforeAfterAnalytics.postOnLoanShares)}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.preOnLoanShares)} before`}
+                  />
+                  <Stat
+                    label="Loan Delta"
+                    value={fmtAbbr(beforeAfterAnalytics.deltaOnLoanShares)}
+                    tone={beforeAfterAnalytics.deltaOnLoanShares >= 0 ? "up" : "down"}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.netAllocationShares)} net route`}
+                  />
+                  <Stat
+                    label="Available"
+                    value={fmtAbbr(beforeAfterAnalytics.postAvailableShares)}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.preAvailableShares)} before`}
+                  />
+                  <Stat
+                    label="Utilization"
+                    value={pctFromDecimal(beforeAfterAnalytics.postUtilization)}
+                    tone={beforeAfterAnalytics.postUtilization >= 0.95 ? "down" : beforeAfterAnalytics.postUtilization >= 0.8 ? "amber" : "neutral"}
+                    sub={`${fmtPct(beforeAfterAnalytics.utilizationDelta * 100, 2)} delta`}
+                  />
+                  <Stat
+                    label="Demand Fill"
+                    value={pctFromDecimal(beforeAfterAnalytics.fillRatio)}
+                    tone={beforeAfterAnalytics.fillShortfallRatio > 0.1 ? "amber" : "up"}
+                    sub={`${fmtAbbr(beforeAfterAnalytics.unfilledShares)} unfilled`}
+                  />
+                  <Stat
+                    label="Route Moves"
+                    value={fmtInt(beforeAfterAnalytics.changedRouteCount)}
+                    sub={`${fmtInt(beforeAfterAnalytics.unchangedRouteCount)} unchanged`}
+                  />
+                  <Stat
+                    label="Gross Increase"
+                    value={fmtAbbr(beforeAfterAnalytics.grossIncreaseShares)}
+                    tone="up"
+                  />
+                  <Stat
+                    label="Gross Decrease"
+                    value={fmtAbbr(beforeAfterAnalytics.grossDecreaseShares)}
+                    tone={beforeAfterAnalytics.grossDecreaseShares > 0 ? "down" : "neutral"}
+                  />
+                  <Stat
+                    label="Active Routes"
+                    value={fmtInt(beforeAfterAnalytics.activeRouteCount)}
+                    sub={`${fmtInt(result?.allocations.length ?? 0)} total`}
+                  />
+                  <Stat
+                    label="Binding Rows"
+                    value={fmtInt(beforeAfterAnalytics.bindingConstraintCount)}
+                    tone={beforeAfterAnalytics.bindingConstraintCount > 0 ? "amber" : "neutral"}
+                  />
+                  <Stat
+                    label="Total Delta"
+                    value={fmtUsdAbbr(result?.economics?.total_delta_usd ?? 0)}
+                    tone={(result?.economics?.total_delta_usd ?? 0) >= 0 ? "up" : "down"}
+                  />
+                  <Stat
+                    label="Status"
+                    value={result?.status.toUpperCase() ?? "-"}
+                    tone={result?.status === "optimal" ? "up" : "amber"}
+                  />
+                </div>
+
+                <div className="grid gap-2 xl:grid-cols-2">
+                  <div>
+                    <div className="term-label mb-1">Top Route Movers</div>
+                    <DataGrid
+                      columns={baseRouteAnalyticsColumns}
+                      rows={beforeAfterAnalytics.routeMovers}
+                      rowKey={(row) => row.route_id}
+                      maxHeight="260px"
+                      initialSort={{ key: "delta", dir: "desc" }}
+                      zebra
+                      onRowClick={(row) => setSelectedRouteId((current) => (current === row.route_id ? null : row.route_id))}
+                      selectedKey={selectedRouteId ?? undefined}
+                    />
+                  </div>
+                  <div>
+                    <div className="term-label mb-1">Inventory Impact</div>
+                    <DataGrid
+                      columns={baseInventoryAnalyticsColumns}
+                      rows={beforeAfterAnalytics.inventoryMovers}
+                      rowKey={(row) => row.inventory_id}
+                      maxHeight="260px"
+                      initialSort={{ key: "loan_delta", dir: "desc" }}
+                      zebra
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2 xl:grid-cols-[1fr_22rem]">
+                  <div>
+                    <div className="term-label mb-1">Demand Shortfall</div>
+                    <DataGrid
+                      columns={baseDemandAnalyticsColumns}
+                      rows={beforeAfterAnalytics.demandDrivers}
+                      rowKey={(row) => row.demand_group_id}
+                      maxHeight="220px"
+                      initialSort={{ key: "shortfall", dir: "desc" }}
+                      zebra
+                    />
+                  </div>
+                  <div>
+                    <div className="term-label mb-1">Reason Codes</div>
+                    <DataGrid
+                      columns={reasonCodeAnalyticsColumns}
+                      rows={beforeAfterAnalytics.reasonCodes}
+                      rowKey={(row) => row.reason_code}
+                      maxHeight="220px"
+                      initialSort={{ key: "gross", dir: "desc" }}
+                      zebra
+                    />
+                  </div>
+                </div>
+              </div>
+            </Panel>
+          )}
+
+          {whatIfResults.length > 0 && (
+            <Panel
+              title="What If Comparison"
+              code="SCENARIO"
+              right={<Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "failed") ? "down" : "up"}>{scenarioBusy ? "RUNNING" : "COMPLETE"}</Tag>}
+            >
+              <DataGrid
+                columns={whatIfColumns}
+                rows={whatIfResults}
+                rowKey={(row) => row.id}
+                maxHeight="260px"
+                initialSort={{ key: "delta", dir: "desc" }}
+                zebra
+                onRowClick={(row) => setSelectedWhatIfId(row.id)}
+                selectedKey={selectedWhatIf?.id ?? undefined}
+              />
+            </Panel>
+          )}
+
+          {selectedWhatIf?.result && (
+            <Panel
+              title={`Scenario Detail - ${selectedWhatIf.label}`}
+              code={selectedWhatIf.runId?.slice(0, 10) ?? "DETAIL"}
+              right={<Tag tone="blue">{fmtInt(selectedWhatIfRoutes.length)} routes</Tag>}
+            >
+              <div className="grid gap-2 p-2">
+                <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
+                  <Stat label="Scenario Delta" value={fmtUsdAbbr(selectedWhatIf.totalDeltaUsd ?? 0)} tone={(selectedWhatIf.totalDeltaUsd ?? 0) >= 0 ? "up" : "down"} />
+                  <Stat label="Fill Ratio" value={selectedWhatIf.fillRatio == null ? "-" : pctFromDecimal(selectedWhatIf.fillRatio)} />
+                  <Stat label="Avg Utilization" value={selectedWhatIf.avgUtilization == null ? "-" : pctFromDecimal(selectedWhatIf.avgUtilization)} />
+                  <Stat label="Binding Rows" value={fmtInt(selectedWhatIf.bindingConstraints ?? 0)} />
+                </div>
+                <div>
+                  <div className="term-label mb-1">Inventory Balances</div>
+                  <DataGrid
+                    columns={whatIfInventoryColumns}
+                    rows={selectedWhatIfInventory}
+                    rowKey={(row) => row.inventory_id}
+                    maxHeight="180px"
+                    initialSort={{ key: "utilization", dir: "desc" }}
+                    zebra
+                  />
+                </div>
+                <div>
+                  <div className="term-label mb-1">Route Allocations</div>
+                  <DataGrid
+                    columns={whatIfRouteColumns}
+                    rows={selectedWhatIfRoutes}
+                    rowKey={(row) => row.route_id}
+                    maxHeight="320px"
+                    initialSort={{ key: "delta", dir: "desc" }}
+                    zebra
+                  />
+                </div>
+              </div>
+            </Panel>
+          )}
 
           {dataset && (
             <Panel

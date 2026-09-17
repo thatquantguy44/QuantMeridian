@@ -46,7 +46,12 @@ def _contract_issues(exc: ValidationError) -> tuple[LocatedIssue, ...]:
 
 
 def validated_request(dataset: DatasetEnvelope, *, max_staleness_hours: float) -> OptimizationRequest:
-    actual_hash = canonical_hash(dataset.request)
+    try:
+        request = OptimizationRequest.model_validate(dataset.request)
+    except ValidationError as exc:
+        raise DatasetValidationError(_contract_issues(exc)) from exc
+    normalized_payload = request.model_dump(mode="json")
+    actual_hash = canonical_hash(normalized_payload)
     if actual_hash != dataset.request_hash:
         raise DatasetValidationError(
             (
@@ -57,10 +62,6 @@ def validated_request(dataset: DatasetEnvelope, *, max_staleness_hours: float) -
                 ),
             )
         )
-    try:
-        request = OptimizationRequest.model_validate(dataset.request)
-    except ValidationError as exc:
-        raise DatasetValidationError(_contract_issues(exc)) from exc
     if summarize(request) != dataset.summary:
         raise DatasetValidationError(
             (
