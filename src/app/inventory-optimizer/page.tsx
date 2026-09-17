@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Copy, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Copy, Download, Play, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
@@ -60,6 +60,53 @@ const DATASET_TABS: { value: DatasetTab; label: string }[] = [
   { value: "raw", label: "Raw" },
 ];
 
+type WhatIfScenarioId = "base" | "scarce" | "specials" | "concentration" | "confidence" | "capacity";
+
+interface WhatIfScenario {
+  id: WhatIfScenarioId;
+  label: string;
+  desc: string;
+  synthetic?: Partial<SyntheticConfig>;
+  runConfig?: Partial<RunConfig>;
+  seedOffset?: number;
+}
+
+interface WhatIfResult {
+  id: WhatIfScenarioId;
+  label: string;
+  status: "pending" | "running" | "optimal" | "failed";
+  message?: string;
+  requestHash?: string;
+  runId?: string;
+  totalDeltaUsd?: number;
+  avgUtilization?: number;
+  fillRatio?: number;
+  bindingConstraints?: number;
+  netAllocation?: number;
+  dataset?: DatasetEnvelope;
+  result?: IbalResult;
+}
+
+interface WhatIfRouteRow extends IbalAllocation {
+  security_id: string;
+  borrower_id: string;
+  vs_base_post_shares: number | null;
+}
+
+interface WhatIfInventoryDrillRow extends IbalBalance {
+  security_id: string;
+  vs_base_utilization: number | null;
+}
+
+const WHAT_IF_SCENARIOS: WhatIfScenario[] = [
+  { id: "base", label: "Base Case", desc: "Current synthetic settings and run config." },
+  { id: "scarce", label: "Scarce Supply", desc: "Higher utilization and tighter lendable supply.", synthetic: { profile: "scarce" }, seedOffset: 11 },
+  { id: "specials", label: "Specials Squeeze", desc: "Higher fee dispersion and special-borrow demand.", synthetic: { profile: "specials" }, seedOffset: 23 },
+  { id: "concentration", label: "Borrower Concentration", desc: "Demand concentrated into fewer parent groups.", synthetic: { profile: "concentrated" }, seedOffset: 37 },
+  { id: "confidence", label: "Strict Entity Confidence", desc: "Raises minimum entity confidence to 95%.", runConfig: { minimum_entity_confidence: 0.95 }, seedOffset: 41 },
+  { id: "capacity", label: "More Balance Sheet", desc: "Looser utilization cap and smaller reserve buffer.", synthetic: { utilization_cap: 0.98, reserve_fraction: 0.02 }, seedOffset: 53 },
+];
+
 function pctFromDecimal(value: number) {
   return fmtPct(value * 100, 2);
 }
@@ -114,6 +161,10 @@ export default function InventoryOptimizerPage() {
   const [resultTab, setResultTab] = useState<ResultTab>("allocations");
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [datasetTab, setDatasetTab] = useState<DatasetTab>("inventory");
+  const [selectedScenarioIds, setSelectedScenarioIds] = useState<WhatIfScenarioId[]>(["base", "scarce", "specials", "concentration"]);
+  const [whatIfResults, setWhatIfResults] = useState<WhatIfResult[]>([]);
+  const [scenarioBusy, setScenarioBusy] = useState(false);
+  const [selectedWhatIfId, setSelectedWhatIfId] = useState<WhatIfScenarioId | null>(null);
 
   // Located issues surfaced from the most-recent failed action (upload/run/export rejection)
   // take priority since they explain what just went wrong; otherwise fall back to the prepared
@@ -191,6 +242,50 @@ export default function InventoryOptimizerPage() {
       bindingConstraints: (result?.constraints ?? []).filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
     };
   }, [result]);
+  const datasetReady = Boolean(dataset?.validation.valid);
+  const runDisabledReason = !dataset
+    ? "Load synthetic data or upload a dataset before running."
+    : !dataset.validation.valid
+      ? "Resolve dataset validation issues before running."
+      : busy
+        ? "Another IBAL action is still running."
+        : null;
+  const runButtonLabel = !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
+  const scenarioSet = useMemo(() => new Set(selectedScenarioIds), [selectedScenarioIds]);
+  const baselineScenario = whatIfResults.find((row) => row.id === "base" && row.status === "optimal");
+  const selectedWhatIf = useMemo(
+    () => whatIfResults.find((row) => row.id === selectedWhatIfId) ?? whatIfResults.find((row) => row.status === "optimal") ?? null,
+    [selectedWhatIfId, whatIfResults]
+  );
+  const selectedWhatIfRoutes = useMemo<WhatIfRouteRow[]>(() => {
+    if (!selectedWhatIf?.result || !selectedWhatIf.dataset) return [];
+    const routeById = new Map(selectedWhatIf.dataset.request.routes.map((row) => [row.route_id, row]));
+    const baseByRoute = new Map((baselineScenario?.result?.allocations ?? []).map((row) => [row.route_id, row]));
+    return selectedWhatIf.result.allocations.map((row) => {
+      const route = routeById.get(row.route_id);
+      const base = baseByRoute.get(row.route_id);
+      return {
+        ...row,
+        security_id: route?.security_id ?? "-",
+        borrower_id: route?.borrower_id ?? "-",
+        vs_base_post_shares: base ? row.post_quantity_shares - base.post_quantity_shares : null,
+      };
+    });
+  }, [baselineScenario?.result?.allocations, selectedWhatIf]);
+  const selectedWhatIfInventory = useMemo<WhatIfInventoryDrillRow[]>(() => {
+    if (!selectedWhatIf?.result || !selectedWhatIf.dataset) return [];
+    const inventoryById = new Map(selectedWhatIf.dataset.request.inventory.map((row) => [row.inventory_id, row]));
+    const baseByInventory = new Map((baselineScenario?.result?.balances ?? []).map((row) => [row.inventory_id, row]));
+    return selectedWhatIf.result.balances.map((row) => {
+      const inventory = inventoryById.get(row.inventory_id);
+      const base = baseByInventory.get(row.inventory_id);
+      return {
+        ...row,
+        security_id: inventory?.security_id ?? "-",
+        vs_base_utilization: base ? row.utilization - base.utilization : null,
+      };
+    });
+  }, [baselineScenario?.result?.balances, selectedWhatIf]);
 
   const inventoryPreviewColumns: Column<IbalInventoryRow>[] = [
     { key: "id", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
@@ -304,6 +399,68 @@ export default function InventoryOptimizerPage() {
     { key: "dual", header: "Dual", align: "right", render: (row) => fmtAbbr(row.dual_value ?? 0), sortVal: (row) => row.dual_value ?? 0 },
   ];
 
+  const whatIfColumns: Column<WhatIfResult>[] = [
+    { key: "scenario", header: "Scenario", render: (row) => <span className="font-semibold text-term-text">{row.label}</span>, sortVal: (row) => row.label, width: "170" },
+    {
+      key: "status",
+      header: "Status",
+      align: "center",
+      render: (row) => (
+        <Tag tone={row.status === "optimal" ? "up" : row.status === "failed" ? "down" : row.status === "running" ? "amber" : "neutral"}>
+          {row.status}
+        </Tag>
+      ),
+      sortVal: (row) => row.status,
+      width: "90",
+    },
+    {
+      key: "delta",
+      header: "Delta Value",
+      align: "right",
+      render: (row) => row.totalDeltaUsd == null ? <span className="text-term-text-mute">-</span> : <span className={row.totalDeltaUsd >= 0 ? "text-term-up" : "text-term-down"}>{fmtUsdAbbr(row.totalDeltaUsd)}</span>,
+      sortVal: (row) => row.totalDeltaUsd ?? Number.NEGATIVE_INFINITY,
+    },
+    {
+      key: "vs_base",
+      header: "Vs Base",
+      align: "right",
+      render: (row) => {
+        const diff = row.totalDeltaUsd != null && baselineScenario?.totalDeltaUsd != null ? row.totalDeltaUsd - baselineScenario.totalDeltaUsd : null;
+        return diff == null ? <span className="text-term-text-mute">-</span> : <span className={diff >= 0 ? "text-term-up" : "text-term-down"}>{fmtUsdAbbr(diff)}</span>;
+      },
+      sortVal: (row) => row.totalDeltaUsd != null && baselineScenario?.totalDeltaUsd != null ? row.totalDeltaUsd - baselineScenario.totalDeltaUsd : Number.NEGATIVE_INFINITY,
+    },
+    { key: "fill", header: "Fill", align: "right", render: (row) => row.fillRatio == null ? "-" : pctFromDecimal(row.fillRatio), sortVal: (row) => row.fillRatio ?? -1 },
+    { key: "util", header: "Avg Util", align: "right", render: (row) => row.avgUtilization == null ? "-" : pctFromDecimal(row.avgUtilization), sortVal: (row) => row.avgUtilization ?? -1 },
+    { key: "binding", header: "Binding", align: "right", render: (row) => row.bindingConstraints == null ? "-" : fmtInt(row.bindingConstraints), sortVal: (row) => row.bindingConstraints ?? -1 },
+    { key: "net", header: "Net Allocation", align: "right", render: (row) => row.netAllocation == null ? "-" : fmtAbbr(row.netAllocation), sortVal: (row) => row.netAllocation ?? Number.NEGATIVE_INFINITY },
+    { key: "message", header: "Message", render: (row) => <span className="text-term-text-mute">{row.message ?? row.requestHash?.slice(0, 12) ?? "-"}</span>, sortVal: (row) => row.message ?? row.requestHash ?? "" },
+  ];
+
+  const whatIfRouteColumns: Column<WhatIfRouteRow>[] = [
+    { key: "route", header: "Route", render: (row) => <span className="text-term-text">{row.route_id}</span>, sortVal: (row) => row.route_id, width: "120" },
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text-dim">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id, width: "120" },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-mute">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
+    { key: "current", header: "Current", align: "right", render: (row) => fmtAbbr(row.current_quantity_shares), sortVal: (row) => row.current_quantity_shares },
+    { key: "post", header: "Post", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_quantity_shares)}</span>, sortVal: (row) => row.post_quantity_shares },
+    { key: "delta", header: "Delta", align: "right", render: (row) => <span className={row.increase_shares > row.decrease_shares ? "text-term-up" : row.decrease_shares > row.increase_shares ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.increase_shares - row.decrease_shares)}</span>, sortVal: (row) => row.increase_shares - row.decrease_shares },
+    { key: "vs_base", header: "Vs Base", align: "right", render: (row) => row.vs_base_post_shares == null ? "-" : <span className={row.vs_base_post_shares >= 0 ? "text-term-up" : "text-term-down"}>{fmtAbbr(row.vs_base_post_shares)}</span>, sortVal: (row) => row.vs_base_post_shares ?? 0 },
+    { key: "fee", header: "Fee", align: "right", render: (row) => pctFromDecimal(row.fee_rate), sortVal: (row) => row.fee_rate },
+    { key: "cap", header: "Demand Cap", align: "right", render: (row) => row.demand_cap_shares == null ? "-" : fmtAbbr(row.demand_cap_shares), sortVal: (row) => row.demand_cap_shares ?? 0 },
+    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_codes?.slice(0, 3).join(", ") || "-"}</span>, sortVal: (row) => row.reason_codes?.[0] ?? "" },
+  ];
+
+  const whatIfInventoryColumns: Column<WhatIfInventoryDrillRow>[] = [
+    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
+    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
+    { key: "pre_on_loan", header: "Pre Loan", align: "right", render: (row) => fmtAbbr(row.pre_on_loan_shares), sortVal: (row) => row.pre_on_loan_shares },
+    { key: "post_on_loan", header: "Post Loan", align: "right", render: (row) => fmtAbbr(row.post_on_loan_shares), sortVal: (row) => row.post_on_loan_shares },
+    { key: "post_available", header: "Post Available", align: "right", render: (row) => fmtAbbr(row.post_available_shares), sortVal: (row) => row.post_available_shares },
+    { key: "utilization", header: "Utilization", align: "right", render: (row) => <span className={row.utilization >= 0.95 ? "text-term-down" : row.utilization >= 0.8 ? "text-term-amber" : "text-term-text"}>{pctFromDecimal(row.utilization)}</span>, sortVal: (row) => row.utilization },
+    { key: "vs_base", header: "Vs Base Util", align: "right", render: (row) => row.vs_base_utilization == null ? "-" : <span className={row.vs_base_utilization >= 0 ? "text-term-up" : "text-term-down"}>{fmtPct(row.vs_base_utilization * 100, 2)}</span>, sortVal: (row) => row.vs_base_utilization ?? 0 },
+  ];
+
   async function doRefreshSynthetic() {
     setBusy(true);
     setMessage(null);
@@ -415,6 +572,83 @@ export default function InventoryOptimizerPage() {
     }
   }
 
+  function toggleScenario(id: WhatIfScenarioId) {
+    setSelectedScenarioIds((current) => {
+      if (current.includes(id)) return current.length === 1 ? current : current.filter((value) => value !== id);
+      return [...current, id];
+    });
+  }
+
+  function summarizeScenarioResult(scenario: WhatIfScenario, nextDataset: DatasetEnvelope, nextResult: IbalResult): WhatIfResult {
+    const filled = nextResult.demand.reduce((sum, row) => sum + row.filled_shares, 0);
+    const effectiveCap = nextResult.demand.reduce((sum, row) => sum + row.effective_cap_shares, 0);
+    const avgUtilization = nextResult.balances.length
+      ? nextResult.balances.reduce((sum, row) => sum + row.utilization, 0) / nextResult.balances.length
+      : 0;
+    return {
+      id: scenario.id,
+      label: scenario.label,
+      status: nextResult.status === "optimal" ? "optimal" : "failed",
+      message: nextResult.status,
+      requestHash: nextDataset.request_hash,
+      runId: nextResult.run_id,
+      totalDeltaUsd: nextResult.economics?.total_delta_usd ?? 0,
+      avgUtilization,
+      fillRatio: effectiveCap > 0 ? filled / effectiveCap : 0,
+      bindingConstraints: nextResult.constraints.filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
+      netAllocation: nextResult.allocations.reduce((sum, row) => sum + row.increase_shares - row.decrease_shares, 0),
+      dataset: nextDataset,
+      result: nextResult,
+    };
+  }
+
+  async function runWhatIfScenarios() {
+    const scenarios = WHAT_IF_SCENARIOS.filter((scenario) => scenarioSet.has(scenario.id));
+    if (!scenarios.length) return;
+    setScenarioBusy(true);
+    setBusy(true);
+    setMessage(null);
+    setActionIssues([]);
+    setSelectedWhatIfId(scenarios[0]?.id ?? null);
+    setWhatIfResults(scenarios.map((scenario) => ({ id: scenario.id, label: scenario.label, status: "pending" })));
+    try {
+      for (const scenario of scenarios) {
+        setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? { ...row, status: "running", message: "Solving..." } : row));
+        try {
+          const scenarioSynthetic = {
+            ...synthetic,
+            ...(scenario.synthetic ?? {}),
+            seed: synthetic.seed + (scenario.seedOffset ?? 0),
+          } as SyntheticConfig;
+          const scenarioRunConfig = { ...runConfig, ...(scenario.runConfig ?? {}) };
+          const nextDataset = await generateSyntheticDataset(scenarioSynthetic);
+          if (!nextDataset.validation.valid) {
+            setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? {
+              ...row,
+              status: "failed",
+              message: nextDataset.validation.issues[0]?.message ?? "Dataset validation failed.",
+              requestHash: nextDataset.request_hash,
+            } : row));
+            continue;
+          }
+          const response = await runIbal(nextDataset, scenarioRunConfig);
+          setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? summarizeScenarioResult(scenario, nextDataset, response.result) : row));
+        } catch (error) {
+          setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? {
+            ...row,
+            status: "failed",
+            message: error instanceof Error ? error.message : "Scenario failed.",
+          } : row));
+          if (error instanceof IbalRequestError && error.issues.length) setActionIssues(error.issues);
+        }
+      }
+      setMessage(`Completed ${scenarios.length} what-if ${scenarios.length === 1 ? "scenario" : "scenarios"}.`);
+    } finally {
+      setScenarioBusy(false);
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
@@ -448,8 +682,31 @@ export default function InventoryOptimizerPage() {
 
       <div className="grid flex-1 grid-cols-1 gap-2 p-2 xl:grid-cols-[24rem_1fr]">
         <div className="flex min-h-0 flex-col gap-2">
-          <Panel title="Dataset Intake" code="DATA" accent resizable={false}>
+          <Panel
+            title="Dataset Intake"
+            code="DATA"
+            accent
+            resizable={false}
+            right={
+              <Tag tone={!dataset ? "neutral" : dataset.validation.valid ? "up" : "down"}>
+                {!dataset ? "NO DATA" : dataset.validation.valid ? "LOADED" : "INVALID"}
+              </Tag>
+            }
+          >
             <div className="grid gap-2 p-2 text-2xs">
+              <div className={`flex items-start gap-2 border px-2 py-1.5 ${datasetReady ? "border-term-up/30 bg-term-up/10 text-term-up" : dataset ? "border-term-down/30 bg-term-down/10 text-term-down" : "border-term-border bg-term-panel-2 text-term-text-dim"}`}>
+                {datasetReady ? <CheckCircle2 className="mt-0.5 shrink-0" size={13} /> : <AlertCircle className="mt-0.5 shrink-0" size={13} />}
+                <div className="min-w-0">
+                  <div className="font-semibold uppercase tracking-wide">
+                    {datasetReady ? "Dataset loaded successfully" : dataset ? "Dataset loaded with issues" : "No dataset loaded"}
+                  </div>
+                  <div className="truncate text-term-text-mute" title={dataset ? `${dataset.source.label} ${dataset.request_hash}` : "Generate synthetic data or upload a JSON/XLSX dataset before running."}>
+                    {dataset
+                      ? `${dataset.source.label} · ${dataset.request_hash.slice(0, 12)} · ${fmtInt(dataset.summary.row_counts.inventory)} inventory / ${fmtInt(dataset.summary.row_counts.routes)} routes`
+                      : "Generate Synthetic or Upload JSON/XLSX before running."}
+                  </div>
+                </div>
+              </div>
               <label className="grid gap-1 text-term-text-dim">
                 Profile
                 <select className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" value={synthetic.profile} onChange={(event) => setSynthetic({ ...synthetic, profile: event.target.value as SyntheticConfig["profile"] })}>
@@ -525,6 +782,15 @@ export default function InventoryOptimizerPage() {
 
           <Panel title="Run Config" code="SOLVE" resizable={false}>
             <div className="grid gap-2 p-2 text-2xs">
+              <div className="flex items-center justify-between gap-2 border border-term-border bg-term-panel-2 px-2 py-1.5">
+                <div className="min-w-0">
+                  <div className="term-label">Run readiness</div>
+                  <div className="truncate text-term-text-mute" title={runDisabledReason ?? "Dataset is valid and ready to run."}>
+                    {runDisabledReason ?? "Dataset is valid and ready to run."}
+                  </div>
+                </div>
+                <Tag tone={datasetReady && !busy ? "up" : dataset ? "amber" : "neutral"}>{datasetReady && !busy ? "READY" : "WAIT"}</Tag>
+              </div>
               <label className="grid gap-1 text-term-text-dim">
                 Time limit seconds
                 <input className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" type="number" min={1} max={60} value={runConfig.solver_time_limit_seconds} onChange={(event) => updateNumber(setRunConfig, runConfig, "solver_time_limit_seconds", event.target.value)} />
@@ -533,11 +799,49 @@ export default function InventoryOptimizerPage() {
                 Minimum entity confidence
                 <input type="range" min={0} max={1} step={0.01} value={runConfig.minimum_entity_confidence} onChange={(event) => updateNumber(setRunConfig, runConfig, "minimum_entity_confidence", event.target.value)} />
               </label>
-              <button className="term-btn justify-center border-term-amber text-term-amber" disabled={!dataset || !dataset.validation.valid || busy} onClick={solveCurrent}>
-                <Play size={13} /> Run
+              <button
+                className="term-btn justify-center border-term-amber text-term-amber disabled:border-term-border disabled:text-term-text-mute"
+                disabled={!dataset || !dataset.validation.valid || busy}
+                title={runDisabledReason ?? "Run optimizer"}
+                onClick={solveCurrent}
+              >
+                <Play size={13} /> {runButtonLabel}
               </button>
               <button className="term-btn justify-center" disabled={!dataset || !result || busy} onClick={exportBundle}>
                 <Download size={13} /> Export
+              </button>
+            </div>
+          </Panel>
+
+          <Panel
+            title="What If Scenarios"
+            code="WIF"
+            resizable={false}
+            right={<Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "optimal") ? "up" : "neutral"}>{scenarioBusy ? "RUNNING" : `${selectedScenarioIds.length} SELECTED`}</Tag>}
+          >
+            <div className="grid gap-2 p-2 text-2xs">
+              <div className="border border-term-border bg-term-panel-2 px-2 py-1.5 text-term-text-mute">
+                Scenario runs use the synthetic generator and current run config, then apply each selected shock.
+              </div>
+              <div className="grid gap-1">
+                {WHAT_IF_SCENARIOS.map((scenario) => (
+                  <label key={scenario.id} className="flex cursor-pointer items-start gap-2 border border-term-border bg-term-panel-2 px-2 py-1 hover:border-term-amber/50">
+                    <input
+                      className="mt-0.5"
+                      type="checkbox"
+                      checked={scenarioSet.has(scenario.id)}
+                      disabled={scenarioBusy}
+                      onChange={() => toggleScenario(scenario.id)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-term-text">{scenario.label}</span>
+                      <span className="block truncate text-term-text-mute" title={scenario.desc}>{scenario.desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <button className="term-btn justify-center border-term-blue text-term-blue" disabled={busy || scenarioBusy || selectedScenarioIds.length === 0} onClick={runWhatIfScenarios}>
+                <Play size={13} /> {scenarioBusy ? "Running Scenarios..." : "Run Scenarios"}
               </button>
             </div>
           </Panel>
@@ -560,6 +864,64 @@ export default function InventoryOptimizerPage() {
               <Stat label="Source" value={dataset?.source.mode.toUpperCase() ?? "-"} sub={dataset?.source.filename ?? (dataset?.source.seed != null ? `seed ${dataset.source.seed}` : undefined)} />
             </div>
           </Panel>
+
+          {whatIfResults.length > 0 && (
+            <Panel
+              title="What If Comparison"
+              code="SCENARIO"
+              right={<Tag tone={scenarioBusy ? "amber" : whatIfResults.some((row) => row.status === "failed") ? "down" : "up"}>{scenarioBusy ? "RUNNING" : "COMPLETE"}</Tag>}
+            >
+              <DataGrid
+                columns={whatIfColumns}
+                rows={whatIfResults}
+                rowKey={(row) => row.id}
+                maxHeight="260px"
+                initialSort={{ key: "delta", dir: "desc" }}
+                zebra
+                onRowClick={(row) => setSelectedWhatIfId(row.id)}
+                selectedKey={selectedWhatIf?.id ?? undefined}
+              />
+            </Panel>
+          )}
+
+          {selectedWhatIf?.result && (
+            <Panel
+              title={`Scenario Detail - ${selectedWhatIf.label}`}
+              code={selectedWhatIf.runId?.slice(0, 10) ?? "DETAIL"}
+              right={<Tag tone="blue">{fmtInt(selectedWhatIfRoutes.length)} routes</Tag>}
+            >
+              <div className="grid gap-2 p-2">
+                <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
+                  <Stat label="Scenario Delta" value={fmtUsdAbbr(selectedWhatIf.totalDeltaUsd ?? 0)} tone={(selectedWhatIf.totalDeltaUsd ?? 0) >= 0 ? "up" : "down"} />
+                  <Stat label="Fill Ratio" value={selectedWhatIf.fillRatio == null ? "-" : pctFromDecimal(selectedWhatIf.fillRatio)} />
+                  <Stat label="Avg Utilization" value={selectedWhatIf.avgUtilization == null ? "-" : pctFromDecimal(selectedWhatIf.avgUtilization)} />
+                  <Stat label="Binding Rows" value={fmtInt(selectedWhatIf.bindingConstraints ?? 0)} />
+                </div>
+                <div>
+                  <div className="term-label mb-1">Inventory Balances</div>
+                  <DataGrid
+                    columns={whatIfInventoryColumns}
+                    rows={selectedWhatIfInventory}
+                    rowKey={(row) => row.inventory_id}
+                    maxHeight="180px"
+                    initialSort={{ key: "utilization", dir: "desc" }}
+                    zebra
+                  />
+                </div>
+                <div>
+                  <div className="term-label mb-1">Route Allocations</div>
+                  <DataGrid
+                    columns={whatIfRouteColumns}
+                    rows={selectedWhatIfRoutes}
+                    rowKey={(row) => row.route_id}
+                    maxHeight="320px"
+                    initialSort={{ key: "delta", dir: "desc" }}
+                    zebra
+                  />
+                </div>
+              </div>
+            </Panel>
+          )}
 
           {dataset && (
             <Panel

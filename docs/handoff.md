@@ -116,6 +116,15 @@ the service's own token requirement -- added. To actually run IBAL end-to-end lo
 `services/inventory_optimizer_api` per its README, set the same `INVENTORY_OPTIMIZER_API_TOKEN`
 in the repo-root `.env`, and (re)start `npm run dev` (Vite only reads `.env` at startup).
 
+**IBAL frontend/Playwright checkpoint, 2026-09-17:** the current workbench branch now fixes the
+browser JSON round-trip `REQUEST_HASH_MISMATCH`, makes dataset readiness explicit, labels the ready
+solve action `Base Case Run`, adds preset what-if scenarios, and renders scenario-specific
+inventory/route detail after scenario runs. Focused browser verification lives in
+`test/ibal.spec.ts` with `playwright.local.config.ts`; run it against the standalone server, not
+the Vite dev server, because this local setup can hang browser POSTs through Vite while standalone
+and direct `curl` calls remain healthy. The durable runbook and verification record is
+`docs/features/IBAL_WHAT_IF_HANDOFF.md`.
+
 **HIGH PRIORITY -- QuantSmith Phase 4 (IBAL model-plugin pilot):** `docs/specs/spec005/SPEC.md`
 was revisited 2026-09-17 to add candidate synergy item 6 and Phase 4: registering `IBAL` with
 QuantSmith's `model_plugin` adapter (spec `0026`) so a QuantSmith review agent
@@ -131,13 +140,12 @@ should stay manual/scripted (mirroring Phase 2's shape) with synthetic `IBAL` da
 book/request data must never enter QuantSmith's repo. Read spec005's item 6 and Phase 4 sections in
 full before starting; check `Related Documents` there for the exact QuantSmith spec paths.
 
-Remaining IBAL priorities, in order: (1) QuantSmith Phase 4 pilot (above); (2) continue the frontend
-workbench -- reducer/state machine, full synthetic-config controls, result tabs, evidence
-drill-down (T-010/T-011), then session/download wiring (T-012); (3) Data Ops health + env/runbook
-docs (T-013/T-014); (4) browser-to-solver E2E and Playwright screenshots before any production
-enablement. Production remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary
-are explicitly configured. CI/Vercel
-repair stays out of scope until the owner asks for it.
+Remaining IBAL priorities, in order: (1) QuantSmith Phase 4 pilot (above); (2) custom what-if shock
+controls and scenario export; (3) reducer/state-machine/session polish for the frontend workbench;
+(4) Data Ops health plus production env/runbook hardening (T-013/T-014); (5) investigate the Vite
+dev-server browser POST hang so IBAL Playwright can run against `npm run dev` as well as standalone.
+Production remains off unless `IBAL_PRODUCTION_ENABLED` and a trusted access boundary are explicitly
+configured. CI/Vercel repair stays out of scope until the owner asks for it.
 
 Tier A production routes for econ, chart, and market data have been hardened to
 read the Gold DB or return explicit `ERR`/empty states. The old silent fallback
