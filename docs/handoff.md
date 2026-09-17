@@ -68,11 +68,9 @@ shell" -- that was wrong (written without actually reading the file). It is a re
 synthetic/upload intake, run config, solve, export, a KPI strip, an allocations grid, a constraints
 grid, and a verification panel, all wired to the live API. What the spec's T-010-T-012 still call
 for and this page doesn't have: a reducer/state machine (it uses plain `useState`), an explicit
-Synthetic/Upload segmented control, full `SyntheticConfig` field coverage in the UI (only 5 of 16
-fields have controls -- `scale: "custom"` is effectively unreachable today), a reroll action,
-result tabs for Balances/Demand/Economics/Diagnostics/Raw (only Allocations/Constraints/
-Verification exist, as stacked panels not tabs), evidence drill-down, and source/version/status
-badges.
+Synthetic/Upload segmented control, a reroll action, result tabs for Balances/Demand/Economics/
+Diagnostics/Raw (only Allocations/Constraints/Verification exist, as stacked panels not tabs),
+evidence drill-down, and source/version/status badges.
 
 First slice landed: `dataset.validation.issues` (and located issues from a failed upload/run/
 export) were never rendered anywhere -- fixed with a `DataGrid`-based Issues panel
@@ -86,6 +84,15 @@ validity. Verified against the real service (curl + Node fetch) and against a li
 session with the network layer route-mocked using captured real response payloads -- direct
 browser-to-live-backend POSTs hit an environment-specific networking limitation in this sandbox
 (unrelated to the diff; ruled out cold-compile, CORS, keepalive, DNS). Not yet pushed/PR'd.
+
+Second slice landed: full `SyntheticConfig` field coverage -- was 5 of 16 fields, now all 16. A
+"Custom shape" section (`security_count`/`inventory_pool_count`/`borrower_count`/
+`parent_group_count`/`routes_per_security`) appears only when `scale === "custom"`, since the
+backend's scale presets silently override those fields otherwise; a collapsible "Advanced" section
+covers the remaining rate/fraction fields; every slider now shows its live formatted value; and a
+"profile-set" hint appears next to any field the selected profile silently overrides (mirroring
+`synthetic.py`'s `PROFILE_PRESETS`, which apply unconditionally) so a user isn't fooled into
+thinking an edit took effect when the backend will discard it. Verified the same route-mocked way.
 
 **HIGH PRIORITY -- QuantSmith Phase 4 (IBAL model-plugin pilot):** `docs/specs/spec005/SPEC.md`
 was revisited 2026-09-17 to add candidate synergy item 6 and Phase 4: registering `IBAL` with
