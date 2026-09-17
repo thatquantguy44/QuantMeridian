@@ -90,17 +90,6 @@ interface WhatIfResult {
   result?: IbalResult;
 }
 
-interface WhatIfRouteRow extends IbalAllocation {
-  security_id: string;
-  borrower_id: string;
-  vs_base_post_shares: number | null;
-}
-
-interface WhatIfInventoryDrillRow extends IbalBalance {
-  security_id: string;
-  vs_base_utilization: number | null;
-}
-
 interface BaseRouteAnalyticsRow extends IbalAllocation {
   security_id: string;
   borrower_id: string;
@@ -408,22 +397,43 @@ export default function InventoryOptimizerPage() {
     getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
   }, []);
 
+  // Whichever result set is on screen right now: the plain Base Case Run by default, or -- once
+  // the What If sweep has produced results -- whichever scenario is selected in that comparison
+  // table (base case included, since it's one of the selectable scenarios). Every results panel
+  // below reads from this single source so there is never more than one "current" result on screen.
+  const baselineScenario = whatIfResults.find((row) => row.id === "base" && row.status === "optimal");
+  const selectedWhatIf = useMemo(
+    () => whatIfResults.find((row) => row.id === selectedWhatIfId) ?? whatIfResults.find((row) => row.status === "optimal") ?? null,
+    [selectedWhatIfId, whatIfResults]
+  );
+  const activeView = useMemo(() => {
+    if (whatIfResults.length > 0) {
+      if (!selectedWhatIf?.result || !selectedWhatIf.dataset) return null;
+      return { label: selectedWhatIf.label, isBase: selectedWhatIf.id === "base", dataset: selectedWhatIf.dataset, result: selectedWhatIf.result };
+    }
+    if (dataset && result) return { label: "Base Case", isBase: true, dataset, result };
+    return null;
+  }, [whatIfResults, selectedWhatIf, dataset, result]);
+  const viewDataset = activeView?.dataset ?? null;
+  const viewResult = activeView?.result ?? null;
+  const viewLabel = activeView?.label ?? "Base Case";
+
   const selectedAllocation = useMemo(
-    () => result?.allocations.find((row) => row.route_id === selectedRouteId) ?? null,
-    [result, selectedRouteId]
+    () => viewResult?.allocations.find((row) => row.route_id === selectedRouteId) ?? null,
+    [viewResult, selectedRouteId]
   );
 
   const totals = useMemo(() => {
-    const allocations = result?.allocations ?? [];
-    const balances = result?.balances ?? [];
+    const allocations = viewResult?.allocations ?? [];
+    const balances = viewResult?.balances ?? [];
     return {
       allocationIncrease: allocations.reduce((sum, row) => sum + row.increase_shares, 0),
       allocationDecrease: allocations.reduce((sum, row) => sum + row.decrease_shares, 0),
       avgUtilization: balances.length ? balances.reduce((sum, row) => sum + row.utilization, 0) / balances.length : 0,
-      bindingConstraints: (result?.constraints ?? []).filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
+      bindingConstraints: (viewResult?.constraints ?? []).filter((row) => Math.abs(row.slack ?? 0) < 1e-8).length,
     };
-  }, [result]);
-  const beforeAfterAnalytics = useMemo(() => buildBeforeAfterAnalytics(dataset, result), [dataset, result]);
+  }, [viewResult]);
+  const beforeAfterAnalytics = useMemo(() => buildBeforeAfterAnalytics(viewDataset, viewResult), [viewDataset, viewResult]);
   const onLoanBridgeSteps = useMemo(() => {
     if (!beforeAfterAnalytics) return [];
     return [
@@ -459,40 +469,6 @@ export default function InventoryOptimizerPage() {
         : null;
   const runButtonLabel = !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
   const scenarioSet = useMemo(() => new Set(selectedScenarioIds), [selectedScenarioIds]);
-  const baselineScenario = whatIfResults.find((row) => row.id === "base" && row.status === "optimal");
-  const selectedWhatIf = useMemo(
-    () => whatIfResults.find((row) => row.id === selectedWhatIfId) ?? whatIfResults.find((row) => row.status === "optimal") ?? null,
-    [selectedWhatIfId, whatIfResults]
-  );
-  const selectedWhatIfRoutes = useMemo<WhatIfRouteRow[]>(() => {
-    if (!selectedWhatIf?.result || !selectedWhatIf.dataset) return [];
-    const routeById = new Map(selectedWhatIf.dataset.request.routes.map((row) => [row.route_id, row]));
-    const baseByRoute = new Map((baselineScenario?.result?.allocations ?? []).map((row) => [row.route_id, row]));
-    return selectedWhatIf.result.allocations.map((row) => {
-      const route = routeById.get(row.route_id);
-      const base = baseByRoute.get(row.route_id);
-      return {
-        ...row,
-        security_id: route?.security_id ?? "-",
-        borrower_id: route?.borrower_id ?? "-",
-        vs_base_post_shares: base ? row.post_quantity_shares - base.post_quantity_shares : null,
-      };
-    });
-  }, [baselineScenario?.result?.allocations, selectedWhatIf]);
-  const selectedWhatIfInventory = useMemo<WhatIfInventoryDrillRow[]>(() => {
-    if (!selectedWhatIf?.result || !selectedWhatIf.dataset) return [];
-    const inventoryById = new Map(selectedWhatIf.dataset.request.inventory.map((row) => [row.inventory_id, row]));
-    const baseByInventory = new Map((baselineScenario?.result?.balances ?? []).map((row) => [row.inventory_id, row]));
-    return selectedWhatIf.result.balances.map((row) => {
-      const inventory = inventoryById.get(row.inventory_id);
-      const base = baseByInventory.get(row.inventory_id);
-      return {
-        ...row,
-        security_id: inventory?.security_id ?? "-",
-        vs_base_utilization: base ? row.utilization - base.utilization : null,
-      };
-    });
-  }, [baselineScenario?.result?.balances, selectedWhatIf]);
 
   const inventoryPreviewColumns: Column<IbalInventoryRow>[] = [
     { key: "id", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
@@ -684,30 +660,6 @@ export default function InventoryOptimizerPage() {
     { key: "binding", header: "Binding", align: "right", render: (row) => row.bindingConstraints == null ? "-" : fmtInt(row.bindingConstraints), sortVal: (row) => row.bindingConstraints ?? -1 },
     { key: "net", header: "Net Allocation", align: "right", render: (row) => row.netAllocation == null ? "-" : fmtAbbr(row.netAllocation), sortVal: (row) => row.netAllocation ?? Number.NEGATIVE_INFINITY },
     { key: "message", header: "Message", render: (row) => <span className="text-term-text-mute">{row.message ?? row.requestHash?.slice(0, 12) ?? "-"}</span>, sortVal: (row) => row.message ?? row.requestHash ?? "" },
-  ];
-
-  const whatIfRouteColumns: Column<WhatIfRouteRow>[] = [
-    { key: "route", header: "Route", render: (row) => <span className="text-term-text">{row.route_id}</span>, sortVal: (row) => row.route_id, width: "120" },
-    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text-dim">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id, width: "120" },
-    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
-    { key: "borrower", header: "Borrower", render: (row) => <span className="text-term-text-mute">{row.borrower_id}</span>, sortVal: (row) => row.borrower_id },
-    { key: "current", header: "Current", align: "right", render: (row) => fmtAbbr(row.current_quantity_shares), sortVal: (row) => row.current_quantity_shares },
-    { key: "post", header: "Post", align: "right", render: (row) => <span className="text-term-text">{fmtAbbr(row.post_quantity_shares)}</span>, sortVal: (row) => row.post_quantity_shares },
-    { key: "delta", header: "Delta", align: "right", render: (row) => <span className={row.increase_shares > row.decrease_shares ? "text-term-up" : row.decrease_shares > row.increase_shares ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.increase_shares - row.decrease_shares)}</span>, sortVal: (row) => row.increase_shares - row.decrease_shares },
-    { key: "vs_base", header: "Vs Base", align: "right", render: (row) => row.vs_base_post_shares == null ? "-" : <span className={row.vs_base_post_shares >= 0 ? "text-term-up" : "text-term-down"}>{fmtAbbr(row.vs_base_post_shares)}</span>, sortVal: (row) => row.vs_base_post_shares ?? 0 },
-    { key: "fee", header: "Fee", align: "right", render: (row) => pctFromDecimal(row.fee_rate), sortVal: (row) => row.fee_rate },
-    { key: "cap", header: "Demand Cap", align: "right", render: (row) => row.demand_cap_shares == null ? "-" : fmtAbbr(row.demand_cap_shares), sortVal: (row) => row.demand_cap_shares ?? 0 },
-    { key: "reason", header: "Reason", render: (row) => <span className="text-term-text-mute">{row.reason_codes?.slice(0, 3).join(", ") || "-"}</span>, sortVal: (row) => row.reason_codes?.[0] ?? "" },
-  ];
-
-  const whatIfInventoryColumns: Column<WhatIfInventoryDrillRow>[] = [
-    { key: "inventory", header: "Inventory", render: (row) => <span className="text-term-text">{row.inventory_id}</span>, sortVal: (row) => row.inventory_id },
-    { key: "security", header: "Security", render: (row) => <span className="text-term-text-dim">{row.security_id}</span>, sortVal: (row) => row.security_id },
-    { key: "pre_on_loan", header: "Pre Loan", align: "right", render: (row) => fmtAbbr(row.pre_on_loan_shares), sortVal: (row) => row.pre_on_loan_shares },
-    { key: "post_on_loan", header: "Post Loan", align: "right", render: (row) => fmtAbbr(row.post_on_loan_shares), sortVal: (row) => row.post_on_loan_shares },
-    { key: "post_available", header: "Post Available", align: "right", render: (row) => fmtAbbr(row.post_available_shares), sortVal: (row) => row.post_available_shares },
-    { key: "utilization", header: "Utilization", align: "right", render: (row) => <span className={row.utilization >= 0.95 ? "text-term-down" : row.utilization >= 0.8 ? "text-term-amber" : "text-term-text"}>{pctFromDecimal(row.utilization)}</span>, sortVal: (row) => row.utilization },
-    { key: "vs_base", header: "Vs Base Util", align: "right", render: (row) => row.vs_base_utilization == null ? "-" : <span className={row.vs_base_utilization >= 0 ? "text-term-up" : "text-term-down"}>{fmtPct(row.vs_base_utilization * 100, 2)}</span>, sortVal: (row) => row.vs_base_utilization ?? 0 },
   ];
 
   async function doRefreshSynthetic() {
