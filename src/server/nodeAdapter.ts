@@ -33,5 +33,12 @@ export async function sendWebResponse(res: ServerResponse, response: Response): 
   res.statusCode = response.status;
   response.headers.forEach((value, key) => res.setHeader(key, value));
   const buffer = Buffer.from(await response.arrayBuffer());
-  res.end(buffer);
+  if (!res.hasHeader("content-length")) res.setHeader("content-length", String(buffer.byteLength));
+  await new Promise<void>((resolve, reject) => {
+    res.once("error", reject);
+    res.end(buffer, () => {
+      res.off("error", reject);
+      resolve();
+    });
+  });
 }

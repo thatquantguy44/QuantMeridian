@@ -31,7 +31,9 @@ async def lifespan(_: FastAPI):
         engine_ready=identity["ready"],
         engine_version=identity["package_version"],
         engine_commit=identity["installed_commit"],
-        backend_version=identity["backend_version"],
+        active_backend=identity["active_backend"],
+        highspy_version=identity["highspy_version"],
+        scipy_version=identity["scipy_version"],
     )
     yield
 
@@ -88,13 +90,27 @@ async def unhandled_handler(_: Any, exc: Exception) -> JSONResponse:
 @app.get("/health")
 async def health() -> dict[str, Any]:
     identity = engine_identity()
+    backend = (
+        identity["solver_backends"].get(identity["active_backend"])
+        if identity["active_backend"] is not None
+        else None
+    )
+    error_category = None
+    if not identity["package_compatible"]:
+        error_category = "incompatible_engine"
+    elif identity["active_backend"] is None:
+        error_category = "optimizer_backend_unavailable"
     return {
         "status": "ready" if identity["ready"] else "unready",
         "ready": identity["ready"],
         "api_schema_version": "1.0.0",
         "engine_package_version": identity["package_version"],
-        "backend": {"name": "highs", "version": identity["backend_version"], "ready": identity["backend_version"] is not None},
-        "error_category": None if identity["ready"] else "incompatible_engine",
+        "engine_commit": identity["installed_commit"],
+        "backend": backend
+        or {"name": None, "version": None, "installed": False, "ready": False},
+        "solver_backends": identity["solver_backends"],
+        "formulations": identity["formulations"],
+        "error_category": error_category,
     }
 
 

@@ -112,7 +112,7 @@ type ProviderRow = ProviderHealth & { verified: boolean };
 
 export default function DataOpsPage() {
   const baseProviders = getProviderHealth();
-  const probe = useProviderHealth();
+  const probe = useProviderHealth({ timeoutMs: 30_000, full: true });
   // Status is driven by the real /api/dataops/health probe. Until the probe
   // confirms a provider it is shown UNVERIFIED — the seeded fixture status is
   // never presented as a live claim (no more hardcoded "FRED LIVE").

@@ -1,8 +1,8 @@
 """Health-endpoint and engine-identity mismatch matrix (AC-019).
 
 engine_identity() (capabilities.py) compares the installed InventoryBallast package
-version/commit/backend against capability-manifest.json and is the sole source of the `/health`
-endpoint's ready/unready state, `/v1/capabilities`' `engine_compatible` flag, and
+version/commit and solver backends against capability-manifest.json. It is the sole source of
+the `/health` endpoint's ready/unready state, `/v1/capabilities`' `engine_compatible` flag, and
 `require_compatible_engine()`'s 503. Before this file, only the happy path (everything matches,
 in this dev environment) had any coverage -- every mismatch branch was untested.
 
@@ -92,7 +92,8 @@ def test_engine_identity_is_ready_in_this_dev_environment() -> None:
     assert identity["ready"] is True
     assert identity["package_version"] == expected["engine_package_version"]
     assert identity["installed_commit"] == expected["engine_commit"]
-    assert identity["backend_version"] is not None
+    assert identity["active_backend"] is not None
+    assert identity["formulations"]
 
 
 # --- engine_identity() mismatch matrix -------------------------------------------------------
@@ -116,13 +117,27 @@ def test_package_not_found_is_not_ready(fake_metadata) -> None:
     assert identity["package_version"] is None
 
 
-def test_missing_backend_is_not_ready(fake_metadata) -> None:
+def test_missing_highspy_uses_scipy_highs_fallback(fake_metadata) -> None:
     fake_metadata(missing=frozenset({"highspy"}))
 
     identity = engine_identity()
 
-    assert identity["ready"] is False
+    assert identity["ready"] is True
+    assert identity["active_backend"] == "scipy_highs"
     assert identity["backend_version"] is None
+    assert identity["solver_backends"]["highs"]["ready"] is False
+    assert identity["solver_backends"]["scipy_highs"]["ready"] is True
+    assert identity["formulations"] == ["lp", "mip"]
+
+
+def test_missing_all_solver_backends_is_not_ready(fake_metadata) -> None:
+    fake_metadata(missing=frozenset({"highspy", "scipy"}))
+
+    identity = engine_identity()
+
+    assert identity["ready"] is False
+    assert identity["active_backend"] is None
+    assert identity["formulations"] == []
 
 
 def test_wrong_commit_is_not_ready(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -156,6 +171,7 @@ def test_health_endpoint_reports_ready_in_this_dev_environment(raw_client: TestC
     assert body["ready"] is True
     assert body["error_category"] is None
     assert body["backend"]["ready"] is True
+    assert body["formulations"]
 
 
 def test_health_endpoint_reports_unready_and_error_category_on_mismatch(
@@ -174,7 +190,7 @@ def test_health_endpoint_reports_unready_and_error_category_on_mismatch(
     assert body["engine_package_version"] == "9.9.9"
 
 
-def test_health_endpoint_is_unauthenticated_on_mismatch_too(
+def test_health_endpoint_is_unauthenticated_with_scipy_fallback(
     raw_client: TestClient, fake_metadata
 ) -> None:
     fake_metadata(missing=frozenset({"highspy"}))
@@ -198,6 +214,21 @@ def test_capabilities_engine_compatible_matches_identity_on_mismatch(
     assert response.json()["engine_compatible"] is False
 
 
+def test_capabilities_drop_qp_when_highspy_is_missing(
+    api_client: TestClient, fake_metadata
+) -> None:
+    fake_metadata(missing=frozenset({"highspy"}))
+
+    response = api_client.get("/v1/capabilities", headers=auth_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["engine_compatible"] is True
+    assert body["backend"]["name"] == "scipy_highs"
+    assert body["formulations"] == ["lp", "mip"]
+    assert body["solver_backends"]["highs"]["formulations"] == []
+
+
 # --- require_compatible_engine() / solve() actually refuse to run on mismatch ----------------
 
 
@@ -210,6 +241,19 @@ def test_require_compatible_engine_raises_on_mismatch(fake_metadata) -> None:
 
 def test_require_compatible_engine_passes_when_ready() -> None:
     require_compatible_engine()  # must not raise
+
+
+def test_require_compatible_engine_passes_with_scipy_fallback(fake_metadata) -> None:
+    fake_metadata(missing=frozenset({"highspy"}))
+
+    require_compatible_engine()
+
+
+def test_require_compatible_engine_raises_without_any_solver_backend(fake_metadata) -> None:
+    fake_metadata(missing=frozenset({"highspy", "scipy"}))
+
+    with pytest.raises(RuntimeError, match="no supported optimizer solver backend"):
+        require_compatible_engine()
 
 
 def test_solve_refuses_to_run_on_real_mismatch_not_monkeypatched_solve(
@@ -230,6 +274,25 @@ def test_solve_refuses_to_run_on_real_mismatch_not_monkeypatched_solve(
             correlation_id=str(uuid4()),
             idempotency_key=str(uuid4()),
         )
+
+
+def test_solve_uses_scipy_highs_fallback_when_highspy_is_missing(
+    fake_metadata, valid_dataset_payload: dict
+) -> None:
+    fake_metadata(missing=frozenset({"highspy"}))
+    request = OptimizationRequest.model_validate(valid_dataset_payload["request"])
+    source = SourceDisclosure(mode="synthetic", label="Synthetic", seed=1)
+    dataset = envelope_from_request(request, source=source)
+
+    response = solve(
+        RunRequest(dataset=dataset, run_config=RunConfig(solver_time_limit_seconds=10)),
+        correlation_id=str(uuid4()),
+        idempotency_key=str(uuid4()),
+    )
+
+    assert response.result["status"] == "optimal"
+    assert response.result["solver"]["backend_name"] == "scipy_highs"
+    assert response.result["verification"]["passed"] is True
 
 
 def test_end_to_end_run_returns_503_on_real_mismatch(

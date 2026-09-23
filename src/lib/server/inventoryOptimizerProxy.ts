@@ -1,8 +1,11 @@
 import { json } from "@/lib/server/http";
+import http from "node:http";
+import https from "node:https";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:8013";
 const MAX_PROXY_BYTES = 10 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 70_000;
+let serviceFetchQueue: Promise<void> = Promise.resolve();
 
 function env(name: string): string | undefined {
   const value = process.env[name];
@@ -19,6 +22,75 @@ function serviceBaseUrl(): string {
 
 function serviceToken(): string | undefined {
   return env("INVENTORY_OPTIMIZER_API_TOKEN") ?? env("IBAL_API_TOKEN");
+}
+
+function nodeHeaders(headers: HeadersInit | undefined): http.OutgoingHttpHeaders {
+  const out: http.OutgoingHttpHeaders = {};
+  if (!headers) return out;
+  const source = new Headers(headers);
+  source.forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
+function responseHeaders(headers: http.IncomingHttpHeaders): Headers {
+  const out = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) value.forEach((item) => out.append(key, item));
+    else if (typeof value === "string") out.set(key, value);
+  }
+  return out;
+}
+
+function bodyBuffer(body: BodyInit | null | undefined): Buffer | undefined {
+  if (!body) return undefined;
+  if (body instanceof ArrayBuffer) return Buffer.from(body);
+  if (ArrayBuffer.isView(body)) return Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+  if (typeof body === "string") return Buffer.from(body);
+  return undefined;
+}
+
+function serviceRequest(input: string | URL, init: RequestInit): Promise<Response> {
+  const url = typeof input === "string" ? new URL(input) : input;
+  const transport = url.protocol === "https:" ? https : http;
+  const body = bodyBuffer(init.body);
+  return new Promise<Response>((resolve, reject) => {
+    const request = transport.request(
+      url,
+      {
+        method: init.method ?? "GET",
+        headers: nodeHeaders(init.headers),
+        signal: init.signal,
+      },
+      (upstream) => {
+        const chunks: Buffer[] = [];
+        upstream.on("data", (chunk) => chunks.push(chunk as Buffer));
+        upstream.on("end", () => {
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: upstream.statusCode ?? 502,
+              statusText: upstream.statusMessage,
+              headers: responseHeaders(upstream.headers),
+            })
+          );
+        });
+      }
+    );
+    request.on("error", reject);
+    if (body) request.write(body);
+    request.end();
+  });
+}
+
+async function serviceFetch(input: string | URL, init: RequestInit): Promise<Response> {
+  const run = () => serviceRequest(input, init);
+  const queued = serviceFetchQueue.then(run, run);
+  serviceFetchQueue = queued.then(
+    () => undefined,
+    () => undefined
+  );
+  return queued;
 }
 
 function isProductionRuntime(): boolean {
@@ -104,7 +176,7 @@ export async function inventoryOptimizerHealthSnapshot(timeoutMs = 3000) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const started = performance.now();
   try {
-    const response = await fetch(`${serviceBaseUrl()}/health`, {
+    const response = await serviceFetch(`${serviceBaseUrl()}/health`, {
       cache: "no-store",
       signal: controller.signal,
     });
@@ -176,7 +248,7 @@ export async function proxyInventoryOptimizer(request: Request, upstreamPath: st
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), init?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   try {
-    const upstream = await fetch(upstreamUrl, {
+    const upstream = await serviceFetch(upstreamUrl, {
       method,
       headers,
       body,
