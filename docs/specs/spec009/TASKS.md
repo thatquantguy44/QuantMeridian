@@ -9,8 +9,9 @@
 
 ## Status Note
 
-spec009 is a draft pending owner review; no task may start until decisions D-1 through D-12 in
-`SPEC.md` are approved. All tasks are `todo`, except that the yield and other non-additive parts of
+spec009 is a draft pending owner review; no task may start until decisions D-1 through D-12 and
+D-14 in `SPEC.md` are approved (D-13 — QuantSmith as the owner's local checkout, with the worker
+beside it — is already decided). All tasks are `todo`, except that the yield and other non-additive parts of
 T-021 and the `curve_levels` part of T-022 are `blocked` on companion items Q-1 and Q-2 (proven at
 run time by the worker's `pit_level_semantics` and `pack_rules_applied` capabilities).
 Implementation starts from the latest QuantMeridian `main`.
@@ -29,8 +30,10 @@ Implementation starts from the latest QuantMeridian `main`.
   from a locally supplied copy (repository path or installed package) and never fetches it over
   the network.
 - New Node and Python dependencies are pinned and exercised in clean-checkout CI.
-- Typecheck, unit, contract, worker, build, and applicable end-to-end tests pass. A test that
-  cannot run because no QuantSmith copy was supplied reports as not run, never as passed.
+- Typecheck, unit, contract, worker, build, and applicable end-to-end tests pass. Hosted CI
+  reports the `needs_quantsmith` suites as not run, never as passed; they pass in
+  `npm run verify:agent` on the owner's machine, and a pull request touching the worker,
+  contracts, or formulas includes that run's report summary (pass counts and fingerprints).
 - Configuration, Data Ops, environment examples, runbooks, and rollback steps are updated with
   the code they describe.
 - UI changes are verified with Playwright at 375×812, 768×1024, and 1440×900 plus keyboard-only
@@ -68,7 +71,7 @@ Implementation starts from the latest QuantMeridian `main`.
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-012 | Scaffold `services/agent_worker` (pyproject with pinned dependencies and no `quantsmith` entry; a Dockerfile that clones nothing and documents mount, named build context, and local-wheel supply), sourcing (`QUANTSMITH_ROOT` path mode with the shadowing check, installed mode with `QUANTSMITH_ASSETS_ROOT`), readiness (fingerprints, schema version, registry, profile dry-runs, `QUANTSMITH_NOT_FOUND`), heartbeats with sourcing mode and fingerprints, the fenced claim loop with leases and stage-boundary cancellation, sweeps (lease expiry, TTL, retention purge), metadata-only telemetry, and confirm the `0070` envelope entry point in `quantsmith.orchestration` on the pinned copy. | REQ-004, REQ-008, REQ-027, REQ-028, REQ-030, NFR-004, NFR-005 | todo | Readiness failure means no claims, ever. A start-up test with outbound network blocked must pass in both modes. |
+| T-012 | Scaffold `services/agent_worker` (pyproject with pinned dependencies and no `quantsmith` entry; no Dockerfile in version one; `scripts/agent-worker.sh` as `npm run agent:worker`, loading the repository's `.env`), sourcing (`QUANTSMITH_ROOT` path mode with the shadowing check, installed mode with `QUANTSMITH_ASSETS_ROOT`), readiness (fingerprints, schema version, registry, profile dry-runs, `QUANTSMITH_NOT_FOUND`), heartbeats with sourcing mode and fingerprints, the fenced claim loop with leases and stage-boundary cancellation, sweeps (lease expiry, TTL, retention purge), metadata-only telemetry, and confirm the `0070` envelope entry point in `quantsmith.orchestration` on the pinned copy. | REQ-004, REQ-008, REQ-027, REQ-028, REQ-030, NFR-004, NFR-005 | todo | Readiness failure means no claims, ever. A start-up test with outbound network blocked must pass in both modes. |
 | T-013 | Implement `readers.py` and `periods.py`: Gold series reader with optional headers and the `DB`-only rule; desk reader over the worker-only route with the bearer token and the `SIM` requirement; period encodings for every grain with round-trip tests; `Fact` construction; `evidence_rows` and `desk_rows` artifacts; content hashing. | REQ-010, REQ-033, NFR-002 | todo | A null observation is skipped and counted, never filled. |
 | T-014 | Implement the Python profile clients (`anthropic`, `openai` SDKs) passing the shared conformance fixtures; retries and normalized errors; per-job caps and daily budgets with atomic usage accounting; declared fallback with disclosure. | REQ-020, REQ-021, REQ-026, NFR-006 | todo | A provider without usage data is charged the estimate and flagged. |
 | T-015 | Implement `chart.build`: the deterministic splitter, `KeywordInterpreter` per fragment, `LlmInterpreter` (structured `ChartRequest`, also registered via `register_interpreter`), `validate_plan` → `authorize_plan` → `execute` → `choose_chart` per series, overlay and transform rules, range mapping with disclosure, pack caveats (or the no-packs notice) and chart conventions, `unsupported_chart` and clarification outcomes, result payload and disclosure; golden tests including `FUND` funding overlays, and deterministic replay. | REQ-006, REQ-011, REQ-017, REQ-024, NFR-002 | todo | The executed `Result` drives form, staleness, and hashes only; its values are never displayed. |
@@ -106,8 +109,8 @@ Implementation starts from the latest QuantMeridian `main`.
 | --- | --- | --- | --- | --- |
 | T-024 | Implement the audit route and `agent_worker.replay` (deterministic jobs replay to identical bytes on a copy with the same fingerprints; LLM jobs replay from transcripts or report `non_reproducible`), plus retention tests for purge and deletion. | REQ-028, NFR-002 | todo | A replay never claims equivalence it cannot show. |
 | T-025 | Security suite: secret scan over `settings/` and `contracts/`, log capture across Node and worker, prompt-injection fixtures (requests for SQL, other modules, unregistered metrics, raw data), context and input fuzzing, data-class and eligible-module enforcement, desk route token and `DATA_CLASS_NOT_APPROVED` tests, a source scan proving the worker never imports the spec `0023`, `0035`, or `0067` runtimes. | REQ-024, REQ-029, REQ-031, NFR-005 | todo | Failures here block release. |
-| T-026 | CI: worker job (ruff, pytest, conformance, formula vectors) with QuantSmith supplied as a local directory or wheel (no fetch step in the worker), Postgres integration job, Playwright `test/agent-panel.spec.ts` with real worker, stub LLM servers, and fixture Gold SQLite, viewport and keyboard runs, and recorded benchmarks. | NFR-003, NFR-008, NFR-010 | todo | How CI obtains the QuantSmith copy is an open owner decision; until it is made, QuantSmith-dependent tests report as not run. |
-| T-027 | Documentation and rollout: `services/agent_worker/README.md` (supplying QuantSmith by path, by installed package, by container mount, by named build context, and by local wheel — no network), a worker section in `docs/deployment/DEPLOY.md`, `.env.example`, a Data Ops runbook (pause/resume, budgets, reviewing and re-pinning a new QuantSmith copy, rollback), and the post-pilot configuration change enabling further modules after owner sign-off. | REQ-025, REQ-030 | todo | Production stays off until D-7's gates are signed off. The spec005 note pointing to spec009 already exists. |
+| T-026 | Split verification per D-14. Hosted CI: a worker job (ruff, `pytest -m "not needs_quantsmith"`, conformance fixtures) whose summary lists the `needs_quantsmith` suites as not run, plus a Postgres queue-store job. Local: `scripts/verify-agent.sh` as `npm run verify:agent` — the full worker suite, formula vectors against spec `0028`, capability self-tests, then Playwright `test/agent-panel.spec.ts` (real worker, stub LLM servers, fixture Gold SQLite, viewport and keyboard runs) and recorded benchmarks — writing `.data/verify-agent/report.json` with pass counts, QuantSmith fingerprints, and the QuantMeridian commit. | NFR-003, NFR-008, NFR-010 | todo | Hosted CI never fetches QuantSmith. QuantSmith imports stay confined to `sourcing.py` and `workflows/` so the rest of the worker tests run in hosted CI. |
+| T-027 | Documentation and rollout: `services/agent_worker/README.md` (setting up the worker on the owner's machine — virtual environment, `QUANTSMITH_ROOT` pointing at the local checkout, `npm run agent:worker`, pointing it at the local dev server or a deployed app's queue database and API; the installed-package alternative; no network fetch), a worker section in `docs/deployment/DEPLOY.md`, `.env.example`, a Data Ops runbook (worker offline, pause/resume, budgets, reviewing and re-pinning after updating the QuantSmith checkout, rollback), and the post-pilot configuration change enabling further modules after owner sign-off. | REQ-025, REQ-030 | todo | Production stays off until D-7's gates are signed off. The spec005 note pointing to spec009 already exists. |
 | T-028 | Track the QuantSmith companion items Q-1–Q-8 in the QuantSmith repository, record outcomes here, and re-pin through T-001's process when they land. | REQ-012, REQ-013 | todo | Owner decides whether and how to file them; no QuantSmith edits from this repository. |
 
 Status values: `todo` | `in-progress` | `blocked` | `done`.
@@ -148,7 +151,7 @@ Status values: `todo` | `in-progress` | `blocked` | `done`.
 | AC-030 | Benchmark suite with retained p50/p95/max and runtime manifest | todo |
 | AC-031 | `agent-panel.spec.ts` viewport and keyboard runs (including the carry form) with overlap and console assertions | todo |
 | AC-032 | `ResultBlocks.test.tsx::incompatible schema version` | todo |
-| AC-033 | Clean-checkout CI: typecheck, Vitest, build, worker job, formula vectors, Postgres job, end-to-end | todo |
+| AC-033 | Hosted CI: typecheck, Vitest (with TypeScript formula vectors), build, worker job (`not needs_quantsmith`, not-run summary), Postgres job. Local: `npm run verify:agent` report with full worker suite, `0028` vectors, end-to-end, and fingerprints | todo |
 | AC-034 | `test_sourcing.py::test_path_mode_not_shadowed`, `::test_installed_mode_without_assets`, `::test_startup_with_network_blocked`; `catalog.route.test.ts::offered workflows without assets` | todo |
 | AC-035 | `catalog.route.test.ts::pilot modules offer securities-finance workflows`; `test_security.py::test_no_excluded_runtime_imports` | todo |
 | AC-036 | `test_secfin_carry.py::test_sofr_plus_spread_carry`, `::test_lookahead_flag`, `::test_flat_rate_notice`; `verifier.test.ts::calculated claims` | todo |
@@ -179,6 +182,8 @@ Deferred to their own specs:
   generated runs and spec005 item 6's dispatcher path).
 - Real or confidential desk-book data: retention, provider approval, and possibly local-only
   profiles.
+- A worker on a host other than the owner's machine (for example a container), with its own
+  reviewed QuantSmith copy supplied without a network fetch.
 - `analysis.eda` over Gold's lead-lag, correlation, and structural-break tables.
 - A general `DashboardSpec` → `MGC`/`MKC` adapter (spec005 item 4 in full).
 - Native cloud-IAM provider flows (Bedrock, Vertex, Entra ID) if gateways prove insufficient.

@@ -5,8 +5,8 @@
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
 - **Last updated:** 2026-10-06 (revised the same day: securities finance agents added;
-  QuantSmith is supplied locally as an installed package or a repository path, never fetched from
-  GitHub)
+  QuantSmith comes from the owner's local checkout — never fetched from GitHub — and the worker
+  runs on the machine that holds it)
 
 > WHAT and WHY only. Architecture, contracts, and the file-level handoff are in `PLAN.md`;
 > ordered work is in `TASKS.md`.
@@ -20,9 +20,9 @@ agents — `nl_analytics`, `data_visualization`, `data_storytelling`, the econom
 `repo_financing`, `collateral_management`, and `securities_lending` — together with its spec
 `0081` analytics packs, spec `0093` visualization packs, and spec `0063` short-term-markets pack.
 
-Jobs run in a separate Python worker that uses a QuantSmith copy the operator supplies — an
-installed Python package or a path to a local QuantSmith repository. The worker never downloads
-QuantSmith; it checks the copy against a reviewed content fingerprint. Charts render through
+Jobs run in a separate Python worker on the owner's machine, using the owner's local QuantSmith
+checkout by path (an installed package is also supported). The worker never downloads QuantSmith;
+it checks the copy against a reviewed content fingerprint. Charts render through
 QuantMeridian's own chart engine. Every number reaches the screen only after QuantMeridian
 re-checks it against the source the module itself displays: Gold for market data, the module's
 deterministic simulated desk book for desk data (always labeled as simulated), or an independent
@@ -109,7 +109,9 @@ QuantSmith `main` `0134d403d5a336ce20e7abd7fb7a0935d7917114` (assessed 2026-10-0
    revenue), ratio metrics (utilization, value-weighted fee), semi-additive metrics within one
    snapshot, and charts that only plot per-period values are unaffected.
 2. **QuantSmith must be supplied locally.** The owner does not want QuantMeridian to fetch
-   QuantSmith from GitHub. The package has no unique release versions yet (`0.1.0`, no tags), so a
+   QuantSmith from GitHub and will keep QuantSmith as a local checkout on their own machine, so
+   anything that runs QuantSmith — the worker and the tests that import it — runs where that
+   checkout is. The package has no unique release versions yet (`0.1.0`, no tags), so a
    version number cannot identify reviewed content. Its knowledge packs, agent contracts, and
    templates live in the repository, not in the Python package (`pyproject.toml` ships only
    `src/quantsmith` plus `asian_nlp` fixtures).
@@ -134,7 +136,7 @@ QuantSmith `main` `0134d403d5a336ce20e7abd7fb7a0935d7917114` (assessed 2026-10-0
 - Bring the securities-finance modules in: funding analysis over Gold rates, cost-of-carry
   calculations, and desk analysis over the simulated books — with simulated data labeled as such
   on every result.
-- Run on a QuantSmith copy the operator supplies (installed package or repository path), verified
+- Run on the owner's local QuantSmith checkout (an installed package is also supported), verified
   by content fingerprint, with no network fetch.
 - Render every chart through QuantMeridian's own chart engine and provenance badges, with a
   one-step hand-off into the `MGC`/`MKC` chart studios.
@@ -206,12 +208,20 @@ QuantSmith `main` `0134d403d5a336ce20e7abd7fb7a0935d7917114` (assessed 2026-10-0
 
 ## QuantSmith Sourcing
 
-The operator supplies QuantSmith to the worker in one of two ways; the worker never downloads it.
+The owner keeps QuantSmith as a local checkout (decision D-13). The worker loads it in one of two
+ways and never downloads it; the repository path is the primary mode.
 
 | Mode | How it is supplied | Code loaded from | Packs, agent contracts, templates |
 | --- | --- | --- | --- |
-| Repository path | `QUANTSMITH_ROOT` points at a local QuantSmith checkout (for example a sibling directory, a read-only volume mount, or a copy baked into the image) | `$QUANTSMITH_ROOT/src` | `$QUANTSMITH_ROOT` |
-| Installed package | `quantsmith` is already installed in the worker's environment from a source the operator controls (a local path, a wheel file, or an internal package index) | The installed package | `QUANTSMITH_ASSETS_ROOT` if set; package data once QuantSmith ships it (companion item Q-5); otherwise unavailable |
+| Repository path (primary) | `QUANTSMITH_ROOT` in the worker's environment points at the owner's local checkout — conventionally `../QuantSmith`, beside QuantMeridian | `$QUANTSMITH_ROOT/src` | `$QUANTSMITH_ROOT` |
+| Installed package (supported) | `quantsmith` is already installed in the worker's environment from a local source (for example `pip install` of the same checkout, or a local wheel file) | The installed package | `QUANTSMITH_ASSETS_ROOT` if set; package data once QuantSmith ships it (companion item Q-5); otherwise unavailable |
+
+**Where the worker runs.** Because the checkout lives on the owner's machine, the worker runs
+there too. It only makes outbound connections — to the queue database, to QuantMeridian's API
+(a local dev server or the deployed app), and to LLM endpoints — so nothing has to reach the
+machine from outside. When the worker is not running, jobs wait as "queued — worker offline"
+until it starts or their time-to-live expires. Running the worker on any other host is a
+follow-up that would need its own reviewed QuantSmith copy.
 
 Reviewed content is identified by **fingerprints**, not by a GitHub commit or a version number:
 a SHA-256 digest over QuantSmith's Python code, and one over the pack, contract, and template files
@@ -325,7 +335,7 @@ the worker — implement the same profile schema and pass the same conformance f
 | NFR-007 | Failure semantics | Worker offline, limits, budget, profile misconfiguration, provider error, timeout, invalid model output, clarification, unavailable data, unsupported metric, unavailable assets, verification failure, cancellation, and expiry are distinct, visible states — never a success and never fallback data. |
 | NFR-008 | Usability and accessibility | The panel supports keyboard operation, visible focus, labeled controls, non-color status and provenance cues, and readable layouts at 375×812, 768×1024, and 1440×900. |
 | NFR-009 | Contract compatibility | Job, result, catalog, profile, registry, formula, and pin contracts carry `schema_version`. Breaking changes require a new major version; QuantMeridian refuses a payload it does not understand and shows an incompatible-result state. |
-| NFR-010 | Observability and testability | Correlation IDs span browser, API, queue, worker, and provider call. Deterministic fixtures, worker tests, Node tests, conformance fixtures, formula vectors, and an end-to-end test with a stub LLM run in CI. |
+| NFR-010 | Observability and testability | Correlation IDs span browser, API, queue, worker, and provider call. Deterministic fixtures, Node tests, conformance fixtures, formula vectors, and worker tests that do not import QuantSmith run in hosted CI; the tests that need QuantSmith, including the end-to-end test with a stub LLM, run in one local verification command against the owner's checkout and record the fingerprints they ran against. |
 
 ## Acceptance Criteria
 
@@ -363,7 +373,7 @@ the worker — implement the same profile schema and pass the same conformance f
 | AC-030 | Given the reference runtime and fixture database, when the benchmark suite runs, then job creation, deterministic `chart.build`, deterministic `secfin.carry`, and verification meet NFR-003, and the runtime profile is recorded. | NFR-003 |
 | AC-031 | Given desktop, tablet, and mobile viewports plus keyboard-only use, when queueing, cancelling, retrying, clarifying, entering carry terms, and opening a chart in the studio, then every action and state is reachable, labeled, non-overlapping, and not color-only. | NFR-008 |
 | AC-032 | Given a result payload with an unknown major `schema_version`, when the panel loads it, then it shows an incompatible-result state and does not render its content. | NFR-009 |
-| AC-033 | Given CI from a clean checkout, when it runs, then typecheck, unit tests, build, worker tests, conformance fixtures, formula vectors, and the end-to-end panel test (real worker, stub LLM, fixture Gold database, QuantSmith from a local path) pass. | NFR-010 |
+| AC-033 | Given hosted CI from a clean checkout, when it runs, then typecheck, unit tests, build, the Postgres job, conformance fixtures, the TypeScript formula vectors, and every worker test not marked as needing QuantSmith pass, and the QuantSmith-dependent suites are reported as not run. Given the owner's machine with `QUANTSMITH_ROOT` set, when the local verification command runs, then the full worker suite, the formula vectors against spec `0028`, and the end-to-end panel test (real worker, stub LLM, fixture Gold database) pass, and the report records the QuantSmith fingerprints it ran against. | NFR-010 |
 | AC-034 | Given `QUANTSMITH_ROOT` set, when the worker starts, then code is imported from `$QUANTSMITH_ROOT/src` (an installed copy does not shadow it) and assets come from that tree. Given only an installed package and no assets root, then `chart.build`, `analysis.answer`, and `secfin.carry` are offered while `story.build` and `brief.draft` are not, with the reason shown. In both modes, start-up with outbound network blocked succeeds. | REQ-030, NFR-005 |
 | AC-035 | Given the pilot configuration, when `FUND` and `SLAB` load, then they offer their securities-finance workflows; a source scan of the worker finds no import of the spec `0023` workflow, the `0035` funding ladder, or the `0067` optimizer. | REQ-031 |
 | AC-036 | Given "long 100,000,000 for 30 days funded at SOFR plus 25 bp" in `FUND`, when `secfin.carry` runs, then the SOFR input is a Gold-verified claim, the terms are labeled assumptions, the funding cost equals the ACT/360 recomputation, and the net financing cost and a +25 bp shock are verified by recomputation; a historical period whose rate was observed after the period began is flagged as look-ahead. | REQ-032 |
@@ -380,7 +390,7 @@ the worker — implement the same profile schema and pass the same conformance f
 - **QuantMeridian** owns module enablement, the panel, the job API, the queue tables, the
   verifier and formula set, chart rendering and hand-off, the profile registry and its clients,
   the metric and desk dataset registries, the Copilot, and Data Ops.
-- **QuantSmith** (supplied locally, fingerprint-pinned) owns plan, interpretation, validation,
+- **QuantSmith** (the owner's local checkout, fingerprint-pinned) owns plan, interpretation, validation,
   authorization, execution semantics, chart choice, insights, grounding, the run envelope, the
   `0028` financing calculations, the agent contracts, and the domain and visualization packs.
   QuantMeridian supplies only the adopter-side pieces those contracts leave open: the readers, the
@@ -428,7 +438,7 @@ the worker — implement the same profile schema and pass the same conformance f
 | RISK-006 | Prompt injection in a question or context steers the model to widen access or invent numbers. | Unauthorized reads or fabricated content. | Typed plans and requests over registry metrics only, `validate_plan` and `authorize_plan`, no tools, context allowlist, claim verification. |
 | RISK-007 | The QuantSmith copy the worker loads differs from what was reviewed (an edited checkout, a different install, packs from another copy). | Behavior differs from what was reviewed. | Content fingerprints for code and assets computed at start-up, readiness failure on mismatch, shadowing check in path mode, pin re-review task. |
 | RISK-008 | The Node and Python profile clients diverge. | A profile works in one runtime but not the other. | One JSON Schema, shared conformance fixtures run in both CIs. |
-| RISK-009 | Queue reliability on serverless hosting. | Lost or duplicated jobs. | Durable database queue, worker hosted outside Vercel, leases, idempotency keys, and an append-only event log. |
+| RISK-009 | Queue reliability on serverless hosting. | Lost or duplicated jobs. | Durable database queue, worker running outside Vercel (on the owner's machine), leases, idempotency keys, and an append-only event log. |
 | RISK-010 | Data reaches a provider without approval. | Policy breach. | Data classes on profiles and workflows, enforced before every call; version one limited to public Gold series and simulated desk books. |
 | RISK-011 | Scope creep toward autonomous publishing, a merged system, or QuantSmith's optimizers. | Unreviewed output or solver logic leaves its boundary. | Attended jobs only, no delivery or write-back, spec005 non-goals reaffirmed, `0023`/`0035`/`0067` never invoked, follow-ups require new specs. |
 | RISK-012 | The worker's readers and the verifier resolve a series or dataset differently. | Correct claims flagged or wrong claims verified. | One server-side resolution function per source used by both the route and the verifier; transforms recomputed from levels with `src/lib/charting/transforms.ts`. Finding: `/api/chart/series` and `/api/econ/series` currently resolve non-`lin` units differently, so version-one claims use levels only. |
@@ -436,7 +446,9 @@ the worker — implement the same profile schema and pass the same conformance f
 | RISK-014 | spec009 depends on QuantSmith specs still in Draft (`0080`, `0081`). | Contract churn breaks the worker. | Fingerprint pin, re-review before every pin bump, contract tests in the worker, capability gating per workflow. |
 | RISK-015 | Analysis of the simulated desk book is mistaken for analysis of a real book. | Decisions made on fake numbers. | Persistent banner, per-value SIM badges, `desk_simulated` as its own data class, simulated values never described as market data. |
 | RISK-016 | A desk module is switched to a real book feed and its data silently flows to an LLM. | Confidential data leaves the terminal. | Datasets declare their source; anything other than simulated fails closed with `DATA_CLASS_NOT_APPROVED` until a new spec approves handling. |
-| RISK-017 | QuantMeridian's recomputation of financing formulas drifts from spec `0028`. | Correct carry figures flagged or wrong ones verified. | One shared vector file exercised by the worker against `0028` and by the verifier's formula set; any divergence fails both CIs. |
+| RISK-017 | QuantMeridian's recomputation of financing formulas drifts from spec `0028`. | Correct carry figures flagged or wrong ones verified. | One shared vector file exercised by the worker against `0028` (local verification) and by the verifier's formula set (hosted CI); any divergence fails the run that sees it. |
+| RISK-018 | QuantSmith-dependent tests run only on the owner's machine, so a change could merge without them. | A regression reaches `main` unnoticed. | Hosted CI reports those suites as not run (never passed); a pull request touching the worker, contracts, or formulas includes the local verification report with fingerprints and pass counts; worker readiness still refuses a mismatched copy. |
+| RISK-019 | The worker runs on the owner's machine, so jobs stall whenever it is off. | Queued requests wait or expire. | Jobs are durable and show "queued — worker offline"; the time-to-live expires them visibly; Data Ops alerts on a missing heartbeat. |
 
 ## Decisions Before Implementation
 
@@ -448,12 +460,14 @@ the worker — implement the same profile schema and pass the same conformance f
 | D-4 | Default LLM profile | `anthropic-direct`, seeded with the Copilot's current model so migration changes nothing; `deterministic` whenever no credential is configured. |
 | D-5 | Draft packs | Allowed locally and in protected staging with a visible caveat; production requires reviewed packs (Q-3). |
 | D-6 | Retention | Question text and LLM transcripts purged after 30 days; job metadata and verification kept for 180 days. |
-| D-7 | Production | Off. Same gates as IBAL plus an identity-supplying trusted boundary, a hosting decision for the worker, and approved budgets. |
+| D-7 | Production | Off. Same gates as IBAL plus an identity-supplying trusted boundary, a decision on where the worker runs for production use (the owner's machine, or another host with its own reviewed QuantSmith copy), and approved budgets. |
 | D-8 | Copilot | Migrates onto profiles in the first phase; it does not get the agent panel in version one. |
 | D-9 | Gateways | OpenAI-compatible and Anthropic-compatible gateways by base URL and header references; native cloud-IAM flows are out of scope. |
 | D-10 | Simulated desk books | Allowed as a labeled `desk_simulated` class; any real or confidential desk data requires a new spec. |
 | D-11 | IBAL run review | Deferred to a follow-up that settles spec007's session-only rule for generated runs and spec005 item 6's dispatcher path. |
 | D-12 | Pin identity | Content fingerprints of code and assets; a source commit is informational only. |
+| D-13 | QuantSmith supply | **Decided by the owner:** a local checkout on the owner's machine, named by `QUANTSMITH_ROOT` (conventionally `../QuantSmith`); the worker runs on that machine. An installed package stays supported. |
+| D-14 | Testing split | Hosted CI runs everything that does not import QuantSmith and reports the rest as not run; one local verification command runs the QuantSmith-dependent suites against the owner's checkout. |
 
 ## Open Questions
 
@@ -468,11 +482,6 @@ the worker — implement the same profile schema and pass the same conformance f
   (`src/lib/server/goldEda.ts`)? It would need claim types for those statistics.
 - Which desk datasets beyond `SLAB`'s should be registered first: `PB` clients, `COLL` collateral
   and margin, or `CASH` funding sources and uses?
-- How should CI obtain a QuantSmith copy without a GitHub fetch — a wheel or directory from an
-  artifact store or package index the owner controls, or a copy provisioned on a self-hosted
-  runner? Until this is decided, QuantSmith-dependent worker tests report as not run rather than
-  passing.
-
 ## Exceptions
 
 None. spec009 adds a documented invocation mode to spec005 rather than breaking one of its rules;

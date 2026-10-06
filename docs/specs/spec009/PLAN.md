@@ -126,8 +126,11 @@ Six invariants hold everywhere:
 
 ### Modes
 
+The owner keeps QuantSmith as a local checkout (D-13), so repository-path mode is the primary
+setup; installed-package mode stays supported.
+
 ```text
-QUANTSMITH_ROOT set   → repository-path mode
+QUANTSMITH_ROOT set   → repository-path mode (primary; the owner's checkout, conventionally ../QuantSmith)
   code:   $QUANTSMITH_ROOT/src, prepended to sys.path before any QuantSmith import; readiness
           asserts quantsmith.__file__ resolves under it, so an installed copy cannot shadow it
   assets: $QUANTSMITH_ROOT (knowledge/, agents/, templates/)
@@ -188,14 +191,30 @@ at the JSON, and extends "Reviewed for" with spec009's files. `scripts/check-qua
 - Readiness computes the fingerprints of what was actually imported and read. A code mismatch is
   `QUANTSMITH_PIN_MISMATCH` (`code`); an assets mismatch is `QUANTSMITH_PIN_MISMATCH` (`assets`).
   Absent assets are not a mismatch — they remove capabilities (see Worker runtime).
-- **Local development:** `QUANTSMITH_ROOT=../QuantSmith` (any local checkout), or
-  `pip install /path/to/QuantSmith` (editable or not) with `QUANTSMITH_ASSETS_ROOT` pointing at the
-  same tree.
-- **Containers:** mount a read-only copy at run time (`-v /srv/quantsmith:/opt/quantsmith:ro` with
-  `QUANTSMITH_ROOT=/opt/quantsmith`); or bake one in from a BuildKit named context
-  (`docker build --build-context quantsmith=/path/to/QuantSmith …`, `COPY --from=quantsmith`); or
-  install a wheel from a directory or internal index the operator controls. Nothing in the
-  Dockerfile clones a repository.
+- **Owner's setup (primary):** the QuantSmith checkout sits beside QuantMeridian, and the
+  repository's `.env` sets `QUANTSMITH_ROOT=../QuantSmith` (any local path works). Updating the
+  checkout changes its fingerprints, so the worker stops claiming jobs until the new copy is
+  reviewed and re-pinned (T-001's process) — an unreviewed `git pull` cannot slip into results.
+- **Installed package (supported):** `pip install /path/to/QuantSmith` (editable or not) into the
+  worker's virtual environment, with `QUANTSMITH_ASSETS_ROOT` pointing at the same tree.
+- **Other hosts:** not in version one. A container or remote host would need its own reviewed
+  copy (mounted, baked in, or installed from a local wheel — never cloned); that is a follow-up.
+
+### Where the worker runs
+
+The worker runs on the owner's machine, beside the checkout, from a local virtual environment:
+`npm run agent:worker` (`scripts/agent-worker.sh`) loads the repository's `.env` and starts
+`python -m agent_worker`. It makes outbound connections only:
+
+| Connection | Setting | Local development | Against the deployed app |
+| --- | --- | --- | --- |
+| Queue database | `AGENT_QUEUE_DB_URL` | `sqlite:./.data/agent_queue.db` | The deployment's Postgres (write-capable credentials) |
+| QuantMeridian API | `QM_API_BASE_URL`, `AGENT_WORKER_TOKEN`, `QM_API_EXTRA_HEADERS_ENV` | The local dev server | The deployed URL, plus any protection-bypass header |
+| LLM endpoints | The enabled profiles' environment variables | Same | Same |
+
+Nothing connects inbound to the machine. While the worker is stopped, jobs stay `queued` and the
+panel shows "worker offline"; they run when it starts, or expire at their time-to-live. One
+worker process per machine is the expected setup; SQLite queues allow only one.
 
 ## Architecture & Components
 
@@ -231,6 +250,8 @@ settings/
 scripts/
   export-agent-metric-registry.ts     # FRED_CATALOG + desk dataset registry → registry JSON
   agent-control.mjs                   # pause | resume | status (queue DB control row)
+  agent-worker.sh                     # npm run agent:worker — load .env, start the local worker
+  verify-agent.sh                     # npm run verify:agent — QuantSmith-dependent suites, local only
   check-quantsmith-pin.sh             # extended: record ↔ JSON agreement, local-copy drift
 
 src/data/securitiesLending.ts, collateral.ts, cash.ts   # add DATA_SOURCE = "SIM"
@@ -259,7 +280,7 @@ src/app/api/copilot/route.ts, src/app/copilot/page.tsx  # profile migration
 src/app/dataops/…                                # agent and profile cards
 
 services/agent_worker/
-  pyproject.toml  Dockerfile  README.md
+  pyproject.toml  README.md           # no Dockerfile in version one (the worker runs locally)
   src/agent_worker/
     main.py  sourcing.py  pin.py  readiness.py  queue.py  contracts.py  registry.py
     periods.py  readers.py  claims.py  splitter.py  envelope.py  telemetry.py  replay.py
@@ -274,8 +295,9 @@ services/agent_worker/
 test/agent-panel.spec.ts              # Playwright: real worker, stub LLM, fixture Gold DB, local QuantSmith
 ```
 
-The worker's Docker build context is the repository root, because it reads `contracts/` and
-`settings/`. No file under `src/` imports from `services/`, and nothing under `services/` imports
+The worker runs from the repository checkout, because it reads `contracts/` and `settings/`
+relative to the repository root. No file under `src/` imports from `services/`, and nothing under
+`services/` imports
 from `src/`.
 
 ## Interfaces & Data Contracts
@@ -1181,14 +1203,16 @@ Only `succeeded` jobs render result blocks. Every transition appends an `agent_j
 | NFR-007 | Error code table, distinct states | T-010, T-018 |
 | NFR-008 | Panel accessibility, viewports, text provenance cues | T-018, T-026, T-032 |
 | NFR-009 | Schema versions, generated types, incompatible state | T-001, T-002, T-018 |
-| NFR-010 | Correlation IDs, health, formula vectors, CI jobs | T-010, T-020, T-026, T-030 |
+| NFR-010 | Correlation IDs, health, formula vectors, hosted CI plus local verification | T-010, T-020, T-026, T-030 |
 
 ## Trade-offs & Alternatives
 
 | Decision | Chosen | Rejected alternative | Why |
 | --- | --- | --- | --- |
 | Execution boundary | Python worker with a locally supplied QuantSmith copy | Claude Code / agent SDK sessions per request; a TypeScript port; Node spawning Python | Sessions cannot be queued from a module UI; a port duplicates QuantSmith; spawning breaks spec005's process boundary and does not run on Vercel. |
-| QuantSmith supply | Installed package or repository path, never fetched | A `git+https://github.com/…@<sha>` dependency or a clone in the Dockerfile | The owner does not want a GitHub connection; local supply also works offline and inside restricted networks. |
+| QuantSmith supply | The owner's local checkout by path (installed package also supported), never fetched | A `git+https://github.com/…@<sha>` dependency or a clone in a Dockerfile | The owner does not want a GitHub connection and keeps QuantSmith locally; local supply also works offline. |
+| Worker location | The owner's machine, beside the checkout, outbound connections only | A hosted container with its own copy | The checkout lives there; the queue design needs no inbound access; jobs wait visibly while it is off. A hosted worker is a follow-up. |
+| QuantSmith-dependent tests | Local verification command with a recorded report | Hosted CI fetching QuantSmith | Hosted CI has no QuantSmith copy and must not fetch one; it reports those suites as not run. |
 | Pin identity | Content fingerprints of code and assets | A Git commit; a package version | A commit needs Git metadata the copy may not have; `0.1.0` does not change with content; fingerprints identify exactly what was reviewed in either mode. |
 | Queue | Database-backed queue in app-owned tables | Redis/SQS; in-memory; worker HTTP API with its own queue (IBAL-style proxy) | No new infrastructure, survives restarts, accepts jobs while the worker is down, works from serverless handlers. |
 | Worker data path | QuantMeridian's series and desk-data routes | Worker reads Gold or desk getters directly | One read path per source: the chat, the module, and the verifier see the same values and labels. |
@@ -1208,6 +1232,20 @@ Only `succeeded` jobs render result blocks. Every transition appends an `agent_j
 | Requester scoping | HMAC'd session cookie; boundary identity in production | No scoping | Threads would otherwise be readable by any viewer. |
 
 ## Validation Strategy
+
+### Where each suite runs (D-14)
+
+QuantSmith exists only on the owner's machine, so the suites split by whether they import it:
+
+| Run | Where | What |
+| --- | --- | --- |
+| Hosted CI (`.github/workflows/ci.yml`) | GitHub-hosted runners, no QuantSmith | Typecheck, Vitest (including the TypeScript formula vectors and conformance fixtures), build, the Postgres queue-store job, and worker tests not marked `needs_quantsmith` (queue, readers against stubs, periods, profile clients, budgets, conformance). The `needs_quantsmith` suites are reported as not run in the job summary — never as passed. |
+| Local verification (`npm run verify:agent`) | The owner's machine, `QUANTSMITH_ROOT` set | Every worker test (including `needs_quantsmith`: sourcing, fingerprints, workflows, formula vectors against spec `0028`, capability self-tests), then the Playwright end-to-end suite. Writes a report (`.data/verify-agent/report.json`, Git-ignored) with pass counts, QuantSmith fingerprints, and the QuantMeridian commit; a pull request that touches the worker, contracts, or formulas pastes its summary. |
+
+Tests that need QuantSmith carry the pytest marker `needs_quantsmith`; hosted CI runs
+`-m "not needs_quantsmith"`. To keep that possible, QuantSmith is imported only inside
+`sourcing.py` and `workflows/`; every other worker module imports cleanly without it, and
+`pin.py` hashes files without importing them.
 
 ### Worker tests (`services/agent_worker/tests`, pytest, ruff)
 
@@ -1255,13 +1293,14 @@ Only `succeeded` jobs render result blocks. Every transition appends an `agent_j
 
 ### End-to-end (`test/agent-panel.spec.ts`, Playwright)
 
-Real Node server, real worker with QuantSmith from a local path, SQLite queue, a small fixture
-Gold SQLite database, and stub LLM servers. Flows: queue three jobs and watch order; cancel and
-retry; worker offline then started; clarification and reply; overlay chart rendered with
-provenance badges; "Open in Chart Studio"; a `FUND` carry calculation from the form; a `SLAB`
-revenue question with the simulated-data banner; production gate closed; incompatible result.
-Viewports 375×812, 768×1024, 1440×900 plus keyboard-only. CI adds a Postgres service container for
-queue-store integration tests and provides QuantSmith as a local directory, not a network fetch.
+Runs in local verification only, because it needs the real worker. Real Node server, real worker
+with QuantSmith from the owner's checkout, SQLite queue, a small fixture Gold SQLite database, and
+stub LLM servers. Flows: queue three jobs and watch order; cancel and retry; worker offline then
+started; clarification and reply; overlay chart rendered with provenance badges; "Open in Chart
+Studio"; a `FUND` carry calculation from the form; a `SLAB` revenue question with the
+simulated-data banner; production gate closed; incompatible result. Viewports 375×812, 768×1024,
+1440×900 plus keyboard-only. Hosted CI keeps its existing smoke suite and adds a Postgres service
+container for queue-store integration tests.
 
 ### Performance reference
 
@@ -1290,7 +1329,7 @@ LLM_GATEWAY_BASE_URL, LLM_GATEWAY_API_KEY, LLM_GATEWAY_MODEL
 ANTHROPIC_GATEWAY_BASE_URL, ANTHROPIC_GATEWAY_API_KEY, ANTHROPIC_GATEWAY_MODEL
 LOCAL_LLM_BASE_URL, LOCAL_LLM_MODEL
 # worker only
-QUANTSMITH_ROOT                          path to a local QuantSmith checkout (repository-path mode)
+QUANTSMITH_ROOT                          the owner's local QuantSmith checkout (primary), e.g. ../QuantSmith
 QUANTSMITH_ASSETS_ROOT                   assets directory for installed-package mode
 QM_API_BASE_URL                          QuantMeridian base URL the readers call
 QM_API_EXTRA_HEADERS_ENV                 optional comma list of env vars holding headers for a protected deployment
@@ -1301,17 +1340,18 @@ Placeholders only in `.env.example`; nothing with a `VITE_` prefix.
 
 ### Stages
 
-1. **Local:** SQLite queue, worker on the host with `QUANTSMITH_ROOT` pointing at a local
-   checkout, `deterministic` plus optional `anthropic-direct`, fixture or local Gold. `MGC`,
-   `FUND`, `SLAB`.
-2. **Protected staging:** Postgres queue, worker container with a mounted or baked-in QuantSmith
-   copy matching the pin, small budgets, trusted staging boundary, provider calls with public and
+1. **Local:** SQLite queue, local dev server, worker on the owner's machine with `QUANTSMITH_ROOT`
+   pointing at the checkout, `deterministic` plus optional `anthropic-direct`, fixture or local
+   Gold. `MGC`, `FUND`, `SLAB`.
+2. **Protected staging:** the staging app's Postgres queue, with the worker still on the owner's
+   machine (pointing `AGENT_QUEUE_DB_URL` and `QM_API_BASE_URL` at staging) and its checkout
+   matching the pin; small budgets, trusted staging boundary, provider calls with public and
    simulated data only.
 3. **Internal pilot:** owner reviews `chart.build` quality on `MGC` and `FUND`, `secfin.carry`
    results, `SLAB` desk answers, verification rates, and Data Ops; decides on `CURV`, `INFL`,
    `PB`, `COLL`, and `CASH`.
-4. **Production:** separate owner sign-off on D-7 (hosting, identity boundary, budgets);
-   production defaults stay off until then.
+4. **Production:** separate owner sign-off on D-7 (where the worker runs, identity boundary,
+   budgets); production defaults stay off until then.
 
 ### Observability
 
@@ -1335,12 +1375,13 @@ profile above 80% of its daily budget.
 
 ## Decisions And Remaining Gates
 
-- Pending owner review: D-1 through D-12 in `SPEC.md`.
-- Before implementation: review the QuantSmith copy to pin and record its fingerprints (T-001), and
-  confirm the worker host for staging.
-- Production gate: worker hosting with CPU, memory, concurrency, and timeout budgets; the trusted
-  boundary that supplies requester identity; per-profile budgets; reviewed packs for any
-  pack-dependent workflow.
+- Decided by the owner: D-13 (QuantSmith is a local checkout; the worker runs beside it).
+- Pending owner review: D-1 through D-12 and D-14 in `SPEC.md`.
+- Before implementation: review the owner's QuantSmith checkout and record its fingerprints
+  (T-001).
+- Production gate: where the worker runs for production use, with its availability expectations;
+  the trusted boundary that supplies requester identity; per-profile budgets; reviewed packs for
+  any pack-dependent workflow.
 - Follow-ups needing their own specs: scheduled workflows, `MPUB` hand-off, a cross-module queue
-  view, streaming, job chaining, `analysis.eda`, IBAL run review, real desk-book data, and a
-  general `DashboardSpec` adapter.
+  view, streaming, job chaining, `analysis.eda`, IBAL run review, real desk-book data, a hosted
+  worker with its own reviewed QuantSmith copy, and a general `DashboardSpec` adapter.
