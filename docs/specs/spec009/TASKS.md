@@ -5,15 +5,15 @@
 
 > Ordered, testable units of work in QuantMeridian. Every task cites the requirements it advances
 > and carries the Definition of Done below. QuantSmith-repository work is tracked separately
-> (companion items Q-1–Q-7, task T-028) and is never done from this repository.
+> (companion items Q-1–Q-8, task T-028) and is never done from this repository.
 
 ## Status Note
 
-spec009 is a draft pending owner review; no task may start until decisions D-1 through D-9 in
-`SPEC.md` are approved. All tasks are `todo` except T-021 and the `curve_levels` half of T-022,
-which are `blocked` on companion items Q-1 and Q-2 (proven at run time by the worker's
-`pit_level_semantics` and `pack_rules_applied` capabilities). Implementation starts from the
-latest QuantMeridian `main`.
+spec009 is a draft pending owner review; no task may start until decisions D-1 through D-12 in
+`SPEC.md` are approved. All tasks are `todo`, except that the yield and other non-additive parts of
+T-021 and the `curve_levels` part of T-022 are `blocked` on companion items Q-1 and Q-2 (proven at
+run time by the worker's `pit_level_semantics` and `pack_rules_applied` capabilities).
+Implementation starts from the latest QuantMeridian `main`.
 
 ## Definition of Done (applies to every task)
 
@@ -22,13 +22,15 @@ latest QuantMeridian `main`.
 - Every behavior traces to a requirement, and every completed acceptance criterion has the
   deterministic evidence named in the Test Coverage Map.
 - No number reaches the panel except through a verified claim; no chart draws data from anywhere
-  but QuantMeridian's resolver.
-- No secret, credential-bearing URL, question text, context, prompt, or model output appears in
-  the repository, logs, Data Ops output, or test snapshots.
-- No QuantSmith code is imported, vendored, or spawned from Node; the worker installs QuantSmith
-  only from the pinned checkout.
+  but QuantMeridian's resolver; every simulated value carries its SIM label.
+- No secret, credential-bearing URL, question text, inputs, context, prompt, desk row, or model
+  output appears in the repository, logs, Data Ops output, or test snapshots.
+- No QuantSmith code is imported, vendored, or spawned from Node. The worker loads QuantSmith only
+  from a locally supplied copy (repository path or installed package) and never fetches it over
+  the network.
 - New Node and Python dependencies are pinned and exercised in clean-checkout CI.
-- Typecheck, unit, contract, worker, build, and applicable end-to-end tests pass.
+- Typecheck, unit, contract, worker, build, and applicable end-to-end tests pass. A test that
+  cannot run because no QuantSmith copy was supplied reports as not run, never as passed.
 - Configuration, Data Ops, environment examples, runbooks, and rollback steps are updated with
   the code they describe.
 - UI changes are verified with Playwright at 375×812, 768×1024, and 1440×900 plus keyboard-only
@@ -40,10 +42,10 @@ latest QuantMeridian `main`.
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-001 | Re-review QuantSmith at the commit chosen for implementation (`0008`, `0070`, `0080`, `0081`, `0093`, `adapters/llm_runtime`, the analytics, economists, and pack files cited in `PLAN.md`); update `docs/specs/spec005/QUANTSMITH_PIN.md` (commit, date, version, "Reviewed for" including spec009); write `services/agent_worker/quantsmith.lock`; extend `scripts/check-quantsmith-pin.sh` to fail when the lock and the record disagree and to accept a configurable sibling path (`QUANTSMITH_DIR`, defaulting to the current path, then `../QuantSmith`). | REQ-008, NFR-009 | todo | Assessed candidate: `0134d403d5a336ce20e7abd7fb7a0935d7917114` (2026-10-06). Never pin a branch. |
-| T-002 | Write the JSON Schemas in `contracts/agent/` (`llm-profiles`, `agent-workflows`, `job`, `result`, `verification`, `metric-registry`) with `schema_version`; generate TypeScript types and Python models from them; add compatibility helpers on both sides and a CI check for uncommitted generation diffs. | REQ-007, REQ-019, NFR-009 | todo | The result schema has no verdict field; the verification schema is written only by Node. |
-| T-003 | Add `settings/agent_workflows.json` (`MGC` enabled; `CURV`, `INFL` disabled; four workflows with `analysis.answer`, `story.build`, `brief.draft` disabled) and `settings/llm_profiles.json` (six profiles; only `anthropic-direct` and `deterministic` enabled); implement both validators, the reviewed `ELIGIBLE_AGENT_MODULES` set checked against `docs/gold-db/MODULE_DATA_AUDIT.md`, per-module context allowlists, and secret-shaped-value rejection; add `.env.example` placeholders. | REQ-001, REQ-005, REQ-007, REQ-019, REQ-029, NFR-005 | todo | `anthropic-direct` is seeded with today's Copilot model and 1500-token limit. |
-| T-004 | Implement `scripts/export-agent-metric-registry.ts` (`FRED_CATALOG` plus a reviewed unit/additivity/domain mapping and `settings/agent_metric_synonyms.json`) generating `contracts/agent/generated/metric_registry.json`; add a Vitest drift check and the worker loader that builds the `0008` `SemanticLayer`. | REQ-009 | todo | Additivity defaults to `non_additive`; any relaxation needs a recorded rationale. Per-series metrics only in version one. |
+| T-001 | Review the QuantSmith copy chosen for implementation (`0008`, `0028`, `0063`, `0070`, `0080`, `0081`, `0093`, `adapters/llm_runtime`, and the analytics, economists, securities-financing, and pack files cited in `PLAN.md`); implement the standard-library fingerprint tool `services/agent_worker/src/agent_worker/pin.py`; write `contracts/agent/quantsmith-pin.json`; update `docs/specs/spec005/QUANTSMITH_PIN.md` (code and assets digests, pointer to the JSON, "Reviewed for" including spec009); extend `scripts/check-quantsmith-pin.sh` (blocking record ↔ JSON agreement; advisory drift for a local copy at `QUANTSMITH_ROOT`, the current default path, or `../QuantSmith`; no network). | REQ-008, REQ-030, NFR-009 | todo | Assessed copy: local checkout at `0134d403d5a336ce20e7abd7fb7a0935d7917114` (2026-10-06), recorded as information only. Nothing fetches QuantSmith. |
+| T-002 | Write the JSON Schemas in `contracts/agent/` (`llm-profiles`, `agent-workflows`, `job`, `result`, `verification`, `metric-registry`, `quantsmith-pin`, `formula-vectors`) with `schema_version`; generate TypeScript types and Python models from them; add compatibility helpers on both sides and a CI check for uncommitted generation diffs. | REQ-007, REQ-019, NFR-009 | todo | The result schema has no verdict field; the verification schema is written only by Node. |
+| T-003 | Add `settings/agent_workflows.json` (`MGC`, `FUND`, `SLAB` enabled; `CURV`, `INFL` disabled; `chart.build`, `analysis.answer`, `secfin.carry` enabled; `story.build` and `brief.draft` with its three kinds disabled) and `settings/llm_profiles.json` (six profiles; only `anthropic-direct` and `deterministic` enabled); implement both validators, the reviewed `ELIGIBLE_AGENT_MODULES` set checked against `docs/gold-db/MODULE_DATA_AUDIT.md` (`IBAL`, `OPT`, `DESK`, `TASSIST`, `AI` never eligible), per-module context allowlists, and secret-shaped-value rejection; add `.env.example` placeholders. | REQ-001, REQ-005, REQ-007, REQ-019, REQ-029, NFR-005 | todo | `anthropic-direct` is seeded with today's Copilot model and 1500-token limit. `SLAB` starts with no context fields. |
+| T-004 | Implement `scripts/export-agent-metric-registry.ts` (`FRED_CATALOG`, the desk dataset registry from T-029, a reviewed unit/additivity/domain mapping, and `settings/agent_metric_synonyms.json`) generating `contracts/agent/generated/metric_registry.json`; add a Vitest drift check and the worker loader that builds the `0008` `SemanticLayer`. | REQ-009 | todo | Funding and money-market series map to `short_term_markets_funding` as well as `rates_fixed_income`. Additivity defaults to `non_additive`; any relaxation needs a recorded rationale. |
 
 ### Slice B - LLM profiles and the Copilot
 
@@ -57,47 +59,56 @@ latest QuantMeridian `main`.
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-008 | Implement `src/lib/server/agent/queueStore.ts`: DDL and migrations for SQLite and Postgres (`agent_schema_version`, `agent_control`, `agent_thread`, `agent_job`, `agent_job_event`, `agent_job_artifact`, `agent_worker_heartbeat`, `agent_usage_daily`), idempotent create, thread listing, cancel, retry, events, and the control row; SQLite unit tests plus a Postgres integration suite. | REQ-002, REQ-003, REQ-004, NFR-004 | todo | `AGENT_QUEUE_DB_URL` is required — no fallback to `MACRO_DB_URL`. Permission failures are explicit errors. |
-| T-009 | Implement `gate.ts` and `identity.ts`: production gate (same detection as IBAL), deploy-level switch, `agent_control.paused` checks, `agent_sid` cookie with HMAC requester IDs, boundary identity header honored only behind an open gate, and `scripts/agent-control.mjs`. | REQ-025, NFR-005 | todo | Requester A must never read or cancel requester B's jobs. |
-| T-010 | Add the `/api/agent/*` routes (`catalog`, `jobs` POST/GET, `jobs/[id]`, `cancel`, `retry`, `audit`, `health`) with limits, context validation, idempotency, correlation IDs, every error code in `PLAN.md`, and the catalog's config ∩ worker-capability rule; route contract tests. | REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-007, REQ-025, REQ-027, NFR-007, NFR-010 | todo | The thread GET runs pending verifications (bounded, idempotent) before returning. |
+| T-008 | Implement `src/lib/server/agent/queueStore.ts`: DDL and migrations for SQLite and Postgres (`agent_schema_version`, `agent_control`, `agent_thread`, `agent_job` with `kind` and `inputs_json`, `agent_job_event`, `agent_job_artifact`, `agent_worker_heartbeat` with sourcing mode and fingerprints, `agent_usage_daily`), idempotent create, thread listing, cancel, retry, events, and the control row; SQLite unit tests plus a Postgres integration suite. | REQ-002, REQ-003, REQ-004, NFR-004 | todo | `AGENT_QUEUE_DB_URL` is required — no fallback to `MACRO_DB_URL`. Permission failures are explicit errors. |
+| T-009 | Implement `gate.ts` and `identity.ts`: production gate (same detection as IBAL), deploy-level switch, `agent_control.paused` checks, `agent_sid` cookie with HMAC requester IDs, boundary identity header honored only behind an open gate, the `AGENT_WORKER_TOKEN` check (constant-time), and `scripts/agent-control.mjs`. | REQ-025, NFR-005 | todo | Requester A must never read or cancel requester B's jobs. Browsers never receive the worker token. |
+| T-010 | Add the panel routes (`catalog`, `jobs` POST/GET, `jobs/[id]`, `cancel`, `retry`, `audit`, `health`) with limits, context and structured-input validation, idempotency, correlation IDs, every error code in `PLAN.md`, and the catalog's config ∩ worker-capability rule for workflows and kinds; route contract tests. | REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-007, REQ-025, REQ-027, NFR-007, NFR-010 | todo | The thread GET runs pending verifications (bounded, idempotent) before returning. |
 | T-011 | Extract `resolveChartSeries` from `src/app/api/chart/series/route.ts` into `src/lib/server/chartSeries.ts` without changing route behavior (snapshot tests pin current responses for `econ`, `fred`, `market`, `ERR`, and empty cases); the verifier uses the same function. | REQ-010, REQ-015 | todo | Behavior-preserving refactor. The non-`lin` units divergence from `/api/econ/series` is recorded, not fixed here. |
 
 ### Slice D - worker
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-012 | Scaffold `services/agent_worker` (pyproject with pinned dependencies, Dockerfile that clones QuantSmith at the lock commit and installs from that checkout, `QUANTSMITH_ROOT`), readiness (PEP 610 commit, schema version, registry, strict pack load, profile dry-runs), heartbeats, the fenced claim loop with leases and stage-boundary cancellation, sweeps (lease expiry, TTL, retention purge), metadata-only telemetry, and confirm the `0070` envelope entry point in `quantsmith.orchestration` at the pin. | REQ-004, REQ-008, REQ-027, REQ-028, NFR-004, NFR-005 | todo | Readiness failure means no claims, ever. Logs never contain message, context, prompt, or output text. |
-| T-013 | Implement `reader.py` and `periods.py`: series-route client with optional headers, `DB`-only provenance rule, period encodings for every grain with round-trip tests, `Fact` construction, evidence-row artifacts, and content hashing. | REQ-010, NFR-002 | todo | A null observation is skipped and counted, never filled. |
+| T-012 | Scaffold `services/agent_worker` (pyproject with pinned dependencies and no `quantsmith` entry; a Dockerfile that clones nothing and documents mount, named build context, and local-wheel supply), sourcing (`QUANTSMITH_ROOT` path mode with the shadowing check, installed mode with `QUANTSMITH_ASSETS_ROOT`), readiness (fingerprints, schema version, registry, profile dry-runs, `QUANTSMITH_NOT_FOUND`), heartbeats with sourcing mode and fingerprints, the fenced claim loop with leases and stage-boundary cancellation, sweeps (lease expiry, TTL, retention purge), metadata-only telemetry, and confirm the `0070` envelope entry point in `quantsmith.orchestration` on the pinned copy. | REQ-004, REQ-008, REQ-027, REQ-028, REQ-030, NFR-004, NFR-005 | todo | Readiness failure means no claims, ever. A start-up test with outbound network blocked must pass in both modes. |
+| T-013 | Implement `readers.py` and `periods.py`: Gold series reader with optional headers and the `DB`-only rule; desk reader over the worker-only route with the bearer token and the `SIM` requirement; period encodings for every grain with round-trip tests; `Fact` construction; `evidence_rows` and `desk_rows` artifacts; content hashing. | REQ-010, REQ-033, NFR-002 | todo | A null observation is skipped and counted, never filled. |
 | T-014 | Implement the Python profile clients (`anthropic`, `openai` SDKs) passing the shared conformance fixtures; retries and normalized errors; per-job caps and daily budgets with atomic usage accounting; declared fallback with disclosure. | REQ-020, REQ-021, REQ-026, NFR-006 | todo | A provider without usage data is charged the estimate and flagged. |
-| T-015 | Implement `chart.build`: the deterministic splitter, `KeywordInterpreter` per fragment, `LlmInterpreter` (structured `ChartRequest`, also registered via `register_interpreter`), `validate_plan` → `authorize_plan` → `execute` → `choose_chart` per series, overlay and transform rules, range mapping with disclosure, pack caveats and chart conventions, `unsupported_chart` and clarification outcomes, result payload and disclosure; golden tests and deterministic replay. | REQ-006, REQ-011, REQ-017, REQ-024, NFR-002 | todo | The executed `Result` drives form, staleness, and hashes only; its values are never displayed. |
-| T-016 | Implement start-up capability self-tests (`chart_line_form`, `pit_level_semantics`, `pack_rules_applied`, `story_recipes`, `claim_bound_drafting`) over fixture data, published in heartbeats and consumed by the catalog. | REQ-007, REQ-012, REQ-013 | todo | When a pin bump satisfies Q-1/Q-2, the gated workflows become offerable without code changes here. |
+| T-015 | Implement `chart.build`: the deterministic splitter, `KeywordInterpreter` per fragment, `LlmInterpreter` (structured `ChartRequest`, also registered via `register_interpreter`), `validate_plan` → `authorize_plan` → `execute` → `choose_chart` per series, overlay and transform rules, range mapping with disclosure, pack caveats (or the no-packs notice) and chart conventions, `unsupported_chart` and clarification outcomes, result payload and disclosure; golden tests including `FUND` funding overlays, and deterministic replay. | REQ-006, REQ-011, REQ-017, REQ-024, NFR-002 | todo | The executed `Result` drives form, staleness, and hashes only; its values are never displayed. |
+| T-016 | Implement start-up capability self-tests (`chart_line_form`, `domain_packs`, `pit_level_semantics`, `pack_rules_applied`, `desk_registry`, `carry_runtime`, `stm_pack`, `story_recipes`, `agent_contracts`, `claim_bound_drafting`) over fixture data, published in heartbeats and consumed by the catalog. | REQ-007, REQ-012, REQ-013, REQ-030 | todo | When a new QuantSmith copy satisfies Q-1/Q-2, or assets become available, the gated workflows become offerable without code changes here. |
+
+### Slice D2 - securities finance
+
+| ID | Task | Covers | Status | Notes |
+| --- | --- | --- | --- | --- |
+| T-029 | Build the desk dataset registry (`src/lib/server/agent/deskDatasets.ts`) for `sl_inventory`, `sl_loans`, and `sl_borrow_demand` with the five initial `SLAB` metrics; add `DATA_SOURCE = "SIM"` to `securitiesLending.ts`, `collateral.ts`, and `cash.ts`; add the worker-only `GET /api/agent/desk-data/[dataset]` (bearer token, production gate, declared fields only, `DATA_CLASS_NOT_APPROVED` for any non-`SIM` source); share the dataset loader with the verifier. | REQ-009, REQ-010, REQ-015, REQ-029, REQ-033 | todo | `PB`, `COLL`, and `CASH` datasets are registered only when those modules are enabled after the pilot. |
+| T-030 | Implement the formula set (`src/lib/server/agent/formulas.ts`: `days_act`, `leg_cost`, `net_financing_cost`, `funding_rate_bps`, `shocked_net_cost`, `pct_to_bps`, `spread_bps`, `share`, `aggregate`) and the shared vectors in `contracts/agent/fixtures/formulas/`; the worker's tests run spec `0028` and spec `0008` on the same vectors. | REQ-015, REQ-032, NFR-010 | todo | Vectors cover ACT/360, the zero floor on shocked rates, absent legs, and every aggregation. |
+| T-031 | Implement `secfin.carry`: `CarryRequest` schema and `carry_request.v1.md` interpreter prompt, term validation, benchmark selection (historical start vs. future start), optional `SLAB` weighted-fee input as a `SIM` claim, spec `0028` `decompose`/`spread_sensitivity`/`check_point_in_time`, assumption, level, aggregate, and calculated claims, the carry table, flat-rate and look-ahead notices, `0063` and pack caveats; plus the panel's carry form with "edit and re-run". | REQ-017, REQ-024, REQ-031, REQ-032, NFR-002 | todo | The form path needs no LLM. Every user term is an `assumption` claim checked against the stored inputs. |
+| T-032 | Implement simulated-data labeling: `ProvenanceBadge` (`GOLD`, `SIM`, `ASSUMPTION`, `CALC` with input provenances), the non-dismissable `SimDataBanner`, and text-not-color cues; component tests and an e2e check on a `SLAB` result. | REQ-034, NFR-008 | todo | Simulated values are never described as market data anywhere in the UI. |
 
 ### Slice E - verification and presentation
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-017 | Implement the claim vocabulary and text rule (worker `claims.py`; Node `claims.ts`) and `verifier.ts`: schema check, text rule, chart reference checks, per-claim re-resolution and recomputation with `transforms.ts`, `VERIFIED`/`FLAGGED`/`DROPPED` with reasons (including `revised_since_job`), conditional `verifying → succeeded`; fixtures for every path. | REQ-014, REQ-015, REQ-016, NFR-001 | todo | The worker cannot write a verdict; any verdict-like field fails schema validation. |
-| T-018 | Build `src/features/agent-panel/` and mount it in `MGC`: thread, non-blocking composer, job cards with lifecycle labels and cancel/retry, context chip, workflow and profile selectors, polling with visibility pause, result blocks (`ChartBlock`, `ClaimText`, caveats, clarification reply), `VerificationSummary`, disclosure drawer, incompatible-result state. | REQ-001, REQ-003, REQ-005, REQ-006, REQ-016, REQ-017, REQ-018, NFR-001, NFR-007, NFR-008, NFR-009 | todo | Status is never conveyed by color alone. `localStorage` access is wrapped in try/catch. |
+| T-017 | Implement the claim vocabulary and text rule (worker `claims.py`; Node `claims.ts`) and `verifier.ts`: schema check, text rule, chart reference checks, per-provenance verification (`DB` via `resolveChartSeries` and `transforms.ts`, `SIM` via the desk loader, `USER` against stored inputs, calculated via the formula set with the `params` rule), `VERIFIED`/`FLAGGED`/`DROPPED` with reasons (including `revised_since_job`), conditional `verifying → succeeded`; fixtures for every path. | REQ-014, REQ-015, REQ-016, REQ-033, NFR-001 | todo | The worker cannot write a verdict; any verdict-like field fails schema validation. |
+| T-018 | Build `src/features/agent-panel/` and mount it in `MGC`, `FUND`, and `SLAB`: thread, non-blocking composer, job cards with lifecycle labels and cancel/retry, context chip, workflow and profile selectors, polling with visibility pause, result blocks (`ChartBlock`, `ClaimTable`, `ClaimText`, caveats, clarification reply), `VerificationSummary`, disclosure drawer, incompatible-result state. | REQ-001, REQ-003, REQ-005, REQ-006, REQ-016, REQ-017, REQ-018, REQ-034, NFR-001, NFR-007, NFR-008, NFR-009 | todo | Status and provenance are never conveyed by color alone. `localStorage` access is wrapped in try/catch. |
 | T-019 | Add the `agentChart` hand-off to `ChartStudio.tsx` (decode, validate, `applyTemplate`, `replaceState`), routing `econ`/`fred` to `MGC` and `market`/`lens` to `MKC`; invalid payloads show a notice and change nothing. | REQ-018 | todo | The studio re-resolves every series itself. |
-| T-020 | Add the Data Ops agent card and finish `GET /api/agent/health`: heartbeats, readiness, commit and capabilities, queue depth, oldest-queued age, outcomes by code, stage latency percentiles, verification rates, profile states, budget use. | REQ-027, NFR-010 | todo | Metadata only; no question text. |
+| T-020 | Add the Data Ops agent card and finish `GET /api/agent/health`: heartbeats, readiness, sourcing mode, fingerprints and capabilities, queue depth, oldest-queued age, outcomes by code, stage latency percentiles, verification rates by provenance, profile states, budget use. | REQ-027, NFR-010 | todo | Metadata only; no question text. |
 
-### Slice F - gated workflows
+### Slice F - analysis and drafting workflows
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-021 | Implement `analysis.answer`: `answer()` with keyword or LLM interpreter and the `0070` envelope, insight-to-claim mapping (`level`, `change`, `trend`; other kinds listed as not displayed), placeholder templates, optional LLM narrator checked by `ground()` and the text rule with template fallback; golden cases for AC-012. | REQ-012, REQ-014, REQ-015, REQ-028 | blocked | Blocked on Q-1 and Q-2. Enable in configuration only after the capabilities are reported. |
+| T-021 | Implement `analysis.answer`: the plan gate, `answer()` with keyword or LLM interpreter and the `0070` envelope, insight-to-claim mapping (`level`, `concentration`, `change`, `trend`; other kinds listed as not displayed), claim-bound tables for breakdowns, placeholder templates, optional LLM narrator checked by `ground()` and the text rule with template fallback; golden cases for AC-012. | REQ-012, REQ-014, REQ-015, REQ-028, REQ-031 | todo | Desk metrics (`SLAB`) are `todo` now; the yield and other non-additive cases are `blocked` on Q-1 and Q-2. |
 | T-022 | Implement `story.build`: `load_catalog` → `select` → `collect_evidence` → `build_story` → `render_json` → blocks; `0093` `bind_claim`/`validate_claim` then translation to `level` claims; draft-pack caveat; `policy_path` first; `curve_levels` (and enabling `CURV`) after Q-1/Q-2 and a tenor family in the registry. | REQ-013 | todo | `policy_path` part is `todo`; `curve_levels` part is `blocked`. `dashboard_handoff` output is stored only. |
-| T-023 | Implement `brief.draft`: drafter prompt from the pinned `macro_backdrop_summarizer` contract and template, structured claims recomputed from evidence rows, unbound-numeral rejection with flagged template fallback, verification table block; spec005 Phase 2's injected claims as permanent fixtures. | REQ-014, REQ-015, NFR-001 | todo | Never published or forwarded. Requires T-017. |
+| T-023 | Implement `brief.draft` with the kinds `macro_backdrop`, `funding_conditions`, and `desk_review`: drafter prompts from the pinned agent contracts and templates, `0063` conventions for funding, structured claims recomputed from evidence rows, unbound-numeral rejection with flagged template fallback, verification table block, simulated-data banner for `desk_review`; spec005 Phase 2's injected claims as permanent fixtures for every kind. | REQ-014, REQ-015, REQ-031, NFR-001 | todo | Never published or forwarded. Requires T-017, T-029, and T-030. |
 
 ### Slice G - hardening and rollout
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-024 | Implement the audit route and `agent_worker.replay` (deterministic jobs replay to identical bytes; LLM jobs replay from transcripts or report `non_reproducible`), plus retention tests for purge and deletion. | REQ-028, NFR-002 | todo | A replay never claims equivalence it cannot show. |
-| T-025 | Security suite: secret scan over `settings/` and `contracts/`, log capture across Node and worker, prompt-injection fixtures (requests for SQL, other modules, unregistered metrics, raw data), context fuzzing, data-class and eligible-module enforcement. | REQ-024, REQ-029, NFR-005 | todo | Failures here block release. |
-| T-026 | CI: worker job (ruff, pytest, conformance), Postgres integration job, Playwright `test/agent-panel.spec.ts` with real worker, stub LLM servers, and fixture Gold SQLite, viewport and keyboard runs, and recorded benchmarks. | NFR-003, NFR-008, NFR-010 | todo | Benchmark artifacts record the runtime profile. |
-| T-027 | Documentation and rollout: `services/agent_worker/README.md`, a worker section in `docs/deployment/DEPLOY.md`, `.env.example`, a Data Ops runbook (pause/resume, budgets, pin bumps, rollback), the dated spec005 note, and the post-pilot configuration change enabling `CURV`/`INFL` after owner sign-off. | REQ-025 | todo | Production stays off until D-7's gates are signed off. |
-| T-028 | Track the QuantSmith companion items Q-1–Q-7 in the QuantSmith repository, record outcomes here, and bump the pin through T-001's process when they land. | REQ-012, REQ-013 | todo | Owner decides whether and how to file them; no QuantSmith edits from this repository. |
+| T-024 | Implement the audit route and `agent_worker.replay` (deterministic jobs replay to identical bytes on a copy with the same fingerprints; LLM jobs replay from transcripts or report `non_reproducible`), plus retention tests for purge and deletion. | REQ-028, NFR-002 | todo | A replay never claims equivalence it cannot show. |
+| T-025 | Security suite: secret scan over `settings/` and `contracts/`, log capture across Node and worker, prompt-injection fixtures (requests for SQL, other modules, unregistered metrics, raw data), context and input fuzzing, data-class and eligible-module enforcement, desk route token and `DATA_CLASS_NOT_APPROVED` tests, a source scan proving the worker never imports the spec `0023`, `0035`, or `0067` runtimes. | REQ-024, REQ-029, REQ-031, NFR-005 | todo | Failures here block release. |
+| T-026 | CI: worker job (ruff, pytest, conformance, formula vectors) with QuantSmith supplied as a local directory or wheel (no fetch step in the worker), Postgres integration job, Playwright `test/agent-panel.spec.ts` with real worker, stub LLM servers, and fixture Gold SQLite, viewport and keyboard runs, and recorded benchmarks. | NFR-003, NFR-008, NFR-010 | todo | How CI obtains the QuantSmith copy is an open owner decision; until it is made, QuantSmith-dependent tests report as not run. |
+| T-027 | Documentation and rollout: `services/agent_worker/README.md` (supplying QuantSmith by path, by installed package, by container mount, by named build context, and by local wheel — no network), a worker section in `docs/deployment/DEPLOY.md`, `.env.example`, a Data Ops runbook (pause/resume, budgets, reviewing and re-pinning a new QuantSmith copy, rollback), and the post-pilot configuration change enabling further modules after owner sign-off. | REQ-025, REQ-030 | todo | Production stays off until D-7's gates are signed off. The spec005 note pointing to spec009 already exists. |
+| T-028 | Track the QuantSmith companion items Q-1–Q-8 in the QuantSmith repository, record outcomes here, and re-pin through T-001's process when they land. | REQ-012, REQ-013 | todo | Owner decides whether and how to file them; no QuantSmith edits from this repository. |
 
 Status values: `todo` | `in-progress` | `blocked` | `done`.
 
@@ -111,15 +122,15 @@ Status values: `todo` | `in-progress` | `blocked` | `done`.
 | AC-004 | `queueStore.test.ts::queued limit`; `services/agent_worker/tests/test_queue.py::test_lease_expiry_requeues_then_fails` | todo |
 | AC-005 | `jobs.route.test.ts::context allowlist and size`; `ContextChip.test.tsx::shows sent context` | todo |
 | AC-006 | `test_chart_build.py::test_ambiguous_request_clarifies`; `agent-panel.spec.ts::clarification reply links jobs` | todo |
-| AC-007 | `catalog.route.test.ts::blocked workflow hidden and rejected` | todo |
-| AC-008 | `test_readiness.py::test_pin_mismatch_blocks_claims`; `architecture.test.ts::no quantsmith in node` | todo |
+| AC-007 | `catalog.route.test.ts::workflow without capability hidden and rejected` | todo |
+| AC-008 | `test_readiness.py::test_code_fingerprint_mismatch_blocks_claims`, `::test_assets_fingerprint_mismatch_blocks_claims`; `architecture.test.ts::no quantsmith in node` | todo |
 | AC-009 | `export-agent-metric-registry.test.ts::no drift`; `test_registry.py::test_plan_outside_registry_rejected` | todo |
-| AC-010 | `test_reader.py::test_non_db_provenance_is_unavailable` | todo |
+| AC-010 | `test_readers.py::test_non_db_provenance_is_unavailable` | todo |
 | AC-011 | `test_chart_build.py::test_overlay_dgs2_dgs10_keyword`, `::test_mixed_units_clarify`, `::test_kpi_form_unsupported`; `agent-panel.spec.ts::overlay chart renders with provenance` | todo |
-| AC-012 | `catalog.route.test.ts::analysis.answer gated`; `test_analysis_answer.py::test_level_is_latest_and_change_in_bps` | blocked |
+| AC-012 | `test_analysis_answer.py::test_desk_revenue_by_borrower`, `::test_nonadditive_plan_unsupported_metric`, `::test_level_is_latest_and_change_in_bps` | todo (yield case blocked) |
 | AC-013 | `test_story_build.py::test_curve_levels_order_and_no_tenor_sum` | blocked |
-| AC-014 | `test_brief_draft.py::test_unbound_numeral_rejected`; `verifier.test.ts::text rule` | todo |
-| AC-015 | `verifier.test.ts::verdict matrix` | todo |
+| AC-014 | `test_brief_draft.py::test_unbound_numeral_rejected`, `::test_claim_bound_output[macro_backdrop, funding_conditions, desk_review]`; `verifier.test.ts::text rule` | todo |
+| AC-015 | `verifier.test.ts::verdict matrix across DB, SIM, USER, and calculated claims` | todo |
 | AC-016 | `ClaimText.test.tsx`; `ResultBlocks.test.tsx::no unverified numbers in DOM` | todo |
 | AC-017 | `DisclosureDrawer.test.tsx::all disclosure fields` | todo |
 | AC-018 | `ChartStudio.agentChart.test.tsx`; `agent-panel.spec.ts::open in chart studio` | todo |
@@ -128,28 +139,34 @@ Status values: `todo` | `in-progress` | `blocked` | `done`.
 | AC-021 | `llm/conformance.test.ts`; `test_profiles_conformance.py`; stub gateway tests on both sides | todo |
 | AC-022 | `copilot.route.test.ts::default profile request identical`; `::local fallback unchanged` | todo |
 | AC-023 | `profiles.route.test.ts::dry-run states redacted` | todo |
-| AC-024 | `test_interpreter.py::test_invalid_llm_outputs_never_execute` | todo |
+| AC-024 | `test_interpreter.py::test_invalid_llm_outputs_never_execute`; `test_secfin_carry.py::test_unknown_benchmark_rejected` | todo |
 | AC-025 | `gate.test.ts::production gate`, `::kill switch`, `::requester isolation` | todo |
 | AC-026 | `test_budget.py::test_budget_exceeded_before_call`, `::test_per_job_cap`, `::test_usage_recorded` | todo |
-| AC-027 | `health.route.test.ts::states`; Data Ops agent card component test | todo |
+| AC-027 | `health.route.test.ts::states including missing assets`; Data Ops agent card component test | todo |
 | AC-028 | `test_replay.py::test_deterministic_replay_identical`; `test_retention.py::test_purge_and_delete` | todo |
 | AC-029 | `config.test.ts::ineligible modules rejected`; `test_profiles.py::test_data_class_enforcement` | todo |
 | AC-030 | Benchmark suite with retained p50/p95/max and runtime manifest | todo |
-| AC-031 | `agent-panel.spec.ts` viewport and keyboard runs with overlap and console assertions | todo |
+| AC-031 | `agent-panel.spec.ts` viewport and keyboard runs (including the carry form) with overlap and console assertions | todo |
 | AC-032 | `ResultBlocks.test.tsx::incompatible schema version` | todo |
-| AC-033 | Clean-checkout CI: typecheck, Vitest, build, worker job, Postgres job, end-to-end | todo |
+| AC-033 | Clean-checkout CI: typecheck, Vitest, build, worker job, formula vectors, Postgres job, end-to-end | todo |
+| AC-034 | `test_sourcing.py::test_path_mode_not_shadowed`, `::test_installed_mode_without_assets`, `::test_startup_with_network_blocked`; `catalog.route.test.ts::offered workflows without assets` | todo |
+| AC-035 | `catalog.route.test.ts::pilot modules offer securities-finance workflows`; `test_security.py::test_no_excluded_runtime_imports` | todo |
+| AC-036 | `test_secfin_carry.py::test_sofr_plus_spread_carry`, `::test_lookahead_flag`, `::test_flat_rate_notice`; `verifier.test.ts::calculated claims` | todo |
+| AC-037 | `deskData.route.test.ts::token and SIM requirement`; `deskDatasets.test.ts::non-SIM source refused`; `verifier.test.ts::desk aggregate` | todo |
+| AC-038 | `SimDataBanner.test.tsx`; `ProvenanceBadge.test.tsx::mixed provenance`; `agent-panel.spec.ts::SLAB answer shows simulated-data banner` | todo |
 
 ## QuantSmith Companion Items
 
 | ID | Item | Blocks | Status |
 | --- | --- | --- | --- |
-| Q-1 | Complete `0080` T-021/T-022: apply `0081` packs in the answer path; unreviewed-pack caveat. | `analysis.answer`; insight sections of `story.build` | open |
+| Q-1 | Complete `0080` T-021/T-022: apply `0081` packs in the answer path; unreviewed-pack caveat. | Non-additive plans in `analysis.answer`; insight sections of `story.build` | open |
 | Q-2 | Point-in-time level semantics for non-additive and semi-additive metrics (latest observation; no cross-dimension sums). | Same as Q-1 | open |
-| Q-3 | Review `economics_macro` and `rates_fixed_income` analytics and visualization packs. | Production use of pack-dependent workflows | open |
-| Q-4 | `quantsmith-version-check.sh` recognizes PEP 508 git-commit pins. | Nothing (optional) | open |
-| Q-5 | Register QuantMeridian for `0047` release notifications (spec005 Phase 1 item). | Nothing (optional) | open |
+| Q-3 | Review the `economics_macro`, `rates_fixed_income`, `securities_financing_prime`, and `short_term_markets_funding` packs. | Production use of pack-dependent workflows | open |
+| Q-4 | Versioned QuantSmith releases whose version changes with content. | Nothing (optional; fingerprints remain the check) | open |
+| Q-5 | Ship knowledge packs, agent contracts, and templates with the package or as a versioned assets bundle. | Nothing (optional; installed mode otherwise needs `QUANTSMITH_ASSETS_ROOT`) | open |
 | Q-6 | Gateway profile document in `adapters/llm_runtime/`. | Nothing (optional) | open |
 | Q-7 | Multi-series time-series form in `0080`. | Nothing; retires spec009's overlay composition | open |
+| Q-8 | Securities-financing visualization pack (`0093`). | `story.build` in `FUND` and `SLAB` | open |
 
 ## Follow-ups
 
@@ -158,6 +175,10 @@ Deferred to their own specs:
 - Scheduled agent workflows on QuantSmith `0055`/`0060`.
 - Offering verified results to `MPUB`'s Chart Queue as `Candidate` items.
 - A cross-module queue view, streaming responses, and job chaining.
+- IBAL run review by the securities-financing agents (settling spec007's session-only rule for
+  generated runs and spec005 item 6's dispatcher path).
+- Real or confidential desk-book data: retention, provider approval, and possibly local-only
+  profiles.
 - `analysis.eda` over Gold's lead-lag, correlation, and structural-break tables.
 - A general `DashboardSpec` → `MGC`/`MKC` adapter (spec005 item 4 in full).
 - Native cloud-IAM provider flows (Bedrock, Vertex, Entra ID) if gateways prove insufficient.

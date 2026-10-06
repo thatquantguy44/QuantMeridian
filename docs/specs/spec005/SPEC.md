@@ -29,12 +29,14 @@ see item 6 and the updated Decisions Before Implementation table.
 
 **2026-10-06 note:** `docs/specs/spec009/` (draft, pending owner review)
 proposes automating items 2 and 4 in an attended form: module-embedded agent
-panels that queue QuantSmith workflows in a separate Python worker pinned to
-this file's QuantSmith pin, with every number re-verified against Gold before
-display. It keeps every non-goal below and adds one invocation mode beside the
-external Claude Code/agent SDK session: a pinned QuantSmith checkout inside a
-QuantMeridian-hosted worker, the same pattern IBAL's service uses for
-InventoryBallast.
+panels that queue QuantSmith workflows — including the securities-financing
+agents, as analysis and review roles only — in a separate Python worker, with
+every number re-verified at its source before display. It keeps every non-goal
+below (spec `0023`'s runtime stays unadopted) and adds one invocation mode
+beside the external Claude Code/agent SDK session: a locally supplied
+QuantSmith copy (installed package or repository path, never fetched from
+GitHub) inside a QuantMeridian-hosted worker, checked against content
+fingerprints recorded alongside this file's pin.
 
 ## Owner
 
