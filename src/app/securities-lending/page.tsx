@@ -83,7 +83,7 @@ export default function SecuritiesLending() {
     return m;
   }, [marketData]);
   const inventory = useMemo(() => mergeLiveInventoryPrices(rawInventory, priceMap), [rawInventory, priceMap]);
-  const hasPipelinePrices = priceMap.size > 0 && mktSource !== "SNAPSHOT" && mktSource !== "LOADING";
+  const hasPipelinePrices = priceMap.size > 0 && mktSource !== "LOADING";
   const badgeSource = hasPipelinePrices ? mktSource : "SIM";
 
   const [source, setSource] = useState<"ALL" | InventoryRow["source"]>("ALL");

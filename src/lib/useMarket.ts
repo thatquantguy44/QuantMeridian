@@ -31,12 +31,12 @@ function emptyMarketView(view: MarketView, basis: ReturnBasis): unknown {
       credit: [],
       volatility: [],
       currencies: [],
-      asof: null,
+      asof: undefined,
     } satisfies Partial<CrossAsset> & { return_basis: ReturnBasis };
   }
   if (view === "rates") {
     return {
-      asof: null,
+      asof: undefined,
       curve: [],
       spreads: { two_s_ten_s_bps: null, three_m_ten_y_bps: null },
       changes: [],
@@ -46,7 +46,7 @@ function emptyMarketView(view: MarketView, basis: ReturnBasis): unknown {
   if (view === "regime") {
     const unavailable = { score: 0, label: "No data" };
     return {
-      asof: null,
+      asof: undefined,
       risk_on_off: unavailable,
       inflation_pressure: unavailable,
       growth_momentum: unavailable,

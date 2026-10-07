@@ -3,6 +3,7 @@ import {
   computeInversionStats,
   monthlySpreadTimeline,
   recessionRangesFromUsrec,
+  type Inversion,
 } from "@/data/econCurve";
 import { goldEnabled, goldStore } from "@/lib/server/goldStore";
 
@@ -66,13 +67,19 @@ export async function GET(req: Request) {
           recession_overlap: ep.recession_overlap ?? false,
           recession_lead_days: ep.recession_lead_days ?? null,
         }));
-        const stats = computeInversionStats(inversions.map((i) => ({
-          start: i.start,
-          end: i.end,
-          troughBps: i.trough_bps,
-          durationDays: i.duration_days,
-          hadRecession: i.recession_overlap,
-          leadDays: i.recession_lead_days,
+        // computeInversionStats reads the Inversion shape; convert days to months
+        // the same way the series-based detector in econCurve.ts does.
+        const stats = computeInversionStats(inversions.map((i): Inversion => ({
+          id: i.start.slice(0, 7),
+          invertedDate: i.start,
+          unInvertedDate: i.end,
+          durationMonths: Math.max(1, Math.round(i.duration_days / 30.44)),
+          maxDepthBps: Math.round(i.trough_bps),
+          recessionFollowed: i.recession_overlap,
+          recessionStart: null,
+          leadTimeMonths:
+            i.recession_overlap && i.recession_lead_days != null ? Math.round(i.recession_lead_days / 30.44) : null,
+          note: "",
         })));
         const timeline = monthlySpreadTimeline(series, recessions);
 

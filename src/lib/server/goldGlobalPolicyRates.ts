@@ -5,7 +5,7 @@
  */
 
 import { GoldStore } from "./goldStore";
-import type { PolicyRate, Trend } from "@/data/globalMacro";
+import { countryIso3, type PolicyRate, type Trend } from "@/data/globalMacro";
 
 interface GoldPolicyRateRow {
   country: string;
@@ -33,8 +33,9 @@ export async function buildGlobalPolicyRateFromGold(
   const rows = await store.latest<GoldPolicyRateRow>("global_policy_rates");
   if (!rows.length) return null;
 
-  // Find the row matching this country's ISO3
-  const row = rows.find((r) => r.iso3 === base.iso3 ?? r.country === base.country);
+  // Find the row matching this country's ISO3, falling back to the country name
+  const iso3 = countryIso3(base.country);
+  const row = rows.find((r) => (iso3 != null && r.iso3 === iso3) || r.country === base.country);
   if (!row || row.policy_rate_pct == null) return null;
 
   const rate = Number(row.policy_rate_pct.toFixed(2));

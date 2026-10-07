@@ -61,7 +61,7 @@ function serviceRequest(input: string | URL, init: RequestInit): Promise<Respons
       {
         method: init.method ?? "GET",
         headers: nodeHeaders(init.headers),
-        signal: init.signal,
+        signal: init.signal ?? undefined,
       },
       (upstream) => {
         const chunks: Buffer[] = [];

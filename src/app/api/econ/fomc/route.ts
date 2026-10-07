@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
   return json({
     source: goldFomc ? "DB" : "SIM",
-    asOf: goldFomc ? (await store!.asOf()).slice(-1)[0]?.observation_date ?? null : null,
+    asOf: goldFomc?.asOf ?? null,
     sourceDetail: goldFomc ? "FOMC probabilities from Gold pipeline" : null,
     spotEffectiveRate: spotEffectiveRate ?? null,
     goldAnchored: spotEffectiveRate != null,

@@ -5,7 +5,7 @@
  */
 
 import { GoldStore } from "./goldStore";
-import type { CountryInflation, Trend } from "@/data/globalMacro";
+import { countryIso3, type CountryInflation, type Trend } from "@/data/globalMacro";
 
 interface GoldInflationRow {
   country: string;
@@ -34,8 +34,9 @@ export async function buildGlobalInflationFromGold(
   const rows = await store.latest<GoldInflationRow>("global_inflation");
   if (!rows.length) return null;
 
-  // Find the row matching this country's ISO3
-  const row = rows.find((r) => r.iso3 === base.iso3 ?? r.country === base.country);
+  // Find the row matching this country's ISO3, falling back to the country name
+  const iso3 = countryIso3(base.country);
+  const row = rows.find((r) => (iso3 != null && r.iso3 === iso3) || r.country === base.country);
   if (!row || row.cpi_yoy_pct == null) return null;
 
   const yoy = Number(row.cpi_yoy_pct.toFixed(1));

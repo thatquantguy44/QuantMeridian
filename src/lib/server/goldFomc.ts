@@ -51,7 +51,7 @@ function labelFor(meetingDate: string): string {
 export async function buildFomcFromGold(
   store: GoldStore,
   spotEffectiveRate?: number,
-): Promise<{ meetings: FomcMeeting[]; path: { label: string; rate: number }[] } | null> {
+): Promise<{ meetings: FomcMeeting[]; path: { label: string; rate: number }[]; asOf: string | null } | null> {
   const [probs, paths] = await Promise.all([
     store.latest<GoldFomcProbability>("fomc_probability"),
     store.latest<GoldFomcPath>("fomc_meeting_path"),
@@ -134,5 +134,12 @@ export async function buildFomcFromGold(
     path.push({ label: labelFor(p.meeting_date), rate: p.implied_rate });
   }
 
-  return { meetings, path };
+  // The FOMC tables carry no observation_date; the model vintage (ISO date of
+  // the model run) is the data's as-of.
+  let asOf: string | null = null;
+  for (const row of [...probs, ...paths]) {
+    if (row.model_vintage && (asOf == null || row.model_vintage > asOf)) asOf = row.model_vintage;
+  }
+
+  return { meetings, path, asOf };
 }

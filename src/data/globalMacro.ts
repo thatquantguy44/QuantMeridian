@@ -121,6 +121,11 @@ const CPI_ISO: Record<string, string> = {
   "Saudi Arabia": "SAU",
 };
 
+/** ISO3 code for a country name used in the CPI or policy-rate tables. */
+export function countryIso3(country: string): string | undefined {
+  return CPI_ISO[country] ?? RATE_ISO[country];
+}
+
 // country, flag, region, central bank, current rate, bias dir (-1 cut/+1 hike/0 hold), FRED id
 const RATE_DEFS: [string, string, Region, string, number, number, string | undefined][] = [
   ["United States", "🇺🇸", "AMER", "Federal Reserve", 4.13, -1, "IRSTCB01USM156N"],
