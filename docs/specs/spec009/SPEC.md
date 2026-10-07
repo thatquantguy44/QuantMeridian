@@ -72,6 +72,12 @@ QuantSmith `main` `0134d403d5a336ce20e7abd7fb7a0935d7917114` (assessed 2026-10-0
   narrative → typed `ChatResponse` (`answered`, `clarification_needed`, `masked`, `empty`,
   `stale`, `write_rejected`). Tasks T-001–T-018 and T-020 are done; T-019, T-021, and T-022 are
   open. LLM interpreters plug in through `register_interpreter` and "live outside the package".
+  *Update 2026-10-07 (QuantSmith `c234119`, the current pin):* T-021–T-023 are done, closing Q-1
+  and Q-2 — `0081` packs apply in the answer path, non-additive metrics are never summed across
+  groups, and levels of stock and rate metrics read the latest observation. `0080` has also
+  recorded REQ-019–REQ-023: provider-neutral, profile-selected LLM backends (being aligned to
+  this repository's `llm-profiles/1`), an `LLMInterpreter`/`LLMNarrator`, a named approver for
+  write-back, and opt-in knowledge candidates — none built yet (`0080` T-024–T-029).
 - **`data_visualization` agent.** The single-chart form rule (`kpi` / `line` / `bar` / `table` /
   `scatter`), finding-first titles, units, alt text, a minimal Vega-Lite spec, and a Markdown table
   (`src/quantsmith/nl_analytics/chart.py`).
@@ -415,7 +421,8 @@ the worker — implement the same profile schema and pass the same conformance f
     installed copy can also be pinned by version. Fingerprints remain the check.
   - **Q-5** (optional) — ship knowledge packs, agent contracts, and templates with the package
     (package data or a versioned assets bundle), so installed mode needs no assets path.
-  - **Q-6** (optional) — add a gateway profile document to `adapters/llm_runtime/`.
+  - **Q-6** (optional) — add a gateway profile document to `adapters/llm_runtime/`. *Planned
+    2026-10-07 as QuantSmith `0080` T-024, reading this repository's `llm-profiles/1` format.*
   - **Q-7** (optional) — a multi-series time-series form in `0080` (one plan, several metrics or
     one dimension over time, rendered as a multi-line chart). `0080`'s keyword interpreter
     currently returns a clarification when two metrics match, and `choose_chart` renders one
