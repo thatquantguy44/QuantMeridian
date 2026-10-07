@@ -463,6 +463,7 @@ export interface IndicatorRow {
   short: string;
   category: EconCategory;
   unit: string;
+  freq: FredSeries["freq"];
   value: number;
   prior: number;
   change: number;
@@ -484,7 +485,7 @@ export function getIndicators(): IndicatorRow[] {
     const yoyBase = hist[Math.max(0, hist.length - 13)].value;
     const yoy = s.unit.includes("y/y") ? value : ((value - yoyBase) / (Math.abs(yoyBase) || 1)) * 100;
     return {
-      id: s.id, label: s.label, short: s.short, category: s.category, unit: s.unit,
+      id: s.id, label: s.label, short: s.short, category: s.category, unit: s.unit, freq: s.freq,
       value, prior, change: Number((value - prior).toFixed(s.decimals)),
       yoy: Number(yoy.toFixed(1)),
       surprise: Number(rng.normal(0, s.vol * 0.8).toFixed(s.decimals)),

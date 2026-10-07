@@ -23,14 +23,40 @@ import {
   type MasterSeriesFile,
   type MasterValueObservation,
 } from "@/data/masterJson";
-import { fredEnabled, fredSeries } from "@/lib/server/fred";
-import { ensureProxy } from "@/lib/server/fetchProxy";
+import { ensureProxy, fetchWithProxyFallback } from "@/lib/server/fetchProxy";
 
 const ROOT = path.resolve(process.cwd(), "data/master");
 const FRED_DIR = path.join(ROOT, "fred");
 const MANIFEST_PATH = path.join(ROOT, "manifest.json");
 const REPORT_DIR = path.join(ROOT, "reports");
 const FULL_HISTORY_START = process.env.FRED_MASTER_START_DATE || "1900-01-01";
+
+// The shared FRED client was removed in the Gold DB migration; this offline
+// exporter keeps its own minimal observations fetch (raw `lin` levels only).
+const FRED_BASE = (process.env.FRED_BASE_URL || "https://api.stlouisfed.org/fred").trim().replace(/\/$/, "");
+
+function fredEnabled(): boolean {
+  return Boolean(process.env.FRED_API_KEY);
+}
+
+async function fredSeries(seriesId: string, start: string): Promise<{ date: string; value: number | null }[]> {
+  const qs = new URLSearchParams({
+    series_id: seriesId,
+    sort_order: "asc",
+    observation_start: start,
+    api_key: process.env.FRED_API_KEY ?? "",
+    file_type: "json",
+  });
+  const res = await fetchWithProxyFallback(`${FRED_BASE}/series/observations?${qs}`, {
+    headers: { accept: "application/json" },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => res.statusText);
+    throw new Error(`FRED ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const json = (await res.json()) as { observations: { date: string; value: string }[] };
+  return json.observations.map((o) => ({ date: o.date, value: o.value === "." ? null : Number(o.value) }));
+}
 
 function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true });
@@ -165,7 +191,7 @@ async function main(): Promise<void> {
     const start = overlapStart(existing?.lastObservationDate ?? null, frequencyOf(s));
 
     try {
-      const live = await fredSeries(s.id, { start, units: "lin", revalidateSec: 60 });
+      const live = await fredSeries(s.id, start);
       const clean = live.map(cleanObservation).filter((o): o is MasterValueObservation => o !== null);
       if (!clean.length && !existing) {
         failures.push({ id: s.id, reason: "No observations returned" });

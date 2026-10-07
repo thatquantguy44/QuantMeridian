@@ -137,7 +137,7 @@ function MetricTable({ rows, maxHeight = "260px", showSection = false }: { rows:
 }
 
 function marketColumns(): Column<CommandCenterMetric>[] {
-  const returnColumn = (horizon: CommandCenterReturnHorizon, header = horizon): Column<CommandCenterMetric> => ({
+  const returnColumn = (horizon: CommandCenterReturnHorizon, header: string = horizon): Column<CommandCenterMetric> => ({
     key: horizon,
     header,
     align: "right",

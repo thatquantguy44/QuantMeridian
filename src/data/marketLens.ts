@@ -462,9 +462,10 @@ async function resolveLevelSeries(input: LensSeriesInput, options: LensRunOption
   let values = obs.map((o) => o.value);
   if (SPREAD_BPS.has(id)) values = values.map((v) => v / 100); // bps -> percent
 
-  // CPI: the builders need an index level. FRED `lin` returns the index; the
-  // econ model returns YoY %, so synthesize a deterministic index in that case.
-  if (id === "CPIAUCSL" && dataSource !== "fred" && options.allowSimFallback) {
+  // CPI: the builders need an index level, but the econ model returns YoY %
+  // (the FRED client that returned the index was removed), so synthesize a
+  // deterministic index.
+  if (id === "CPIAUCSL" && options.allowSimFallback) {
     dates = businessDates(N, new Date());
     values = macroIndex(new Rng(`lens:${id}`), dates);
     dataSource = "synthetic";

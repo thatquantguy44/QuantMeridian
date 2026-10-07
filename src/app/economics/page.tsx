@@ -152,6 +152,7 @@ export default function MacroDashboard() {
         short: s.short,
         category: s.category,
         unit: s.unit,
+        freq: s.freq,
         value: s.level,
         prior: s.level,
         change: 0,

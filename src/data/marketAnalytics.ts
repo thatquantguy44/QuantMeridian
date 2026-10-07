@@ -21,6 +21,7 @@ export interface QuiltYear {
 
 export interface IndexDefinition {
   symbol: string;
+  proxy?: string;
   name: string;
   base: number;
   vol: number;

@@ -100,7 +100,7 @@ export default function IndexReturnAnalyticsPage() {
     () => matrixIsLive ? liveMatrix : matrixIsSnapshot ? snapshotMatrix : simEnabled ? getIndexReturnMatrix(symbol) : emptyIndexReturnMatrix(symbol),
     [liveMatrix, matrixIsLive, matrixIsSnapshot, simEnabled, snapshotMatrix, symbol],
   );
-  const matrixSource: MarketSource | "SIM" = matrixIsLive ? source : matrixIsSnapshot ? "SNAPSHOT" : simEnabled ? "SIM" : "LOADING";
+  const matrixSource: MarketSource | "SIM" | "SNAPSHOT" = matrixIsLive ? source : matrixIsSnapshot ? "SNAPSHOT" : simEnabled ? "SIM" : "LOADING";
   const matrixAsOf = matrixIsLive ? liveData?.asof : matrixIsSnapshot ? snapshotData.asof : undefined;
   const columns = [...matrix.years, matrix.ytdYear];
   const completedYears = matrix.summaries.filter((s) => !s.isYtd);
@@ -196,6 +196,6 @@ export default function IndexReturnAnalyticsPage() {
   );
 }
 
-function PipelineTag({ source, asOf }: { source: MarketSource | "SIM"; asOf?: string | null }) {
+function PipelineTag({ source, asOf }: { source: MarketSource | "SIM" | "SNAPSHOT"; asOf?: string | null }) {
   return <ProvenanceBadge source={source} asOf={asOf} />;
 }

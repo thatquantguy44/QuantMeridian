@@ -522,7 +522,7 @@ function finiteNumber(v: unknown): number | null {
 
 function goldEquityRowsToObservations(rows: GoldEquityRow[], basis: ReturnBasis, asof: string | null): MarketObservation[] {
   return rows
-    .map((r) => {
+    .map((r): MarketObservation | null => {
       const ticker = r.ticker ?? r.series_id;
       const date = String(r.observation_date ?? r.date ?? "");
       const close = finiteNumber(r.close ?? r.price);
