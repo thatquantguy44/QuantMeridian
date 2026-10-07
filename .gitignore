@@ -51,3 +51,6 @@ services/inventory_optimizer_api/tests/benchmarks/
 
 # test artifacts
 /test-results/
+
+# local engine wheels for Docker builds (see services/inventory_optimizer_api/README.md)
+services/inventory_optimizer_api/wheels/

@@ -1,7 +1,8 @@
 """Health-endpoint and engine-identity mismatch matrix (AC-019).
 
 engine_identity() (capabilities.py) compares the installed InventoryBallast package
-version/commit and solver backends against capability-manifest.json. It is the sole source of
+version, source fingerprint, commit (when known) and solver backends against
+capability-manifest.json. It is the sole source of
 the `/health` endpoint's ready/unready state, `/v1/capabilities`' `engine_compatible` flag, and
 `require_compatible_engine()`'s 503. Before this file, only the happy path (everything matches,
 in this dev environment) had any coverage -- every mismatch branch was untested.
@@ -26,7 +27,7 @@ from conftest import auth_headers
 from fastapi.testclient import TestClient
 from inventory_optimizer.domain.requests import OptimizationRequest
 
-from inventory_optimizer_api import capabilities
+from inventory_optimizer_api import capabilities, engine_source
 from inventory_optimizer_api.capabilities import (
     engine_identity,
     manifest,
@@ -49,15 +50,23 @@ class FakeMetadata:
     PackageNotFoundError = real_metadata.PackageNotFoundError
 
     def __init__(
-        self, *, overrides: dict[str, str] | None = None, missing: frozenset[str] = frozenset()
+        self,
+        *,
+        engine_version: str | None,
+        overrides: dict[str, str] | None = None,
+        missing: frozenset[str] = frozenset(),
     ) -> None:
-        self._overrides = overrides or {}
+        # The engine may be supplied by a checkout path rather than pip, so its version is
+        # passed in instead of read from real metadata.
+        self._overrides = {"inventory-optimizer": engine_version, **(overrides or {})}
         self._missing = missing
 
     def version(self, name: str) -> str:
         if name in self._missing:
             raise real_metadata.PackageNotFoundError(name)
-        return self._overrides.get(name, real_metadata.version(name))
+        if name in self._overrides:
+            return self._overrides[name]
+        return real_metadata.version(name)
 
     def distribution(self, name: str):  # noqa: ANN201 -- passthrough to the real stdlib type
         return real_metadata.distribution(name)
@@ -66,7 +75,11 @@ class FakeMetadata:
 @pytest.fixture
 def fake_metadata(monkeypatch: pytest.MonkeyPatch):
     def apply(**kwargs: object) -> FakeMetadata:
-        fake = FakeMetadata(**kwargs)  # type: ignore[arg-type]
+        # Fake metadata models a pip install, so a configured checkout path (which bypasses pip
+        # metadata) is dropped; the already-imported engine is still what gets fingerprinted.
+        engine_version = capabilities._engine_version()
+        monkeypatch.delenv(engine_source.ENGINE_PATH_ENV, raising=False)
+        fake = FakeMetadata(engine_version=engine_version, **kwargs)  # type: ignore[arg-type]
         monkeypatch.setattr(capabilities, "metadata", fake)
         return fake
 
@@ -91,7 +104,10 @@ def test_engine_identity_is_ready_in_this_dev_environment() -> None:
 
     assert identity["ready"] is True
     assert identity["package_version"] == expected["engine_package_version"]
-    assert identity["installed_commit"] == expected["engine_commit"]
+    # Index, wheel and plain local installs carry no commit; the fingerprint is the identity.
+    assert identity["installed_commit"] in (None, expected["engine_commit"])
+    assert identity["engine_fingerprint"] == expected["engine_fingerprint"]
+    assert identity["engine_mismatches"] == []
     assert identity["active_backend"] is not None
     assert identity["formulations"]
 
