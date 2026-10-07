@@ -1,0 +1,46 @@
+# Minimal project file for the spec009 agent worker. T-012 scaffolds the rest (runtime
+# dependencies, entry points). `quantsmith` is deliberately never listed as a dependency: the
+# worker loads the owner's local copy and verifies it against contracts/agent/quantsmith-pin.json.
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-worker"
+version = "0.1.0"
+description = "Local worker that runs QuantSmith agent workflows for QuantMeridian module panels."
+requires-python = ">=3.12"
+dependencies = [
+  "jsonschema==4.26.0",
+  "pydantic==2.11.7",
+]
+
+[project.optional-dependencies]
+dev = [
+  # The generator formats its output with black and isort; pinned so CI's drift check does not
+  # fail when either releases a formatting change.
+  "datamodel-code-generator==0.83.0",
+  "black==26.10.0",
+  "isort==8.0.1",
+  "pytest==8.4.1",
+  "ruff==0.12.9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_worker"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+  "needs_quantsmith: needs a local QuantSmith copy (QUANTSMITH_ROOT); not run in hosted CI",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Generated from the JSON Schemas; formatting follows the generator.
+extend-exclude = ["src/agent_worker/contracts_generated"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

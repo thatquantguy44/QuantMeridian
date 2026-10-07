@@ -1,0 +1,156 @@
+{
+  "synonyms": {
+    "DGS1MO": [
+      "1-month treasury",
+      "1 month treasury",
+      "1m treasury",
+      "one month treasury"
+    ],
+    "DGS3MO": [
+      "3-month treasury",
+      "3 month treasury",
+      "3m treasury",
+      "three month treasury"
+    ],
+    "DGS6MO": [
+      "6-month treasury",
+      "6 month treasury",
+      "6m treasury",
+      "six month treasury"
+    ],
+    "DGS1": [
+      "1-year treasury",
+      "1 year treasury",
+      "1y treasury",
+      "one year treasury"
+    ],
+    "DGS2": [
+      "2-year treasury",
+      "2 year treasury",
+      "2y treasury",
+      "two year treasury",
+      "2-year",
+      "2y"
+    ],
+    "DGS3": [
+      "3-year treasury",
+      "3 year treasury",
+      "3y treasury"
+    ],
+    "DGS5": [
+      "5-year treasury",
+      "5 year treasury",
+      "5y treasury",
+      "5-year",
+      "5y"
+    ],
+    "DGS7": [
+      "7-year treasury",
+      "7 year treasury",
+      "7y treasury"
+    ],
+    "DGS10": [
+      "10-year treasury",
+      "10 year treasury",
+      "10y treasury",
+      "ten year treasury",
+      "10-year",
+      "10y"
+    ],
+    "DGS20": [
+      "20-year treasury",
+      "20 year treasury",
+      "20y treasury"
+    ],
+    "DGS30": [
+      "30-year treasury",
+      "30 year treasury",
+      "30y treasury",
+      "long bond"
+    ],
+    "SOFR": [
+      "secured overnight financing rate",
+      "sofr rate"
+    ],
+    "IORB": [
+      "interest on reserve balances",
+      "interest on reserves"
+    ],
+    "OBFR": [
+      "overnight bank funding rate"
+    ],
+    "BGCR": [
+      "broad general collateral rate"
+    ],
+    "TGCRRATE": [
+      "tri-party general collateral rate",
+      "tgcr"
+    ],
+    "RRPONTSYD": [
+      "reverse repo",
+      "overnight reverse repo",
+      "on rrp",
+      "rrp"
+    ],
+    "T10Y2Y": [
+      "2s10s",
+      "2-10 spread",
+      "10y-2y spread",
+      "10s2s"
+    ],
+    "T10Y3M": [
+      "3m10y",
+      "10y-3m spread"
+    ],
+    "BAMLH0A0HYM2": [
+      "high yield spread",
+      "hy spread",
+      "high yield oas"
+    ],
+    "BAMLC0A0CM": [
+      "ig spread",
+      "investment grade spread",
+      "ig oas"
+    ],
+    "UNRATE": [
+      "unemployment",
+      "unemployment rate",
+      "jobless rate"
+    ],
+    "CPIAUCSL": [
+      "inflation",
+      "headline cpi",
+      "consumer price index"
+    ],
+    "CPILFESL": [
+      "core inflation"
+    ],
+    "PCEPILFE": [
+      "core pce inflation"
+    ],
+    "PAYEMS": [
+      "payrolls",
+      "nonfarm payrolls",
+      "nfp"
+    ],
+    "ICSA": [
+      "jobless claims",
+      "initial claims",
+      "initial jobless claims"
+    ],
+    "GDPC1": [
+      "gdp",
+      "real gdp growth"
+    ],
+    "WALCL": [
+      "fed balance sheet",
+      "balance sheet",
+      "fed assets"
+    ],
+    "MORTGAGE30US": [
+      "mortgage rate",
+      "30-year mortgage",
+      "30 year mortgage"
+    ]
+  }
+}

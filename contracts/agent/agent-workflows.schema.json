@@ -1,0 +1,344 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://quantmeridian.invalid/contracts/agent/agent-workflows.schema.json",
+  "title": "AgentWorkflowsConfig",
+  "description": "settings/agent_workflows.json: which module panels exist, which workflows each offers, and queue limits (agent-workflows/1).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "agent-workflows/1"
+    },
+    "limits": {
+      "$ref": "#/definitions/Limits"
+    },
+    "workflows": {
+      "type": "object",
+      "properties": {
+        "chart.build": {
+          "$ref": "#/definitions/Workflow"
+        },
+        "analysis.answer": {
+          "$ref": "#/definitions/Workflow"
+        },
+        "secfin.carry": {
+          "$ref": "#/definitions/Workflow"
+        },
+        "story.build": {
+          "$ref": "#/definitions/Workflow"
+        },
+        "brief.draft": {
+          "$ref": "#/definitions/Workflow"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "chart.build",
+        "analysis.answer",
+        "secfin.carry",
+        "story.build",
+        "brief.draft"
+      ]
+    },
+    "modules": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Z0-9]{1,7}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/Module"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "limits",
+    "workflows",
+    "modules"
+  ],
+  "definitions": {
+    "Limits": {
+      "type": "object",
+      "properties": {
+        "max_queued_per_requester": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "max_running_per_requester": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "queue_ttl_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "lease_seconds": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 600
+        },
+        "heartbeat_seconds": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 120
+        },
+        "max_context_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16384
+        },
+        "max_message_chars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "max_queued_per_requester",
+        "max_running_per_requester",
+        "queue_ttl_hours",
+        "max_attempts",
+        "lease_seconds",
+        "heartbeat_seconds",
+        "max_context_bytes",
+        "max_message_chars"
+      ]
+    },
+    "Workflow": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "llm": {
+          "type": "string",
+          "enum": [
+            "none",
+            "optional",
+            "required"
+          ]
+        },
+        "uses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "copilot",
+              "interpreter",
+              "narrator",
+              "drafter"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 900
+        },
+        "data_classes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "public_market_data",
+              "module_context",
+              "desk_simulated"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "requires_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "uniqueItems": true
+        },
+        "plan_capabilities": {
+          "type": "object",
+          "properties": {
+            "non_additive_or_multi_period": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "uniqueItems": true
+            },
+            "desk_metric": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "kinds": {
+          "type": "object",
+          "properties": {
+            "macro_backdrop": {
+              "type": "object",
+              "properties": {
+                "requires_capabilities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "requires_capabilities"
+              ]
+            },
+            "funding_conditions": {
+              "type": "object",
+              "properties": {
+                "requires_capabilities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "requires_capabilities"
+              ]
+            },
+            "desk_review": {
+              "type": "object",
+              "properties": {
+                "requires_capabilities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "requires_capabilities"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "llm",
+        "uses",
+        "timeout_seconds",
+        "data_classes",
+        "enabled",
+        "requires_capabilities"
+      ]
+    },
+    "Module": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "chart.build",
+              "analysis.answer",
+              "secfin.carry",
+              "story.build",
+              "brief.draft"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "default_profile": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9\\-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_override": {
+          "type": "boolean"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "uniqueItems": true
+        },
+        "desk_datasets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "uniqueItems": true
+        },
+        "context_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "series",
+              "range",
+              "transform",
+              "chartType",
+              "asOfDate",
+              "tenors",
+              "components",
+              "metric"
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "workflows",
+        "default_profile",
+        "profile_override",
+        "domains",
+        "context_fields"
+      ]
+    }
+  }
+}

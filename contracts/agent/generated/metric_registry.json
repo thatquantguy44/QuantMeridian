@@ -1,0 +1,6544 @@
+{
+  "schema_version": "metric-registry/1",
+  "metrics": [
+    {
+      "name": "ANFCI",
+      "label": "Adjusted NFCI",
+      "short": "ANFCI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "ANFCI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "adjusted nfci",
+        "anfci"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "AUSCPIALLQINMEI",
+      "label": "Australia CPI Index",
+      "short": "AU CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "AUSCPIALLQINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "quarter",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "au cpi",
+        "auscpiallqinmei",
+        "australia cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "AWHAETP",
+      "label": "Avg Weekly Hours",
+      "short": "Hours",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "AWHAETP",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "hours",
+      "display_unit": "hrs",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "avg weekly hours",
+        "awhaetp",
+        "hours"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLC0A0CM",
+      "label": "US IG Corp OAS",
+      "short": "IG OAS",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLC0A0CM",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlc0a0cm",
+        "ig oas",
+        "ig spread",
+        "investment grade spread",
+        "us ig corp oas"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLC0A0CMEY",
+      "label": "US IG Corp Yield",
+      "short": "IG Yield",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLC0A0CMEY",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlc0a0cmey",
+        "ig yield",
+        "us ig corp yield"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLC0A1CAAA",
+      "label": "AAA Corp OAS",
+      "short": "AAA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLC0A1CAAA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "aaa",
+        "aaa corp oas",
+        "bamlc0a1caaa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLC0A2CAA",
+      "label": "AA Corp OAS",
+      "short": "AA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLC0A2CAA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "aa",
+        "aa corp oas",
+        "bamlc0a2caa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLC0A3CA",
+      "label": "A Corp OAS",
+      "short": "A",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLC0A3CA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "a",
+        "a corp oas",
+        "bamlc0a3ca"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLC0A4CBBB",
+      "label": "BBB Corp OAS",
+      "short": "BBB",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLC0A4CBBB",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlc0a4cbbb",
+        "bbb",
+        "bbb corp oas"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLEMCBPIOAS",
+      "label": "EM Corp OAS",
+      "short": "EM Corp",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLEMCBPIOAS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlemcbpioas",
+        "em corp",
+        "em corp oas"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLH0A0HYM2",
+      "label": "HY Credit Spread (OAS)",
+      "short": "HY OAS",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLH0A0HYM2",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlh0a0hym2",
+        "high yield oas",
+        "high yield spread",
+        "hy credit spread (oas)",
+        "hy oas",
+        "hy spread"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLH0A0HYM2EY",
+      "label": "US HY Corp Yield",
+      "short": "HY Yield",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLH0A0HYM2EY",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlh0a0hym2ey",
+        "hy yield",
+        "us hy corp yield"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLH0A1HYBB",
+      "label": "BB HY OAS",
+      "short": "BB",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLH0A1HYBB",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlh0a1hybb",
+        "bb",
+        "bb hy oas"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLH0A2HYB",
+      "label": "B HY OAS",
+      "short": "B",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLH0A2HYB",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "b",
+        "b hy oas",
+        "bamlh0a2hyb"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BAMLH0A3HYC",
+      "label": "CCC & Lower OAS",
+      "short": "CCC",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BAMLH0A3HYC",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "bamlh0a3hyc",
+        "ccc",
+        "ccc & lower oas"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BGCR",
+      "label": "Broad General Collateral Rate",
+      "short": "BGCR",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BGCR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "bgcr",
+        "broad general collateral rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BOGMBASE",
+      "label": "Monetary Base",
+      "short": "Base",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BOGMBASE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "base",
+        "bogmbase",
+        "monetary base"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "BRACPIALLMINMEI",
+      "label": "Brazil CPI Index",
+      "short": "BR CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "BRACPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "br cpi",
+        "bracpiallminmei",
+        "brazil cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CANCPIALLMINMEI",
+      "label": "Canada CPI Index",
+      "short": "CA CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CANCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "ca cpi",
+        "canada cpi index",
+        "cancpiallminmei"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CCSA",
+      "label": "Continued Jobless Claims",
+      "short": "Cont. Claims",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CCSA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "persons",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "ccsa",
+        "cont. claims",
+        "continued jobless claims"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CES0500000003",
+      "label": "Avg Hourly Earnings level",
+      "short": "AHE",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CES0500000003",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$/hr",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "ahe",
+        "avg hourly earnings level",
+        "ces0500000003"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CFNAI",
+      "label": "Chicago Fed Nat'l Activity",
+      "short": "CFNAI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CFNAI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cfnai",
+        "chicago fed nat'l activity"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CHECPIALLMINMEI",
+      "label": "Switzerland CPI Index",
+      "short": "CH CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CHECPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "ch cpi",
+        "checpiallminmei",
+        "switzerland cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CHNCPIALLMINMEI",
+      "label": "China CPI Index",
+      "short": "CN CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CHNCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "china cpi index",
+        "chncpiallminmei",
+        "cn cpi"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CIVPART",
+      "label": "Labor Force Participation",
+      "short": "LFPR",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CIVPART",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "civpart",
+        "labor force participation",
+        "lfpr"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CP0000EZ19M086NEST",
+      "label": "Euro Area CPI Index",
+      "short": "EA CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CP0000EZ19M086NEST",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cp0000ez19m086nest",
+        "ea cpi",
+        "euro area cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPIAPPSL",
+      "label": "CPI: Apparel",
+      "short": "Apparel",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPIAPPSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "apparel",
+        "cpi: apparel",
+        "cpiappsl"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPIAUCSL",
+      "label": "CPI (headline) level",
+      "short": "CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPIAUCSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "consumer price index",
+        "cpi",
+        "cpi (headline) level",
+        "cpiaucsl",
+        "headline cpi",
+        "inflation"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPIENGSL",
+      "label": "CPI: Energy",
+      "short": "Energy",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPIENGSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: energy",
+        "cpiengsl",
+        "energy"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPILFESL",
+      "label": "Core CPI level",
+      "short": "Core CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPILFESL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "core cpi",
+        "core cpi level",
+        "core inflation",
+        "cpilfesl"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPIMEDSL",
+      "label": "CPI: Medical Care",
+      "short": "Medical",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPIMEDSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: medical care",
+        "cpimedsl",
+        "medical"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPIRECSL",
+      "label": "CPI: Recreation",
+      "short": "Recreation",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPIRECSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: recreation",
+        "cpirecsl",
+        "recreation"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPITRNSL",
+      "label": "CPI: Transportation Services",
+      "short": "Transport Svc",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPITRNSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: transportation services",
+        "cpitrnsl",
+        "transport svc"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CPIUFDSL",
+      "label": "CPI: Food",
+      "short": "Food",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CPIUFDSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: food",
+        "cpiufdsl",
+        "food"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CSUSHPINSA",
+      "label": "Case-Shiller Home Px level",
+      "short": "Home Px",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CSUSHPINSA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "case-shiller home px level",
+        "csushpinsa",
+        "home px"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SA0E",
+      "label": "CPI: Energy",
+      "short": "Energy",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SA0E",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cusr0000sa0e"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAA",
+      "label": "CPI: Apparel",
+      "short": "Apparel",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cusr0000saa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAC",
+      "label": "CPI: Commodities",
+      "short": "Commodities",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAC",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "commodities",
+        "cpi: commodities",
+        "cusr0000sac"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SACL1E",
+      "label": "CPI: Core Goods",
+      "short": "Core Goods",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SACL1E",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "core goods",
+        "cpi: core goods",
+        "cusr0000sacl1e"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAE",
+      "label": "CPI: Education & Communication",
+      "short": "Edu/Comm",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: education & communication",
+        "cusr0000sae",
+        "edu/comm"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAE1",
+      "label": "CPI: Education & Communication",
+      "short": "Edu/Comm",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAE1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cusr0000sae1"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAF",
+      "label": "CPI: Food & Beverages",
+      "short": "Food/Bvg",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAF",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: food & beverages",
+        "cusr0000saf",
+        "food/bvg"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAF1",
+      "label": "CPI: Food",
+      "short": "Food",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAF1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cusr0000saf1"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAF11",
+      "label": "CPI: Food at Home",
+      "short": "Food@Home",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAF11",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: food at home",
+        "cusr0000saf11",
+        "food@home"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAG",
+      "label": "CPI: Other Goods & Services",
+      "short": "Other G&S",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAG",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: other goods & services",
+        "cusr0000sag",
+        "other g&s"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAH",
+      "label": "CPI: Housing",
+      "short": "Housing",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAH",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: housing",
+        "cusr0000sah",
+        "housing"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAH1",
+      "label": "CPI: Shelter",
+      "short": "Shelter",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAH1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: shelter",
+        "cusr0000sah1",
+        "shelter"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAH2",
+      "label": "CPI: Fuels & Utilities",
+      "short": "Fuel/Util",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAH2",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: fuels & utilities",
+        "cusr0000sah2",
+        "fuel/util"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAM",
+      "label": "CPI: Medical Care",
+      "short": "Medical",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAM",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cusr0000sam"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAM1",
+      "label": "CPI: Medical Care Commodities",
+      "short": "Med Goods",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAM1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: medical care commodities",
+        "cusr0000sam1",
+        "med goods"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAM2",
+      "label": "CPI: Medical Care Services",
+      "short": "Med Svcs",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAM2",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: medical care services",
+        "cusr0000sam2",
+        "med svcs"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAR",
+      "label": "CPI: Recreation",
+      "short": "Recreation",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cusr0000sar"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAS",
+      "label": "CPI: Services",
+      "short": "Services",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: services",
+        "cusr0000sas",
+        "services"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAS367",
+      "label": "CPI: Airline Fares",
+      "short": "Airfares",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAS367",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "airfares",
+        "cpi: airline fares",
+        "cusr0000sas367"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SASLE",
+      "label": "CPI: Core Services ex Energy",
+      "short": "Core Svcs",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SASLE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "core svcs",
+        "cpi: core services ex energy",
+        "cusr0000sasle"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SAT",
+      "label": "CPI: Transportation",
+      "short": "Transport",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SAT",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: transportation",
+        "cusr0000sat",
+        "transport"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SEFV",
+      "label": "CPI: Food Away from Home",
+      "short": "Food Out",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SEFV",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: food away from home",
+        "cusr0000sefv",
+        "food out"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SEHA",
+      "label": "CPI: Rent of Primary Residence",
+      "short": "Rent",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SEHA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: rent of primary residence",
+        "cusr0000seha",
+        "rent"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SEHC",
+      "label": "CPI: Owners' Equiv. Rent",
+      "short": "OER",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SEHC",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: owners' equiv. rent",
+        "cusr0000sehc",
+        "oer"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SEHF01",
+      "label": "CPI: Electricity",
+      "short": "Electric",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SEHF01",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: electricity",
+        "cusr0000sehf01",
+        "electric"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SEHF02",
+      "label": "CPI: Utility Gas Service",
+      "short": "Utility Gas",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SEHF02",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: utility gas service",
+        "cusr0000sehf02",
+        "utility gas"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SEMD",
+      "label": "CPI: Hospital Services",
+      "short": "Hospital",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SEMD",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: hospital services",
+        "cusr0000semd",
+        "hospital"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SETA01",
+      "label": "CPI: New Vehicles",
+      "short": "New Cars",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SETA01",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: new vehicles",
+        "cusr0000seta01",
+        "new cars"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SETA02",
+      "label": "CPI: Used Cars & Trucks",
+      "short": "Used Cars",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SETA02",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: used cars & trucks",
+        "cusr0000seta02",
+        "used cars"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUSR0000SETB01",
+      "label": "CPI: Gasoline",
+      "short": "Gas",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUSR0000SETB01",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi: gasoline",
+        "cusr0000setb01",
+        "gas"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SA0E",
+      "label": "CPI NSA: Energy",
+      "short": "Energy NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SA0E",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: energy",
+        "cuur0000sa0e",
+        "energy nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAA",
+      "label": "CPI NSA: Apparel",
+      "short": "Apparel NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "apparel nsa",
+        "cpi nsa: apparel",
+        "cuur0000saa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAC",
+      "label": "CPI NSA: Commodities",
+      "short": "Commodities NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAC",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "commodities nsa",
+        "cpi nsa: commodities",
+        "cuur0000sac"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SACL1E",
+      "label": "CPI NSA: Core Goods",
+      "short": "Core Goods NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SACL1E",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "core goods nsa",
+        "cpi nsa: core goods",
+        "cuur0000sacl1e"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAE",
+      "label": "CPI NSA: Education & Communication",
+      "short": "Edu/Comm NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: education & communication",
+        "cuur0000sae",
+        "edu/comm nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAF",
+      "label": "CPI NSA: Food & Beverages",
+      "short": "Food/Bvg NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAF",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: food & beverages",
+        "cuur0000saf",
+        "food/bvg nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAF1",
+      "label": "CPI NSA: Food",
+      "short": "Food NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAF1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: food",
+        "cuur0000saf1",
+        "food nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAF11",
+      "label": "CPI NSA: Food at Home",
+      "short": "Food@Home NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAF11",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: food at home",
+        "cuur0000saf11",
+        "food@home nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAF116",
+      "label": "CPI NSA: Alcoholic Beverages",
+      "short": "Alcohol NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAF116",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "alcohol nsa",
+        "cpi nsa: alcoholic beverages",
+        "cuur0000saf116"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAG",
+      "label": "CPI NSA: Other Goods & Services",
+      "short": "Other G&S NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAG",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: other goods & services",
+        "cuur0000sag",
+        "other g&s nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAH",
+      "label": "CPI NSA: Housing",
+      "short": "Housing NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAH",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: housing",
+        "cuur0000sah",
+        "housing nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAH1",
+      "label": "CPI NSA: Shelter",
+      "short": "Shelter NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAH1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: shelter",
+        "cuur0000sah1",
+        "shelter nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAH2",
+      "label": "CPI NSA: Fuels & Utilities",
+      "short": "Fuel/Util NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAH2",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: fuels & utilities",
+        "cuur0000sah2",
+        "fuel/util nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAM",
+      "label": "CPI NSA: Medical Care",
+      "short": "Medical NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAM",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: medical care",
+        "cuur0000sam",
+        "medical nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAM1",
+      "label": "CPI NSA: Medical Care Commodities",
+      "short": "Med Goods NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAM1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: medical care commodities",
+        "cuur0000sam1",
+        "med goods nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAM2",
+      "label": "CPI NSA: Medical Care Services",
+      "short": "Med Svcs NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAM2",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: medical care services",
+        "cuur0000sam2",
+        "med svcs nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAR",
+      "label": "CPI NSA: Recreation",
+      "short": "Recreation NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: recreation",
+        "cuur0000sar",
+        "recreation nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAS",
+      "label": "CPI NSA: Services",
+      "short": "Services NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: services",
+        "cuur0000sas",
+        "services nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SASLE",
+      "label": "CPI NSA: Core Services ex Energy",
+      "short": "Core Svcs NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SASLE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "core svcs nsa",
+        "cpi nsa: core services ex energy",
+        "cuur0000sasle"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SAT",
+      "label": "CPI NSA: Transportation",
+      "short": "Transport NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SAT",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: transportation",
+        "cuur0000sat",
+        "transport nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SEFV",
+      "label": "CPI NSA: Food Away from Home",
+      "short": "Food Out NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SEFV",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: food away from home",
+        "cuur0000sefv",
+        "food out nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SEHA",
+      "label": "CPI NSA: Rent of Primary Residence",
+      "short": "Rent NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SEHA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: rent of primary residence",
+        "cuur0000seha",
+        "rent nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SEHC",
+      "label": "CPI NSA: Owners' Equiv. Rent",
+      "short": "OER NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SEHC",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: owners' equiv. rent",
+        "cuur0000sehc",
+        "oer nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SEHF01",
+      "label": "CPI NSA: Electricity",
+      "short": "Electric NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SEHF01",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: electricity",
+        "cuur0000sehf01",
+        "electric nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SEHF02",
+      "label": "CPI NSA: Utility Gas Service",
+      "short": "Utility Gas NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SEHF02",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: utility gas service",
+        "cuur0000sehf02",
+        "utility gas nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SETA01",
+      "label": "CPI NSA: New Vehicles",
+      "short": "New Cars NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SETA01",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: new vehicles",
+        "cuur0000seta01",
+        "new cars nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SETA02",
+      "label": "CPI NSA: Used Cars & Trucks",
+      "short": "Used Cars NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SETA02",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: used cars & trucks",
+        "cuur0000seta02",
+        "used cars nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "CUUR0000SETB01",
+      "label": "CPI NSA: Gasoline",
+      "short": "Gas NSA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "CUUR0000SETB01",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cpi nsa: gasoline",
+        "cuur0000setb01",
+        "gas nsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DCOILWTICO",
+      "label": "WTI Crude Oil",
+      "short": "WTI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DCOILWTICO",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$/bbl",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dcoilwtico",
+        "wti",
+        "wti crude oil"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DEUCPIALLMINMEI",
+      "label": "Germany CPI Index",
+      "short": "DE CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DEUCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "de cpi",
+        "deucpiallminmei",
+        "germany cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DEXCAUS",
+      "label": "CAD / USD",
+      "short": "USD/CAD",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DEXCAUS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "C$",
+      "unit_review": "catalog",
+      "decimals": 4,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "fx_markets"
+      ],
+      "synonyms": [
+        "cad / usd",
+        "dexcaus",
+        "usd/cad"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DEXCHUS",
+      "label": "CNY / USD",
+      "short": "USD/CNY",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DEXCHUS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "¥",
+      "unit_review": "catalog",
+      "decimals": 4,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "fx_markets"
+      ],
+      "synonyms": [
+        "cny / usd",
+        "dexchus",
+        "usd/cny"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DEXJPUS",
+      "label": "JPY / USD",
+      "short": "USD/JPY",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DEXJPUS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "¥",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "fx_markets"
+      ],
+      "synonyms": [
+        "dexjpus",
+        "jpy / usd",
+        "usd/jpy"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DEXMXUS",
+      "label": "MXN / USD",
+      "short": "USD/MXN",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DEXMXUS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "MX$",
+      "unit_review": "catalog",
+      "decimals": 3,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "fx_markets"
+      ],
+      "synonyms": [
+        "dexmxus",
+        "mxn / usd",
+        "usd/mxn"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DEXUSEU",
+      "label": "USD / EUR",
+      "short": "EUR/USD",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DEXUSEU",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$",
+      "unit_review": "catalog",
+      "decimals": 4,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "fx_markets"
+      ],
+      "synonyms": [
+        "dexuseu",
+        "eur/usd",
+        "usd / eur"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DEXUSUK",
+      "label": "USD / GBP",
+      "short": "GBP/USD",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DEXUSUK",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$",
+      "unit_review": "catalog",
+      "decimals": 4,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "fx_markets"
+      ],
+      "synonyms": [
+        "dexusuk",
+        "gbp/usd",
+        "usd / gbp"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DFEDTARL",
+      "label": "Fed Funds Target Range — Lower",
+      "short": "Target Lo",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DFEDTARL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "dfedtarl",
+        "fed funds target range — lower",
+        "target lo"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DFEDTARU",
+      "label": "Fed Funds Target Range — Upper",
+      "short": "Target Up",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DFEDTARU",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "dfedtaru",
+        "fed funds target range — upper",
+        "target up"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DFII10",
+      "label": "10Y Real Yield (TIPS)",
+      "short": "10Y Real",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DFII10",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "10y real",
+        "10y real yield (tips)",
+        "dfii10"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DFXARG3M086SBEA",
+      "label": "PCE: Food level",
+      "short": "PCE Food",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DFXARG3M086SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dfxarg3m086sbea",
+        "pce food",
+        "pce: food level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGDSRG3M086SBEA",
+      "label": "PCE: Goods level",
+      "short": "PCE Goods",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGDSRG3M086SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dgdsrg3m086sbea",
+        "pce goods",
+        "pce: goods level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGORDER",
+      "label": "Durable Goods Orders level",
+      "short": "Dur Goods",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGORDER",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$M",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dgorder",
+        "dur goods",
+        "durable goods orders level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS1",
+      "label": "1-Year Treasury",
+      "short": "UST 1Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "1 year treasury",
+        "1-year treasury",
+        "1y treasury",
+        "dgs1",
+        "one year treasury",
+        "ust 1y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS10",
+      "label": "10-Year Treasury",
+      "short": "UST 10Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS10",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "10 year treasury",
+        "10-year",
+        "10-year treasury",
+        "10y",
+        "10y treasury",
+        "dgs10",
+        "ten year treasury",
+        "ust 10y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS1MO",
+      "label": "1-Month Treasury",
+      "short": "UST 1M",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS1MO",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "1 month treasury",
+        "1-month treasury",
+        "1m treasury",
+        "dgs1mo",
+        "one month treasury",
+        "ust 1m"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS2",
+      "label": "2-Year Treasury",
+      "short": "UST 2Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS2",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "2 year treasury",
+        "2-year",
+        "2-year treasury",
+        "2y",
+        "2y treasury",
+        "dgs2",
+        "two year treasury",
+        "ust 2y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS20",
+      "label": "20-Year Treasury",
+      "short": "UST 20Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS20",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "20 year treasury",
+        "20-year treasury",
+        "20y treasury",
+        "dgs20",
+        "ust 20y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS3",
+      "label": "3-Year Treasury",
+      "short": "UST 3Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS3",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "3 year treasury",
+        "3-year treasury",
+        "3y treasury",
+        "dgs3",
+        "ust 3y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS30",
+      "label": "30-Year Treasury",
+      "short": "UST 30Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS30",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "30 year treasury",
+        "30-year treasury",
+        "30y treasury",
+        "dgs30",
+        "long bond",
+        "ust 30y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS3MO",
+      "label": "3-Month Treasury",
+      "short": "UST 3M",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS3MO",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "3 month treasury",
+        "3-month treasury",
+        "3m treasury",
+        "dgs3mo",
+        "three month treasury",
+        "ust 3m"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS5",
+      "label": "5-Year Treasury",
+      "short": "UST 5Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS5",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "5 year treasury",
+        "5-year",
+        "5-year treasury",
+        "5y",
+        "5y treasury",
+        "dgs5",
+        "ust 5y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS6MO",
+      "label": "6-Month Treasury",
+      "short": "UST 6M",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS6MO",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "6 month treasury",
+        "6-month treasury",
+        "6m treasury",
+        "dgs6mo",
+        "six month treasury",
+        "ust 6m"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DGS7",
+      "label": "7-Year Treasury",
+      "short": "UST 7Y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DGS7",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "7 year treasury",
+        "7-year treasury",
+        "7y treasury",
+        "dgs7",
+        "ust 7y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DHLCRG3M086SBEA",
+      "label": "PCE: Health Care level",
+      "short": "PCE Health",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DHLCRG3M086SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dhlcrg3m086sbea",
+        "pce health",
+        "pce: health care level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DHUTRC1M027SBEA",
+      "label": "PCE: Housing & Utilities level",
+      "short": "PCE Housing",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DHUTRC1M027SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dhutrc1m027sbea",
+        "pce housing",
+        "pce: housing & utilities level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DJIA",
+      "label": "Dow Jones Industrial Average",
+      "short": "DJIA",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DJIA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 0,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "djia",
+        "dow jones industrial average"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DNRGRG3M086SBEA",
+      "label": "PCE: Energy Goods & Svc level",
+      "short": "PCE Energy",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DNRGRG3M086SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dnrgrg3m086sbea",
+        "pce energy",
+        "pce: energy goods & svc level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DPRIME",
+      "label": "Bank Prime Loan Rate",
+      "short": "Prime",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DPRIME",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "bank prime loan rate",
+        "dprime",
+        "prime"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DRCARC1M027SBEA",
+      "label": "PCE: Recreation level",
+      "short": "PCE Rec",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DRCARC1M027SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "drcarc1m027sbea",
+        "pce rec",
+        "pce: recreation level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DRTSCILM",
+      "label": "Banks Tightening C&I (SLOOS)",
+      "short": "SLOOS C&I",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DRTSCILM",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "net %",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "quarter",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "credit_markets"
+      ],
+      "synonyms": [
+        "banks tightening c&i (sloos)",
+        "drtscilm",
+        "sloos c&i"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DSERRG3M086SBEA",
+      "label": "PCE: Services level",
+      "short": "PCE Svcs",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DSERRG3M086SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dserrg3m086sbea",
+        "pce svcs",
+        "pce: services level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DTB3",
+      "label": "3-Month T-Bill (secondary)",
+      "short": "Bill 3M",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DTB3",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "3-month t-bill (secondary)",
+        "bill 3m",
+        "dtb3"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DTB4WK",
+      "label": "4-Week T-Bill (secondary)",
+      "short": "Bill 1M",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DTB4WK",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "4-week t-bill (secondary)",
+        "bill 1m",
+        "dtb4wk"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DTB6",
+      "label": "6-Month T-Bill (secondary)",
+      "short": "Bill 6M",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DTB6",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "6-month t-bill (secondary)",
+        "bill 6m",
+        "dtb6"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DTRSRC1M027SBEA",
+      "label": "PCE: Transportation level",
+      "short": "PCE Transport",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DTRSRC1M027SBEA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "dtrsrc1m027sbea",
+        "pce transport",
+        "pce: transportation level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "DTWEXBGS",
+      "label": "Trade-Weighted USD (Broad)",
+      "short": "USD Broad",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "DTWEXBGS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "fx_markets"
+      ],
+      "synonyms": [
+        "dtwexbgs",
+        "trade-weighted usd (broad)",
+        "usd broad"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "ECBDFR",
+      "label": "ECB Deposit Facility Rate",
+      "short": "ECB DFR",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "ECBDFR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "ecb deposit facility rate",
+        "ecb dfr",
+        "ecbdfr"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "EFFR",
+      "label": "Effective Fed Funds Rate (daily)",
+      "short": "EFFR (d)",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "EFFR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "effective fed funds rate (daily)",
+        "effr",
+        "effr (d)"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "EMRATIO",
+      "label": "Employment-Population Ratio",
+      "short": "E/P",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "EMRATIO",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "e/p",
+        "employment-population ratio",
+        "emratio"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "ESPCPIALLMINMEI",
+      "label": "Spain CPI Index",
+      "short": "ES CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "ESPCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "es cpi",
+        "espcpiallminmei",
+        "spain cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "EXHOSLUSM495S",
+      "label": "Existing Home Sales",
+      "short": "Home Sales",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "EXHOSLUSM495S",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "homes",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "exhoslusm495s",
+        "existing home sales",
+        "home sales"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "FEDFUNDS",
+      "label": "Effective Fed Funds Rate",
+      "short": "EFFR",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "FEDFUNDS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "effective fed funds rate",
+        "fedfunds"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "FRACPIALLMINMEI",
+      "label": "France CPI Index",
+      "short": "FR CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "FRACPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "fr cpi",
+        "fracpiallminmei",
+        "france cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "GBRCPIALLMINMEI",
+      "label": "United Kingdom CPI Index",
+      "short": "UK CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "GBRCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "gbrcpiallminmei",
+        "uk cpi",
+        "united kingdom cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "GDPC1",
+      "label": "Real GDP (SAAR) level",
+      "short": "Real GDP",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "GDPC1",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B (chained 2017, SAAR)",
+      "chart_unit": "pct",
+      "chart_display_unit": "% q/q ann.",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "quarter",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "gdp",
+        "gdpc1",
+        "real gdp",
+        "real gdp (saar) level",
+        "real gdp growth"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "GDPNOW",
+      "label": "GDPNow Nowcast",
+      "short": "GDPNow",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "GDPNOW",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "% q/q ann.",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "quarter",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "gdpnow",
+        "gdpnow nowcast"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "GOLDPMGBD228NLBM",
+      "label": "Gold Fixing Price (London PM)",
+      "short": "Gold",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "GOLDPMGBD228NLBM",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$/oz",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "gold",
+        "gold fixing price (london pm)",
+        "goldpmgbd228nlbm"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "HOUST",
+      "label": "Housing Starts",
+      "short": "Starts",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "HOUST",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "k SAAR",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "housing starts",
+        "houst",
+        "starts"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "ICSA",
+      "label": "Initial Jobless Claims",
+      "short": "Claims",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "ICSA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "persons",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "claims",
+        "icsa",
+        "initial claims",
+        "initial jobless claims",
+        "jobless claims"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IDNCPIALLMINMEI",
+      "label": "Indonesia CPI Index",
+      "short": "ID CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IDNCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "id cpi",
+        "idncpiallminmei",
+        "indonesia cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "INDCPIALLMINMEI",
+      "label": "India CPI Index",
+      "short": "IN CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "INDCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "in cpi",
+        "indcpiallminmei",
+        "india cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "INDPRO",
+      "label": "Industrial Production level",
+      "short": "Ind. Prod.",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "INDPRO",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "ind. prod.",
+        "indpro",
+        "industrial production level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IORB",
+      "label": "Interest on Reserve Balances",
+      "short": "IORB",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IORB",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "interest on reserve balances",
+        "interest on reserves",
+        "iorb"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01AUM156N",
+      "label": "RBA Cash Rate",
+      "short": "RBA Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01AUM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "irstcb01aum156n",
+        "rba cash rate",
+        "rba rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01BRM156N",
+      "label": "Banco Central do Brasil Rate",
+      "short": "BCB Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01BRM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "banco central do brasil rate",
+        "bcb rate",
+        "irstcb01brm156n"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01CAM156N",
+      "label": "Bank of Canada Rate",
+      "short": "BoC Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01CAM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "bank of canada rate",
+        "boc rate",
+        "irstcb01cam156n"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01CHM156N",
+      "label": "Swiss National Bank Rate",
+      "short": "SNB Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01CHM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "irstcb01chm156n",
+        "snb rate",
+        "swiss national bank rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01GBM156N",
+      "label": "Bank of England Rate",
+      "short": "BoE Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01GBM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "bank of england rate",
+        "boe rate",
+        "irstcb01gbm156n"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01JPM156N",
+      "label": "Bank of Japan Rate",
+      "short": "BoJ Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01JPM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "bank of japan rate",
+        "boj rate",
+        "irstcb01jpm156n"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01KRM156N",
+      "label": "Bank of Korea Rate",
+      "short": "BoK Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01KRM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "bank of korea rate",
+        "bok rate",
+        "irstcb01krm156n"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01MXM156N",
+      "label": "Banco de Mexico Rate",
+      "short": "Banxico Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01MXM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "banco de mexico rate",
+        "banxico rate",
+        "irstcb01mxm156n"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01NOM156N",
+      "label": "Norges Bank Rate",
+      "short": "Norges Bank",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01NOM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "irstcb01nom156n",
+        "norges bank",
+        "norges bank rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01NZM156N",
+      "label": "RBNZ Rate",
+      "short": "RBNZ Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01NZM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "irstcb01nzm156n",
+        "rbnz rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01SEM156N",
+      "label": "Riksbank Rate",
+      "short": "Riksbank",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01SEM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "irstcb01sem156n",
+        "riksbank",
+        "riksbank rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01TRM156N",
+      "label": "CBRT Rate (Turkey)",
+      "short": "CBRT Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01TRM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "cbrt rate",
+        "cbrt rate (turkey)",
+        "irstcb01trm156n"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "IRSTCB01USM156N",
+      "label": "US Federal Reserve Rate",
+      "short": "Fed Rate",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "IRSTCB01USM156N",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "fed rate",
+        "irstcb01usm156n",
+        "us federal reserve rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "ITACPIALLMINMEI",
+      "label": "Italy CPI Index",
+      "short": "IT CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "ITACPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "it cpi",
+        "itacpiallminmei",
+        "italy cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "JPNCPIALLMINMEI",
+      "label": "Japan CPI Index",
+      "short": "JP CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "JPNCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "japan cpi index",
+        "jp cpi",
+        "jpncpiallminmei"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "JTSHIR",
+      "label": "Hires Rate (JOLTS)",
+      "short": "Hires",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "JTSHIR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "hires",
+        "hires rate (jolts)",
+        "jtshir"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "JTSJOL",
+      "label": "Job Openings (JOLTS)",
+      "short": "Openings",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "JTSJOL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "k",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "job openings (jolts)",
+        "jtsjol",
+        "openings"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "JTSQUR",
+      "label": "Quits Rate (JOLTS)",
+      "short": "Quits",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "JTSQUR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "jtsqur",
+        "quits",
+        "quits rate (jolts)"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "KORCPIALLMINMEI",
+      "label": "South Korea CPI Index",
+      "short": "KR CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "KORCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "korcpiallminmei",
+        "kr cpi",
+        "south korea cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "M1SL",
+      "label": "M1 Money Supply level",
+      "short": "M1",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "M1SL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "m1",
+        "m1 money supply level",
+        "m1sl"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "M2SL",
+      "label": "M2 Money Supply level",
+      "short": "M2",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "M2SL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "m2",
+        "m2 money supply level",
+        "m2sl"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "MEDCPIM159SFRB",
+      "label": "Median CPI (ann.)",
+      "short": "Median CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "MEDCPIM159SFRB",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "% ann.",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "medcpim159sfrb",
+        "median cpi",
+        "median cpi (ann.)"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "MEXCPIALLMINMEI",
+      "label": "Mexico CPI Index",
+      "short": "MX CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "MEXCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "mexcpiallminmei",
+        "mexico cpi index",
+        "mx cpi"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "MORTGAGE15US",
+      "label": "15Y Mortgage Rate",
+      "short": "15Y Mtg",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "MORTGAGE15US",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "15y mortgage rate",
+        "15y mtg",
+        "mortgage15us"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "MORTGAGE30US",
+      "label": "30Y Mortgage Rate",
+      "short": "30Y Mtg",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "MORTGAGE30US",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "30 year mortgage",
+        "30-year mortgage",
+        "30y mortgage rate",
+        "30y mtg",
+        "mortgage rate",
+        "mortgage30us"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "MSACSR",
+      "label": "Monthly Supply of New Homes",
+      "short": "Mos Supply",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "MSACSR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "months",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "monthly supply of new homes",
+        "mos supply",
+        "msacsr"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "NASDAQCOM",
+      "label": "Nasdaq Composite",
+      "short": "Nasdaq",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "NASDAQCOM",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 0,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "nasdaq",
+        "nasdaq composite",
+        "nasdaqcom"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "NEWORDER",
+      "label": "Core Capital Goods Orders level",
+      "short": "Cap Orders",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "NEWORDER",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$M",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cap orders",
+        "core capital goods orders level",
+        "neworder"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "NFCI",
+      "label": "Chicago Fed Fin. Conditions",
+      "short": "NFCI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "NFCI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "chicago fed fin. conditions",
+        "nfci"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "OBFR",
+      "label": "Overnight Bank Funding Rate",
+      "short": "OBFR",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "OBFR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "obfr",
+        "overnight bank funding rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PAYEMS",
+      "label": "Nonfarm Payrolls level",
+      "short": "NFP",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PAYEMS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "k persons",
+      "chart_unit": "count",
+      "chart_display_unit": "k m/m",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "nfp",
+        "nonfarm payrolls",
+        "nonfarm payrolls level",
+        "payems",
+        "payrolls"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PCE",
+      "label": "Personal Consumption level",
+      "short": "PCE Spend",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PCE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "pce",
+        "pce spend",
+        "personal consumption level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PCEPI",
+      "label": "PCE Price Index level",
+      "short": "PCE",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PCEPI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "pce price index level",
+        "pcepi"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PCEPILFE",
+      "label": "Core PCE level",
+      "short": "Core PCE",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PCEPILFE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 3,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "core pce",
+        "core pce inflation",
+        "core pce level",
+        "pcepilfe"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PCETRIM12M159SFRB",
+      "label": "Trimmed-Mean PCE (12m)",
+      "short": "Trim PCE",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PCETRIM12M159SFRB",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "% y/y",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "pcetrim12m159sfrb",
+        "trim pce",
+        "trimmed-mean pce (12m)"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PERMIT",
+      "label": "Building Permits",
+      "short": "Permits",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PERMIT",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "k SAAR",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "building permits",
+        "permit",
+        "permits"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PPIACO",
+      "label": "PPI All Commodities level",
+      "short": "PPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PPIACO",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "ppi",
+        "ppi all commodities level",
+        "ppiaco"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "PSAVERT",
+      "label": "Personal Saving Rate",
+      "short": "Saving",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "PSAVERT",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "personal saving rate",
+        "psavert",
+        "saving"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "REVOLSL",
+      "label": "Revolving Consumer Credit level",
+      "short": "Rev Credit",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "REVOLSL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "chart_unit": "pct",
+      "chart_display_unit": "% y/y",
+      "unit_review": "reviewed",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "rev credit",
+        "revolsl",
+        "revolving consumer credit level"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "RRPONTSYD",
+      "label": "Overnight Reverse Repo (take-up)",
+      "short": "RRP",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "RRPONTSYD",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "unit_review": "catalog",
+      "decimals": 0,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "on rrp",
+        "overnight reverse repo",
+        "overnight reverse repo (take-up)",
+        "reverse repo",
+        "rrp",
+        "rrpontsyd"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "RSAFS",
+      "label": "Retail Sales level",
+      "short": "Retail",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "RSAFS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$M",
+      "chart_unit": "pct",
+      "chart_display_unit": "% m/m",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "retail",
+        "retail sales level",
+        "rsafs"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "SAUCPIALLMINMEI",
+      "label": "Saudi Arabia CPI Index",
+      "short": "SA CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "SAUCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "sa cpi",
+        "saucpiallminmei",
+        "saudi arabia cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "SOFR",
+      "label": "SOFR",
+      "short": "SOFR",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "SOFR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "secured overnight financing rate",
+        "sofr",
+        "sofr rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "SOFR30DAYAVG",
+      "label": "30-Day Average SOFR",
+      "short": "SOFR 30d",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "SOFR30DAYAVG",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "30-day average sofr",
+        "sofr 30d",
+        "sofr30dayavg"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "SP500",
+      "label": "S&P 500",
+      "short": "S&P 500",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "SP500",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 0,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "s&p 500",
+        "sp500"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "STICKCPIM159SFRBATL",
+      "label": "Sticky CPI (YoY)",
+      "short": "Sticky CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "STICKCPIM159SFRBATL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "% y/y",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "stickcpim159sfrbatl",
+        "sticky cpi",
+        "sticky cpi (yoy)"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "STLFSI4",
+      "label": "St. Louis Fed Financial Stress",
+      "short": "STLFSI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "STLFSI4",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "st. louis fed financial stress",
+        "stlfsi",
+        "stlfsi4"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "T10Y2Y",
+      "label": "10Y-2Y Spread",
+      "short": "2s10s",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "T10Y2Y",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "10s2s",
+        "10y-2y spread",
+        "2-10 spread",
+        "2s10s",
+        "t10y2y"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "T10Y3M",
+      "label": "10Y-3M Spread",
+      "short": "3m10y",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "T10Y3M",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pp",
+      "display_unit": "pp",
+      "unit_review": "reviewed",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "10y-3m spread",
+        "3m10y",
+        "t10y3m"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "T10YIE",
+      "label": "10Y Breakeven Inflation",
+      "short": "10y B/E",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "T10YIE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "10y b/e",
+        "10y breakeven inflation",
+        "t10yie"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "T5YIE",
+      "label": "5y Breakeven Inflation",
+      "short": "5y B/E",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "T5YIE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "5y b/e",
+        "5y breakeven inflation",
+        "t5yie"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "T5YIFR",
+      "label": "5y5y Forward Inflation",
+      "short": "5y5y Fwd",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "T5YIFR",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income"
+      ],
+      "synonyms": [
+        "5y5y forward inflation",
+        "5y5y fwd",
+        "t5yifr"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "TCU",
+      "label": "Capacity Utilization",
+      "short": "Cap Util",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "TCU",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cap util",
+        "capacity utilization",
+        "tcu"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "TGCRRATE",
+      "label": "Tri-Party General Collateral Rate",
+      "short": "TGCR",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "TGCRRATE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "rates_fixed_income",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "tgcr",
+        "tgcrrate",
+        "tri-party general collateral rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "TOTALSA",
+      "label": "Light Vehicle Sales",
+      "short": "Auto Sales",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "TOTALSA",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "count",
+      "display_unit": "M SAAR",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "auto sales",
+        "light vehicle sales",
+        "totalsa"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "TURCPIALLMINMEI",
+      "label": "Turkey CPI Index",
+      "short": "TR CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "TURCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "tr cpi",
+        "turcpiallminmei",
+        "turkey cpi index"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "U6RATE",
+      "label": "U-6 Underemployment",
+      "short": "U-6",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "U6RATE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "u-6",
+        "u-6 underemployment",
+        "u6rate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "UMCSENT",
+      "label": "U. Mich Consumer Sentiment",
+      "short": "Sentiment",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "UMCSENT",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "sentiment",
+        "u. mich consumer sentiment",
+        "umcsent"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "UNRATE",
+      "label": "Unemployment Rate",
+      "short": "U-3",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "UNRATE",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "pct",
+      "display_unit": "%",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "jobless rate",
+        "u-3",
+        "unemployment",
+        "unemployment rate",
+        "unrate"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "VIXCLS",
+      "label": "CBOE VIX",
+      "short": "VIX",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "VIXCLS",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 1,
+      "grain": "day",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "cboe vix",
+        "vix",
+        "vixcls"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "WALCL",
+      "label": "Fed Balance Sheet",
+      "short": "Fed B/S",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "WALCL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$M",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "balance sheet",
+        "fed assets",
+        "fed b/s",
+        "fed balance sheet",
+        "walcl"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "WRESBAL",
+      "label": "Reserve Balances at the Fed",
+      "short": "Reserves",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "WRESBAL",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "currency",
+      "display_unit": "$B",
+      "unit_review": "reviewed",
+      "decimals": 0,
+      "grain": "week",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro",
+        "short_term_markets_funding"
+      ],
+      "synonyms": [
+        "reserve balances at the fed",
+        "reserves",
+        "wresbal"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "ZAFCPIALLMINMEI",
+      "label": "South Africa CPI Index",
+      "short": "ZA CPI",
+      "source": {
+        "kind": "gold_series",
+        "source": "econ",
+        "id": "ZAFCPIALLMINMEI",
+        "units": "lin"
+      },
+      "data_class": "public_market_data",
+      "unit": "index",
+      "display_unit": "index",
+      "unit_review": "catalog",
+      "decimals": 2,
+      "grain": "month",
+      "agg": "mean",
+      "additivity": "non_additive",
+      "dimensions": [],
+      "domains": [
+        "economics_macro"
+      ],
+      "synonyms": [
+        "south africa cpi index",
+        "za cpi",
+        "zafcpiallminmei"
+      ],
+      "owner": "gold:fred_latest_observation"
+    },
+    {
+      "name": "sl_daily_revenue",
+      "label": "Daily lending revenue",
+      "source": {
+        "kind": "desk_dataset",
+        "dataset": "sl_loans",
+        "measure": {
+          "fn": "sum",
+          "terms": [
+            [
+              "revenueDay"
+            ]
+          ]
+        }
+      },
+      "data_class": "desk_simulated",
+      "unit": "currency",
+      "display_unit": "$",
+      "decimals": 0,
+      "grain": "day",
+      "agg": "sum",
+      "snapshot": true,
+      "additivity": "additive",
+      "additivity_rationale": "Each loan's daily revenue is a flow that adds across loans and days.",
+      "dimensions": [
+        "borrower",
+        "collateral_type",
+        "ticker"
+      ],
+      "domains": [
+        "securities_financing_prime"
+      ],
+      "synonyms": [
+        "daily lending revenue",
+        "daily revenue",
+        "lending revenue",
+        "revenue",
+        "sl_daily_revenue"
+      ],
+      "owner": "sim:securitiesLending.getLoanBook"
+    },
+    {
+      "name": "sl_inventory_value",
+      "label": "Lendable inventory value",
+      "source": {
+        "kind": "desk_dataset",
+        "dataset": "sl_inventory",
+        "measure": {
+          "fn": "sum",
+          "terms": [
+            [
+              "marketValue"
+            ]
+          ]
+        }
+      },
+      "data_class": "desk_simulated",
+      "unit": "currency",
+      "display_unit": "$",
+      "decimals": 0,
+      "grain": "day",
+      "agg": "sum",
+      "snapshot": true,
+      "additivity": "semi_additive",
+      "additivity_rationale": "Adds across positions at one date; a stock, so it is not summed across periods.",
+      "dimensions": [
+        "asset_class",
+        "classification",
+        "source",
+        "ticker"
+      ],
+      "domains": [
+        "securities_financing_prime"
+      ],
+      "synonyms": [
+        "inventory market value",
+        "inventory value",
+        "lendable inventory",
+        "lendable inventory value",
+        "sl_inventory_value"
+      ],
+      "owner": "sim:securitiesLending.getInventory"
+    },
+    {
+      "name": "sl_on_loan_notional",
+      "label": "On-loan notional",
+      "source": {
+        "kind": "desk_dataset",
+        "dataset": "sl_loans",
+        "measure": {
+          "fn": "sum",
+          "terms": [
+            [
+              "notional"
+            ]
+          ]
+        }
+      },
+      "data_class": "desk_simulated",
+      "unit": "currency",
+      "display_unit": "$",
+      "decimals": 0,
+      "grain": "day",
+      "agg": "sum",
+      "snapshot": true,
+      "additivity": "semi_additive",
+      "additivity_rationale": "Adds across loans at one date; a stock, so it is not summed across periods.",
+      "dimensions": [
+        "borrower",
+        "collateral_type",
+        "ticker"
+      ],
+      "domains": [
+        "securities_financing_prime"
+      ],
+      "synonyms": [
+        "loan balance",
+        "on loan",
+        "on loan notional",
+        "on-loan notional",
+        "on-loan value",
+        "sl_on_loan_notional"
+      ],
+      "owner": "sim:securitiesLending.getLoanBook"
+    },
+    {
+      "name": "sl_utilization",
+      "label": "Lending utilization",
+      "source": {
+        "kind": "desk_dataset",
+        "dataset": "sl_inventory",
+        "measure": {
+          "numerator": {
+            "fn": "sum",
+            "terms": [
+              [
+                "onLoan"
+              ]
+            ]
+          },
+          "denominator": {
+            "fn": "sum",
+            "terms": [
+              [
+                "available"
+              ],
+              [
+                "onLoan"
+              ],
+              [
+                "restricted"
+              ]
+            ]
+          }
+        }
+      },
+      "data_class": "desk_simulated",
+      "unit": "ratio",
+      "display_unit": "ratio",
+      "decimals": 4,
+      "grain": "day",
+      "agg": "ratio",
+      "snapshot": true,
+      "additivity": "ratio",
+      "additivity_rationale": "Ratio of two additive sums; never summed or averaged across groups.",
+      "dimensions": [
+        "asset_class",
+        "classification",
+        "source",
+        "ticker"
+      ],
+      "domains": [
+        "securities_financing_prime"
+      ],
+      "synonyms": [
+        "lending utilization",
+        "sl_utilization",
+        "utilisation",
+        "utilization"
+      ],
+      "owner": "sim:securitiesLending.getInventory"
+    },
+    {
+      "name": "sl_weighted_fee_bps",
+      "label": "Notional-weighted borrow fee",
+      "source": {
+        "kind": "desk_dataset",
+        "dataset": "sl_loans",
+        "measure": {
+          "numerator": {
+            "fn": "sum",
+            "terms": [
+              [
+                "rateBps",
+                "notional"
+              ]
+            ]
+          },
+          "denominator": {
+            "fn": "sum",
+            "terms": [
+              [
+                "notional"
+              ]
+            ]
+          }
+        }
+      },
+      "data_class": "desk_simulated",
+      "unit": "bps",
+      "display_unit": "bps",
+      "decimals": 1,
+      "grain": "day",
+      "agg": "ratio",
+      "snapshot": true,
+      "additivity": "ratio",
+      "additivity_rationale": "Weighted average rate: a ratio of two additive sums, never summed or simply averaged.",
+      "dimensions": [
+        "borrower",
+        "collateral_type",
+        "ticker"
+      ],
+      "domains": [
+        "securities_financing_prime"
+      ],
+      "synonyms": [
+        "average fee",
+        "borrow fee",
+        "lending fee",
+        "notional-weighted borrow fee",
+        "sl_weighted_fee_bps",
+        "weighted fee"
+      ],
+      "owner": "sim:securitiesLending.getLoanBook"
+    }
+  ],
+  "excluded": [
+    {
+      "name": "ISM-MFG",
+      "reason": "sim_only"
+    },
+    {
+      "name": "ISM-SVC",
+      "reason": "sim_only"
+    },
+    {
+      "name": "PCEPILFE_MOM",
+      "reason": "sim_only"
+    }
+  ],
+  "desk_datasets": [
+    {
+      "id": "sl_inventory",
+      "module": "SLAB",
+      "getter": "getInventory",
+      "fields": {
+        "ticker": "string",
+        "assetClass": "string",
+        "source": "string",
+        "classification": "string",
+        "available": "number",
+        "onLoan": "number",
+        "restricted": "number",
+        "utilization": "number",
+        "feeBps": "number",
+        "marketValue": "number"
+      },
+      "dimensions": {
+        "ticker": "ticker",
+        "asset_class": "assetClass",
+        "source": "source",
+        "classification": "classification"
+      }
+    },
+    {
+      "id": "sl_loans",
+      "module": "SLAB",
+      "getter": "getLoanBook",
+      "fields": {
+        "ticker": "string",
+        "borrower": "string",
+        "collateralType": "string",
+        "qty": "number",
+        "notional": "number",
+        "rateBps": "number",
+        "revenueDay": "number",
+        "daysOpen": "number",
+        "recallable": "boolean"
+      },
+      "dimensions": {
+        "ticker": "ticker",
+        "borrower": "borrower",
+        "collateral_type": "collateralType"
+      }
+    },
+    {
+      "id": "sl_borrow_demand",
+      "module": "SLAB",
+      "getter": "getBorrowDemand",
+      "fields": {
+        "ticker": "string",
+        "borrower": "string",
+        "qty": "number",
+        "bidBps": "number",
+        "classification": "string",
+        "filled": "number",
+        "urgency": "string"
+      },
+      "dimensions": {
+        "ticker": "ticker",
+        "borrower": "borrower",
+        "classification": "classification",
+        "urgency": "urgency"
+      }
+    }
+  ],
+  "registry_version": "sha256:74d6146f5bfc78a4a08827d2c96fbdfe730620a8aebe9aa5c74ed61db384a70e"
+}

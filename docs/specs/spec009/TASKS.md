@@ -9,9 +9,11 @@
 
 ## Status Note
 
-spec009 is a draft pending owner review; no task may start until decisions D-1 through D-12 and
-D-14 in `SPEC.md` are approved (D-13 — QuantSmith as the owner's local checkout, with the worker
-beside it — is already decided). All tasks are `todo`, except that the yield and other non-additive parts of
+spec009 is a draft. The owner authorized Slice A (T-001–T-004) to start on 2026-10-07; decisions
+D-1 through D-12 and D-14 in `SPEC.md` are not otherwise recorded as approved, so later slices
+should confirm them first (D-13 — QuantSmith as the owner's local checkout, with the worker
+beside it — is already decided). T-001 through T-004 are `done` (see "Slice A implementation
+notes"); every other task is `todo`, except that the yield and other non-additive parts of
 T-021 and the `curve_levels` part of T-022 are `blocked` on companion items Q-1 and Q-2 (proven at
 run time by the worker's `pit_level_semantics` and `pack_rules_applied` capabilities).
 Implementation starts from the latest QuantMeridian `main`.
@@ -45,10 +47,58 @@ Implementation starts from the latest QuantMeridian `main`.
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-001 | Review the QuantSmith copy chosen for implementation (`0008`, `0028`, `0063`, `0070`, `0080`, `0081`, `0093`, `adapters/llm_runtime`, and the analytics, economists, securities-financing, and pack files cited in `PLAN.md`); implement the standard-library fingerprint tool `services/agent_worker/src/agent_worker/pin.py`; write `contracts/agent/quantsmith-pin.json`; update `docs/specs/spec005/QUANTSMITH_PIN.md` (code and assets digests, pointer to the JSON, "Reviewed for" including spec009); extend `scripts/check-quantsmith-pin.sh` (blocking record ↔ JSON agreement; advisory drift for a local copy at `QUANTSMITH_ROOT`, the current default path, or `../QuantSmith`; no network). | REQ-008, REQ-030, NFR-009 | todo | Assessed copy: local checkout at `0134d403d5a336ce20e7abd7fb7a0935d7917114` (2026-10-06), recorded as information only. Nothing fetches QuantSmith. |
-| T-002 | Write the JSON Schemas in `contracts/agent/` (`llm-profiles`, `agent-workflows`, `job`, `result`, `verification`, `metric-registry`, `quantsmith-pin`, `formula-vectors`) with `schema_version`; generate TypeScript types and Python models from them; add compatibility helpers on both sides and a CI check for uncommitted generation diffs. | REQ-007, REQ-019, NFR-009 | todo | The result schema has no verdict field; the verification schema is written only by Node. |
-| T-003 | Add `settings/agent_workflows.json` (`MGC`, `FUND`, `SLAB` enabled; `CURV`, `INFL` disabled; `chart.build`, `analysis.answer`, `secfin.carry` enabled; `story.build` and `brief.draft` with its three kinds disabled) and `settings/llm_profiles.json` (six profiles; only `anthropic-direct` and `deterministic` enabled); implement both validators, the reviewed `ELIGIBLE_AGENT_MODULES` set checked against `docs/gold-db/MODULE_DATA_AUDIT.md` (`IBAL`, `OPT`, `DESK`, `TASSIST`, `AI` never eligible), per-module context allowlists, and secret-shaped-value rejection; add `.env.example` placeholders. | REQ-001, REQ-005, REQ-007, REQ-019, REQ-029, NFR-005 | todo | `anthropic-direct` is seeded with today's Copilot model and 1500-token limit. `SLAB` starts with no context fields. |
-| T-004 | Implement `scripts/export-agent-metric-registry.ts` (`FRED_CATALOG`, the desk dataset registry from T-029, a reviewed unit/additivity/domain mapping, and `settings/agent_metric_synonyms.json`) generating `contracts/agent/generated/metric_registry.json`; add a Vitest drift check and the worker loader that builds the `0008` `SemanticLayer`. | REQ-009 | todo | Funding and money-market series map to `short_term_markets_funding` as well as `rates_fixed_income`. Additivity defaults to `non_additive`; any relaxation needs a recorded rationale. |
+| T-001 | Review the QuantSmith copy chosen for implementation (`0008`, `0028`, `0063`, `0070`, `0080`, `0081`, `0093`, `adapters/llm_runtime`, and the analytics, economists, securities-financing, and pack files cited in `PLAN.md`); implement the standard-library fingerprint tool `services/agent_worker/src/agent_worker/pin.py`; write `contracts/agent/quantsmith-pin.json`; update `docs/specs/spec005/QUANTSMITH_PIN.md` (code and assets digests, pointer to the JSON, "Reviewed for" including spec009); extend `scripts/check-quantsmith-pin.sh` (blocking record ↔ JSON agreement; advisory drift for a local copy at `QUANTSMITH_ROOT`, the current default path, or `../QuantSmith`; no network). | REQ-008, REQ-030, NFR-009 | done | Assessed copy: local checkout at `0134d403d5a336ce20e7abd7fb7a0935d7917114` (2026-10-06), recorded as information only. Nothing fetches QuantSmith. |
+| T-002 | Write the JSON Schemas in `contracts/agent/` (`llm-profiles`, `agent-workflows`, `job`, `result`, `verification`, `metric-registry`, `quantsmith-pin`, `formula-vectors`) with `schema_version`; generate TypeScript types and Python models from them; add compatibility helpers on both sides and a CI check for uncommitted generation diffs. | REQ-007, REQ-019, NFR-009 | done | The result schema has no verdict field; the verification schema is written only by Node. |
+| T-003 | Add `settings/agent_workflows.json` (`MGC`, `FUND`, `SLAB` enabled; `CURV`, `INFL` disabled; `chart.build`, `analysis.answer`, `secfin.carry` enabled; `story.build` and `brief.draft` with its three kinds disabled) and `settings/llm_profiles.json` (six profiles; only `anthropic-direct` and `deterministic` enabled); implement both validators, the reviewed `ELIGIBLE_AGENT_MODULES` set checked against `docs/gold-db/MODULE_DATA_AUDIT.md` (`IBAL`, `OPT`, `DESK`, `TASSIST`, `AI` never eligible), per-module context allowlists, and secret-shaped-value rejection; add `.env.example` placeholders. | REQ-001, REQ-005, REQ-007, REQ-019, REQ-029, NFR-005 | done | `anthropic-direct` is seeded with today's Copilot model and 1500-token limit. `SLAB` starts with no context fields. |
+| T-004 | Implement `scripts/export-agent-metric-registry.ts` (`FRED_CATALOG`, the desk dataset registry from T-029, a reviewed unit/additivity/domain mapping, and `settings/agent_metric_synonyms.json`) generating `contracts/agent/generated/metric_registry.json`; add a Vitest drift check and the worker loader that builds the `0008` `SemanticLayer`. | REQ-009 | done | Funding and money-market series map to `short_term_markets_funding` as well as `rates_fixed_income`. Additivity defaults to `non_additive`; any relaxation needs a recorded rationale. |
+
+#### Slice A implementation notes
+
+Deviations and additions made while building Slice A (all recorded here per the Definition of
+Done; none changes a requirement):
+
+1. **Shared module policy.** Module eligibility, per-module context allowlists, known domain
+   packs, and forbidden header names live in `contracts/agent/module-policy.json`, read by both
+   the Node validator (`src/lib/server/agent/modulePolicy.ts`) and the worker
+   (`agent_worker/settings.py`), instead of two copies of a code constant. A test checks every
+   eligible module exists in `settings/modules.config.json` and has a section in
+   `docs/gold-db/MODULE_DATA_AUDIT.md`. `IBAL` is not in that audit (it postdates it); it is
+   checked only for existing as a module. Eligible: Gold-backed `MGC MKC ECON CURV INFL GCPI GPOL
+   CRDT STAT REGIME SFE FUND BMRK BRA YCURV RVOL FCOST MOTN`; desk `SLAB PB COLL CASH` (PB, COLL,
+   and CASH have no registered datasets yet).
+2. **Plan correction: `sl_utilization`.** `getInventory().available` already excludes on-loan and
+   restricted shares, so `sum(onLoan) / sum(available)` is not utilization. The denominator is
+   `sum(available + onLoan + restricted)`, matching the page's per-row `utilization`. `PLAN.md`
+   is updated; desk expressions are now `{fn, terms}` (a sum of products of fields).
+3. **Registry units describe the Gold level.** Verified claims report raw `lin` levels, but the
+   catalog `unit` describes the displayed, transformed value (CPI "% y/y" is an index level in
+   Gold). The registry's `unit`/`display_unit` are the level's; for the 25 series the resolver
+   transforms, `chart_unit`/`chart_display_unit` give what the chart shows, and the label drops
+   "YoY/MoM/chg" and says "level". The 46 transformed or rescaled series are listed in
+   `metricUnits.ts` with a rationale and need the owner's review of the FRED units. A new unusual
+   series with no reviewed unit would be excluded (`lin_unit_unreviewed`); a test requires none.
+4. **Registry additions.** `desk_datasets` (fields and dimensions, which the worker's readers
+   need) and a domain override for `BAMLH0A0HYM2` (the catalog files high-yield OAS under RATES;
+   it takes `credit_markets`). Curated synonyms must be globally unique (the keyword interpreter
+   clarifies on ties); automatic ones (label, short name, id) never override them.
+5. **Pulled forward from T-029.** The desk dataset registry declarations
+   (`src/lib/server/agent/deskDatasets.ts`) and `DATA_SOURCE = "SIM"` on `securitiesLending.ts`,
+   `collateral.ts`, and `cash.ts`, because T-004 needs them. The desk-data route, the worker
+   token check, the shared loader, and the verifier use stay in T-029.
+6. **Contract tooling.** `ajv` and `ajv-formats` (runtime), `json-schema-to-typescript` (dev);
+   worker `jsonschema`, `pydantic`, and dev `datamodel-code-generator` with `black` and `isort`
+   pinned so the drift check cannot flap. Generated: `src/lib/agent/contracts/*.generated.ts` and
+   `agent_worker/contracts_generated/*.py`. Hand-written: `src/lib/agent/{compat,validate,
+   secretShape}.ts`, `agent_worker/{contracts,settings,registry}.py` (`settings.py` is added to
+   the planned layout). Readers ignore unknown additive fields; a worker `verdict`/`status` is
+   rejected by the result schema.
+7. **Fingerprint bytes.** The pin hashes file bytes as stored (no newline normalization), as the
+   plan says; a copy checked out with different line endings reads as drift.
+8. **CI seeded early.** `.github/workflows/ci.yml` now runs the pin record check and the
+   registry check in `verify`, and a new `agent-worker` job (contract drift, ruff, hosted pytest
+   with `needs_quantsmith` skipped). T-026 extends this rather than creating it.
+9. **Worker project file.** `services/agent_worker/pyproject.toml` is minimal (T-012 completes
+   it); `quantsmith` is deliberately not a dependency.
 
 ### Slice B - LLM profiles and the Copilot
 

@@ -1,64 +1,123 @@
 #!/usr/bin/env bash
-# Advisory gate — reports drift between the QuantSmith commit recorded in
-# docs/specs/spec005/QUANTSMITH_PIN.md and the sibling repo's current HEAD.
+# QuantSmith pin checks (spec005 record, spec009 content pin).
 #
-# QuantSmith's own hooks/stages/quantsmith-version-check.sh gate cannot run
-# here: it looks for a `quantsmith==X.Y.Z` pin in requirements.txt/
-# pyproject.toml and an importable Python package, neither of which exists in
-# this Node/Vite repo (spec 0047, RISK-004). This script is the documented
-# fallback for an artifact-only consumer: track the reviewed commit by hand,
-# report drift, never block.
+# 1. BLOCKING (exit 1): docs/specs/spec005/QUANTSMITH_PIN.md and
+#    contracts/agent/quantsmith-pin.json must agree on the package version and both digests.
+#    Needs no QuantSmith copy, so it runs in hosted CI.
+# 2. ADVISORY (never fails): when a local QuantSmith copy is found, its fingerprints are computed
+#    with services/agent_worker/src/agent_worker/pin.py and drift from the pin is reported. The
+#    copy is looked up at $QUANTSMITH_ROOT (also read from .env), then the old default path, then
+#    ../QuantSmith. No network call is ever made; with no copy present this part is skipped.
 #
-# Advisory only, always exits 0. Skips cleanly when the sibling repo isn't
-# checked out locally (e.g. CI), matching QuantSmith's own gates' "degrade
-# gracefully when files are missing" design.
+# QuantSmith's own hooks/stages/quantsmith-version-check.sh gate cannot run here: it looks for a
+# `quantsmith==X.Y.Z` pin in requirements.txt/pyproject.toml and an importable package, neither of
+# which exists in this Node/Vite repo (spec 0047, RISK-004).
 
 set -uo pipefail
 
 PIN_FILE="docs/specs/spec005/QUANTSMITH_PIN.md"
-QS_DIR="../agentic_workflows/qf_workflow_sdk_public"
+PIN_JSON="contracts/agent/quantsmith-pin.json"
+PIN_TOOL="services/agent_worker/src/agent_worker/pin.py"
+OLD_DEFAULT_DIR="../agentic_workflows/qf_workflow_sdk_public"
 
 if [[ ! -f "$PIN_FILE" ]]; then
   echo "QuantSmith pin check: $PIN_FILE not found, skipped."
   exit 0
 fi
 
-pinned_commit=$(grep -m1 '| Commit |' "$PIN_FILE" | sed -E 's/.*`([0-9a-f]{7,40})`.*/\1/')
+# --- 1. record <-> JSON agreement (blocking) ---------------------------------------------------
 
-if [[ -z "$pinned_commit" ]]; then
-  echo "QuantSmith pin check: could not read a pinned commit from $PIN_FILE, skipped."
+record_field() { # value of a `| <label> | ... |` row, first backtick-quoted token
+  grep -m1 -E "^\| $1 \|" "$PIN_FILE" | sed -E 's/^[^`]*`([^`]*)`.*/\1/'
+}
+
+if [[ ! -f "$PIN_JSON" ]]; then
+  echo "QuantSmith pin check FAILED — $PIN_JSON is missing."
+  exit 1
+fi
+
+json_field() {
+  python3 -c '
+import json, sys
+pin = json.load(open(sys.argv[1]))
+path = sys.argv[2].split(".")
+for key in path:
+    pin = pin[key]
+print(pin)' "$PIN_JSON" "$1"
+}
+
+status=0
+check_pair() { # label, record value, json value
+  if [[ -z "$2" ]]; then
+    echo "  MISMATCH $1: not found in $PIN_FILE"
+    status=1
+  elif [[ "$2" != "$3" ]]; then
+    echo "  MISMATCH $1: record=$2 json=$3"
+    status=1
+  fi
+}
+
+check_pair "package version" "$(record_field 'Package version')" "$(json_field package.version)"
+check_pair "code digest" "$(record_field 'Code digest')" "$(json_field package.code_digest)"
+check_pair "assets digest" "$(record_field 'Assets digest')" "$(json_field assets.digest)"
+check_pair "reviewed commit" "$(record_field 'Reviewed commit \(informational\)')" "$(json_field reviewed.source_commit)"
+
+if [[ $status -ne 0 ]]; then
+  echo "QuantSmith pin check FAILED — $PIN_FILE and $PIN_JSON disagree. Update them together."
+  exit 1
+fi
+echo "QuantSmith pin record PASSED — $PIN_FILE and $PIN_JSON agree."
+
+# --- 2. local copy drift (advisory) ------------------------------------------------------------
+
+root="${QUANTSMITH_ROOT:-}"
+if [[ -z "$root" && -f .env ]]; then
+  root=$(grep -E '^QUANTSMITH_ROOT=' .env | tail -1 | cut -d= -f2- | sed -E 's/^["'\'']|["'\'']$//g')
+fi
+
+copy=""
+for candidate in "$root" "$OLD_DEFAULT_DIR" "../QuantSmith"; do
+  if [[ -n "$candidate" && -d "$candidate/src/quantsmith" ]]; then
+    copy="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$copy" ]]; then
+  echo "QuantSmith copy drift: no local copy found (QUANTSMITH_ROOT, $OLD_DEFAULT_DIR, ../QuantSmith), skipped."
   exit 0
 fi
 
-if [[ ! -d "$QS_DIR/.git" ]]; then
-  echo "QuantSmith pin check: sibling repo not found at $QS_DIR, skipped."
-  echo "Pinned commit on record: $pinned_commit"
+echo "QuantSmith copy drift: checking $copy"
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "  python3 not found, skipped."
   exit 0
 fi
 
-current_commit=$(git -C "$QS_DIR" rev-parse HEAD 2>/dev/null || echo "")
-
-if [[ -z "$current_commit" ]]; then
-  echo "QuantSmith pin check: could not read HEAD from $QS_DIR, skipped."
-  exit 0
-fi
-
-if [[ "$current_commit" == "$pinned_commit" ]]; then
-  echo "QuantSmith pin check PASSED — sibling repo at pinned commit ($pinned_commit)."
-  exit 0
-fi
-
-if git -C "$QS_DIR" merge-base --is-ancestor "$pinned_commit" "$current_commit" 2>/dev/null; then
-  behind=$(git -C "$QS_DIR" rev-list --count "${pinned_commit}..${current_commit}" 2>/dev/null || echo "?")
-  echo "QuantSmith pin check: DRIFT — sibling repo is $behind commit(s) ahead of the pin."
-  echo "  Pinned:  $pinned_commit"
-  echo "  Current: $current_commit"
-  echo "  Re-review docs/specs/spec005/SPEC.md's cited files before further spec005 work."
+if report=$(python3 -I "$PIN_TOOL" --root "$copy" 2>&1); then
+  mismatches=$(printf '%s' "$report" | python3 -c 'import json,sys; print(" ".join(json.load(sys.stdin)["mismatches"]))')
+  if [[ -z "$mismatches" ]]; then
+    echo "  PASSED — code and assets digests match the pin."
+  else
+    echo "  DRIFT — fingerprints differ from the pin ($mismatches)."
+    echo "  The worker will not claim jobs on this copy until it is reviewed and re-pinned"
+    echo "  (see docs/specs/spec005/QUANTSMITH_PIN.md)."
+  fi
 else
-  echo "QuantSmith pin check: DRIFT — sibling repo HEAD is not a descendant of the pin"
-  echo "  (rebase, reset, or a different branch checked out). Manual review needed."
-  echo "  Pinned:  $pinned_commit"
-  echo "  Current: $current_commit"
+  echo "  could not fingerprint the copy: $report"
+fi
+
+# Informational only: where the copy's git HEAD stands against the recorded commits.
+if [[ -d "$copy/.git" ]]; then
+  head=$(git -C "$copy" rev-parse HEAD 2>/dev/null || true)
+  reviewed=$(json_field reviewed.source_commit)
+  if [[ -n "$head" ]]; then
+    if [[ "$head" == "$reviewed" ]]; then
+      echo "  git HEAD is the spec009 reviewed commit ($head)."
+    else
+      echo "  git HEAD $head differs from the spec009 reviewed commit $reviewed (information only)."
+    fi
+  fi
 fi
 
 exit 0

@@ -776,7 +776,7 @@ Initial datasets: `sl_inventory` (`getInventory`), `sl_loans` (`getLoanBook`), `
 | `sl_daily_revenue` | `sum(revenueDay)` over loans | additive | `securities_financing_prime` (`lending_revenue`) |
 | `sl_on_loan_notional` | `sum(notional)` over loans, one snapshot | semi_additive | `securities_financing_prime` (`on_loan_value`) |
 | `sl_weighted_fee_bps` | ratio `sum(rateBps × notional) / sum(notional)` | ratio | `securities_financing_prime` (`borrow_fee`) |
-| `sl_utilization` | ratio `sum(onLoan) / sum(available)` over inventory | ratio | `securities_financing_prime` (`utilization`) |
+| `sl_utilization` | ratio `sum(onLoan) / sum(available + onLoan + restricted)` over inventory (`available` in `getInventory` already excludes on-loan and restricted shares, so it is not the denominator) | ratio | `securities_financing_prime` (`utilization`) |
 | `sl_inventory_value` | `sum(marketValue)` over inventory, one snapshot | semi_additive | `securities_financing_prime` (`on_loan_value` family) |
 
 `PB`, `COLL`, and `CASH` datasets (`pb_clients`, `coll_assets`, `coll_margin`, `cash_sources`,

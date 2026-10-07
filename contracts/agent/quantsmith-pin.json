@@ -1,0 +1,21 @@
+{
+  "schema_version": "quantsmith-pin/1",
+  "package": { "name": "quantsmith", "version": "0.1.0", "code_digest": "sha256:e54b0f69215ba6abf9b2434e88e9fa7efd9d71bc3c4e67ec3ce6f2573b39c3e9" },
+  "assets": {
+    "digest": "sha256:cf8d8780b316f0fdc152649d98736c7e649780bbe8fb5cd35caabc58d8c0f088",
+    "paths": [
+      "knowledge/analytics_packs",
+      "knowledge/visualization_packs",
+      "knowledge/short_term_markets",
+      "agents/analytics",
+      "agents/economists/macro_backdrop_summarizer",
+      "agents/securities_financing",
+      "templates/docs/macro_backdrop_report.md"
+    ]
+  },
+  "reviewed": {
+    "on": "2026-10-07",
+    "source_commit": "0134d403d5a336ce20e7abd7fb7a0935d7917114",
+    "note": "Informational. QuantSmith is supplied locally and never fetched."
+  }
+}

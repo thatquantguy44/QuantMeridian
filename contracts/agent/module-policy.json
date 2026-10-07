@@ -1,0 +1,27 @@
+{
+  "schema_version": "agent-module-policy/1",
+  "note": "Reviewed policy shared by the Node and worker config validators (spec009 REQ-005, REQ-029). Changing eligibility needs a spec change; the audit doc is docs/gold-db/MODULE_DATA_AUDIT.md.",
+  "audit_reviewed_on": "2026-10-07",
+  "eligible_modules": {
+    "gold": ["MGC", "MKC", "ECON", "CURV", "INFL", "GCPI", "GPOL", "CRDT", "STAT", "REGIME", "SFE", "FUND", "BMRK", "BRA", "YCURV", "RVOL", "FCOST", "MOTN"],
+    "desk": ["SLAB", "PB", "COLL", "CASH"]
+  },
+  "never_eligible": ["IBAL", "OPT", "DESK", "TASSIST", "AI"],
+  "context_field_allowlist": {
+    "MGC": ["series", "range", "transform", "chartType"],
+    "MKC": ["series", "range", "transform", "chartType"],
+    "FUND": ["series", "range"],
+    "SLAB": [],
+    "CURV": ["asOfDate", "tenors"],
+    "INFL": ["components", "range", "metric"]
+  },
+  "known_domains": [
+    "economics_macro",
+    "rates_fixed_income",
+    "short_term_markets_funding",
+    "securities_financing_prime",
+    "credit_markets",
+    "fx_markets"
+  ],
+  "forbidden_header_envs": ["authorization", "proxy-authorization", "x-api-key", "api-key", "cookie", "host", "content-length", "content-type"]
+}

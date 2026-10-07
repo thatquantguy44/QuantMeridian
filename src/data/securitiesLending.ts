@@ -1,6 +1,9 @@
 import { Rng } from "@/lib/rng";
 import { LENDABLE, BORROWERS, BENEFICIAL_OWNERS, type Security, type Counterparty } from "./universe";
 
+/** Every value in this module is simulated desk data (spec009 REQ-033; the agent desk-data route requires "SIM"). */
+export const DATA_SOURCE = "SIM" as const;
+
 /** Securities Lending domain — inventory, loan book, borrow demand, revenue. */
 
 export interface InventoryRow {

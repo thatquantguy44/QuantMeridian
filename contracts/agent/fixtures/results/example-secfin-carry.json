@@ -1,0 +1,179 @@
+{
+  "schema_version": "agent-result/1",
+  "job_id": "00000000-0000-4000-8000-000000000001",
+  "workflow": {
+    "id": "secfin.carry",
+    "version": "1.0.0",
+    "kind": null
+  },
+  "outcome": "answered",
+  "blocks": [
+    {
+      "type": "table",
+      "title": "Cost of carry",
+      "columns": [
+        "Leg",
+        "Rate",
+        "Cost"
+      ],
+      "rows": [
+        [
+          {
+            "text": "Funding"
+          },
+          {
+            "claim": "c4"
+          },
+          {
+            "claim": "c6"
+          }
+        ],
+        [
+          {
+            "text": "Net financing cost"
+          },
+          {
+            "text": ""
+          },
+          {
+            "claim": "c7"
+          }
+        ]
+      ]
+    },
+    {
+      "type": "notice",
+      "code": "FLAT_RATE_ASSUMPTION",
+      "text_template": "Assumes {{c:c3}} stays at its {{d:c3}} level for the whole period."
+    },
+    {
+      "type": "caveats",
+      "items": [
+        {
+          "id": "cv.quarter_end",
+          "source": "pack:short_term_markets_funding",
+          "text": "Quarter-end funding pressure can move rates around the period end."
+        }
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "assumption",
+      "provenance": "USER",
+      "name": "notional",
+      "value": 100000000,
+      "unit": "currency"
+    },
+    {
+      "id": "c2",
+      "kind": "assumption",
+      "provenance": "USER",
+      "name": "spread_bps",
+      "value": 25,
+      "unit": "bps"
+    },
+    {
+      "id": "c3",
+      "kind": "level",
+      "provenance": "DB",
+      "series": {
+        "source": "econ",
+        "id": "SOFR"
+      },
+      "date": "2026-10-05",
+      "value": 4.31,
+      "unit": "pct",
+      "decimals": 2
+    },
+    {
+      "id": "c4",
+      "kind": "calculated",
+      "formula": "funding_rate_bps",
+      "inputs": [
+        "c3",
+        "c2"
+      ],
+      "value": 456.0,
+      "unit": "bps"
+    },
+    {
+      "id": "c5",
+      "kind": "calculated",
+      "formula": "days_act",
+      "params": {
+        "start": "2026-10-07",
+        "end": "2026-11-06"
+      },
+      "inputs": [],
+      "value": 30,
+      "unit": "days"
+    },
+    {
+      "id": "c6",
+      "kind": "calculated",
+      "formula": "leg_cost",
+      "inputs": [
+        "c1",
+        "c4",
+        "c5"
+      ],
+      "params": {
+        "basis": 360
+      },
+      "value": 380000.0,
+      "unit": "currency"
+    },
+    {
+      "id": "c7",
+      "kind": "calculated",
+      "formula": "net_financing_cost",
+      "inputs": [
+        "c6"
+      ],
+      "value": 380000.0,
+      "unit": "currency"
+    }
+  ],
+  "disclosure": {
+    "quantsmith": {
+      "mode": "path",
+      "code_digest": "sha256:e54b0f69215ba6abf9b2434e88e9fa7efd9d71bc3c4e67ec3ce6f2573b39c3e9",
+      "assets_digest": "sha256:cf8d8780b316f0fdc152649d98736c7e649780bbe8fb5cd35caabc58d8c0f088"
+    },
+    "registry_version": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "interpreter_mode": "form",
+    "llm": [],
+    "prompts": [],
+    "plans_sha256": [],
+    "data": [
+      {
+        "series": {
+          "source": "econ",
+          "id": "SOFR"
+        },
+        "as_of": "2026-10-05",
+        "rows": 260,
+        "provenance": "DB"
+      }
+    ],
+    "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "packs": [
+      {
+        "id": "short_term_markets_funding",
+        "kind": "analytics",
+        "review_status": "draft"
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "timings_ms": {
+    "read": 31,
+    "compute": 2,
+    "total": 40
+  }
+}

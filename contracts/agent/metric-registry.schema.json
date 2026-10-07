@@ -1,0 +1,400 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://quantmeridian.invalid/contracts/agent/metric-registry.schema.json",
+  "title": "MetricRegistry",
+  "description": "contracts/agent/generated/metric_registry.json: the metrics workflows may plan over (metric-registry/1). Generated; never edited by hand.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "metric-registry/1"
+    },
+    "registry_version": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Metric"
+      },
+      "minItems": 1
+    },
+    "excluded": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "sim_only",
+              "lin_unit_unreviewed"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "reason"
+        ]
+      }
+    },
+    "desk_datasets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/DeskDataset"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_version",
+    "metrics",
+    "excluded",
+    "desk_datasets"
+  ],
+  "definitions": {
+    "Metric": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.\\-]{1,64}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "short": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "source": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/GoldSource"
+            },
+            {
+              "$ref": "#/definitions/DeskSource"
+            }
+          ]
+        },
+        "data_class": {
+          "type": "string",
+          "enum": [
+            "public_market_data",
+            "desk_simulated"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "display_unit": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "chart_unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "chart_display_unit": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "unit_review": {
+          "type": "string",
+          "enum": [
+            "catalog",
+            "reviewed"
+          ]
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "grain": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "quarter"
+          ]
+        },
+        "agg": {
+          "type": "string",
+          "enum": [
+            "sum",
+            "mean",
+            "count",
+            "last",
+            "ratio"
+          ]
+        },
+        "snapshot": {
+          "type": "boolean"
+        },
+        "additivity": {
+          "type": "string",
+          "enum": [
+            "additive",
+            "semi_additive",
+            "non_additive",
+            "ratio"
+          ]
+        },
+        "additivity_rationale": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "uniqueItems": true
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "synonyms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "uniqueItems": true
+        },
+        "owner": {
+          "type": "string",
+          "maxLength": 120
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "additivity": {
+                "enum": [
+                  "additive",
+                  "semi_additive",
+                  "ratio"
+                ]
+              }
+            },
+            "required": [
+              "additivity"
+            ]
+          },
+          "then": {
+            "required": [
+              "additivity_rationale"
+            ]
+          }
+        }
+      ],
+      "required": [
+        "name",
+        "label",
+        "source",
+        "data_class",
+        "unit",
+        "decimals",
+        "grain",
+        "agg",
+        "additivity",
+        "dimensions",
+        "domains",
+        "synonyms",
+        "owner"
+      ]
+    },
+    "GoldSource": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "gold_series"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "econ",
+            "fred",
+            "market"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.\\-^=]{1,64}$"
+        },
+        "units": {
+          "type": "string",
+          "const": "lin"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source",
+        "id",
+        "units"
+      ]
+    },
+    "DeskSource": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "desk_dataset"
+        },
+        "dataset": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "measure": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/DeskExpr"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "numerator": {
+                  "$ref": "#/definitions/DeskExpr"
+                },
+                "denominator": {
+                  "$ref": "#/definitions/DeskExpr"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "numerator",
+                "denominator"
+              ]
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "dataset",
+        "measure"
+      ]
+    },
+    "DeskExpr": {
+      "type": "object",
+      "properties": {
+        "fn": {
+          "type": "string",
+          "enum": [
+            "sum",
+            "mean",
+            "count"
+          ]
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+            },
+            "minItems": 1
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false,
+      "description": "Per row, the sum over terms of the product of each term's fields; then fn over rows.",
+      "required": [
+        "fn",
+        "terms"
+      ]
+    },
+    "DeskDataset": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "module": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]{1,7}$"
+        },
+        "getter": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+        },
+        "fields": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "module",
+        "getter",
+        "fields",
+        "dimensions"
+      ]
+    }
+  }
+}
