@@ -1,3 +1,5 @@
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { GET } from "./route";
 
@@ -28,6 +30,23 @@ function clearKeys() {
   for (const key of KEYS) delete process.env[key];
 }
 
+/**
+ * A real loopback server standing in for the IBAL service. The proxy talks through node:http (not
+ * global fetch), so stubbing fetch would never be seen; this exercises the actual transport.
+ */
+const servers: http.Server[] = [];
+async function fakeIbal(status: number, payload: unknown): Promise<{ url: string; requests: string[] }> {
+  const requests: string[] = [];
+  const server = http.createServer((req, res) => {
+    requests.push(`${req.method} ${req.url}`);
+    res.writeHead(status, { "content-type": "application/json" });
+    res.end(JSON.stringify(payload));
+  });
+  servers.push(server);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, requests };
+}
+
 async function callHealth() {
   const res = await GET(new Request("http://localhost/api/dataops/health"));
   return res.json();
@@ -39,9 +58,10 @@ describe("/api/dataops/health intelligence feeds", () => {
     clearKeys();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.restoreAllMocks();
     clearKeys();
+    await Promise.all(servers.splice(0).map((s) => new Promise((resolve) => s.close(resolve))));
   });
 
   test("reports an umbrella intelligence row plus separate news, social, and NLP rows", async () => {
@@ -99,21 +119,16 @@ describe("/api/dataops/health intelligence feeds", () => {
   });
 
   test("surfaces IBAL optimizer readiness without exposing secrets", async () => {
-    process.env.INVENTORY_OPTIMIZER_API_URL = "http://ibal.local";
+    const ibal = await fakeIbal(200, {
+      status: "ready",
+      ready: true,
+      api_schema_version: "1.0.0",
+      engine_package_version: "0.1.0",
+      backend: { name: "highs", version: "1.15.1", ready: true },
+      error_category: null,
+    });
+    process.env.INVENTORY_OPTIMIZER_API_URL = ibal.url;
     process.env.INVENTORY_OPTIMIZER_API_TOKEN = "secret-token";
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url === "http://ibal.local/health") {
-        return new Response(JSON.stringify({
-          status: "ready",
-          ready: true,
-          api_schema_version: "1.0.0",
-          engine_package_version: "0.1.0",
-          backend: { name: "highs", version: "1.15.1", ready: true },
-          error_category: null,
-        }), { status: 200, headers: { "content-type": "application/json" } });
-      }
-      throw new Error(`unexpected URL ${url}`);
-    }));
 
     const body = await callHealth();
 
@@ -127,25 +142,40 @@ describe("/api/dataops/health intelligence feeds", () => {
     expect(body.providers.IBAL.detail).toContain("engine=0.1.0");
     expect(body.providers.IBAL.detail).toContain("backend=highs 1.15.1");
     expect(JSON.stringify(body.providers.IBAL)).not.toContain("secret-token");
-    expect(JSON.stringify(body.providers.IBAL)).not.toContain("http://ibal.local");
+    expect(JSON.stringify(body.providers.IBAL)).not.toContain(ibal.url);
+    expect(JSON.stringify(body.providers.IBAL)).not.toContain(new URL(ibal.url).host);
+    expect(ibal.requests).toEqual(["GET /health"]);
+  });
+
+  test("reports an unreachable IBAL service as an error, not as stale", async () => {
+    const ibal = await fakeIbal(200, {});
+    const { port } = new URL(ibal.url);
+    await new Promise((resolve) => servers.pop()!.close(resolve)); // nothing listens on this port now
+    process.env.INVENTORY_OPTIMIZER_API_URL = `http://127.0.0.1:${port}`;
+    process.env.INVENTORY_OPTIMIZER_API_TOKEN = "secret-token";
+
+    const body = await callHealth();
+
+    expect(body.providers.IBAL).toMatchObject({
+      status: "ERROR",
+      live: false,
+      configured: true,
+      explicitStatus: "IBAL_HEALTH_UNREACHABLE",
+    });
+    expect(body.providers.IBAL.diagnostics).toMatchObject({ reachable: false, ready: false });
   });
 
   test("reports reachable but unready IBAL service as stale", async () => {
-    process.env.INVENTORY_OPTIMIZER_API_URL = "http://ibal.local";
+    const ibal = await fakeIbal(503, {
+      status: "unavailable",
+      ready: false,
+      api_schema_version: "1.0.0",
+      engine_package_version: null,
+      backend: { name: "highs", version: null, ready: false },
+      error_category: "ENGINE_IMPORT_FAILED",
+    });
+    process.env.INVENTORY_OPTIMIZER_API_URL = ibal.url;
     process.env.INVENTORY_OPTIMIZER_API_TOKEN = "secret-token";
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url === "http://ibal.local/health") {
-        return new Response(JSON.stringify({
-          status: "unavailable",
-          ready: false,
-          api_schema_version: "1.0.0",
-          engine_package_version: null,
-          backend: { name: "highs", version: null, ready: false },
-          error_category: "ENGINE_IMPORT_FAILED",
-        }), { status: 503, headers: { "content-type": "application/json" } });
-      }
-      throw new Error(`unexpected URL ${url}`);
-    }));
 
     const body = await callHealth();
 
