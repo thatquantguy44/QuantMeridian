@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "inventory-optimizer-api"
 version = "0.1.0"
 description = "Bounded API adapter between QuantMeridian and InventoryBallast."
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
   "fastapi==0.116.1",
   "numpy==2.3.2",
@@ -14,11 +14,20 @@ dependencies = [
   "pydantic==2.11.7",
   "python-multipart==0.0.20",
   "scipy==1.18.1",
+  "pyyaml==6.0.2",
   "uvicorn[standard]==0.35.0",
-  "inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@74737e53bf9821089c6aa2aeca5dffc4e67c81b7",
 ]
+# The InventoryBallast engine is not a hard dependency: supply it from a local checkout
+# (INVENTORY_OPTIMIZER_ENGINE_PATH), a pip install from a path, wheel or index, or one of the
+# extras below. Readiness checks the installed code against capability-manifest.json either way.
 
 [project.optional-dependencies]
+engine = [
+  "inventory-optimizer==0.1.0",
+]
+engine-github = [
+  "inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@74737e53bf9821089c6aa2aeca5dffc4e67c81b7",
+]
 highs = [
   "highspy==1.15.1",
 ]
@@ -34,6 +43,9 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/inventory_optimizer_api"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"capability-manifest.json" = "inventory_optimizer_api/capability-manifest.json"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

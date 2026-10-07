@@ -1,16 +1,24 @@
-FROM python:3.11-slim
+FROM python:3.12-slim-bookworm
+
+# Any pip requirement for the InventoryBallast engine: the pinned git URL (default), a wheel
+# copied into the build context (./wheels/inventory_optimizer-0.1.0-py3-none-any.whl), or
+# inventory-optimizer==0.1.0 from an index pip can reach. Readiness verifies the installed code
+# against capability-manifest.json whichever source is used.
+ARG INVENTORY_OPTIMIZER_ENGINE="inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@74737e53bf9821089c6aa2aeca5dffc4e67c81b7"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    INVENTORY_OPTIMIZER_ENGINE_COMMIT=74737e53bf9821089c6aa2aeca5dffc4e67c81b7
+    PYTHONUNBUFFERED=1
 
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y git=1:2.39.5-0+deb12u2 \
-    && rm -rf /var/lib/apt/lists/*
+# git is only needed when the engine comes from a git URL.
+RUN case "${INVENTORY_OPTIMIZER_ENGINE}" in \
+      *git+*) apt-get update \
+        && apt-get install --no-install-recommends -y git=1:2.39.5-0+deb12u2 \
+        && rm -rf /var/lib/apt/lists/* ;; \
+    esac
 
 WORKDIR /app
 COPY . /app
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir . "${INVENTORY_OPTIMIZER_ENGINE}"
 
 USER nobody
 EXPOSE 8080

@@ -815,10 +815,14 @@ npm run build && npm start  # → http://localhost:3000
 
 **Optional - IBAL end-to-end verification.** Start the pinned Python service on
 `127.0.0.1:8013`, set the same `INVENTORY_OPTIMIZER_API_TOKEN` in the repo-root
-environment, then run the standalone server before the focused browser test:
+environment, then run the standalone server before the focused browser test. The
+InventoryBallast engine can come from a local checkout (`INVENTORY_OPTIMIZER_ENGINE_PATH`)
+or any pip install (local path, wheel, package index, or GitHub); see
+`services/inventory_optimizer_api/README.md`.
 
 ```bash
 cd services/inventory_optimizer_api
+INVENTORY_OPTIMIZER_ENGINE_PATH=/path/to/InventoryBallast \
 INVENTORY_OPTIMIZER_API_TOKEN=<same-token-as-market-terminal-env> \
   .venv/bin/uvicorn inventory_optimizer_api.app:app --host 127.0.0.1 --port 8013
 

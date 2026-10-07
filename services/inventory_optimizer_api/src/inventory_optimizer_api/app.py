@@ -11,13 +11,29 @@ from fastapi.responses import JSONResponse, Response
 
 from .auth import require_service_auth
 from .capabilities import capability_payload, engine_identity
-from .config_adapter import RunConfigurationError
-from .contracts import DatasetEnvelope, ExportRequest, LocatedIssue, RunRequest, SyntheticConfig
-from .engine_service import DatasetValidationError, export_bundle, solve, validation_report
-from .synthetic import generate_dataset
+from .engine_source import require_importable_engine
 from .telemetry import emit, timed
-from .templates import json_template, workbook_template
-from .upload import MAX_UPLOAD_BYTES, UploadValidationError, parse_upload
+
+# Explain a missing engine before the imports below fail on it with a bare ModuleNotFoundError.
+require_importable_engine()
+
+from .config_adapter import RunConfigurationError  # noqa: E402
+from .contracts import (  # noqa: E402
+    DatasetEnvelope,
+    ExportRequest,
+    LocatedIssue,
+    RunRequest,
+    SyntheticConfig,
+)
+from .engine_service import (  # noqa: E402
+    DatasetValidationError,
+    export_bundle,
+    solve,
+    validation_report,
+)
+from .synthetic import generate_dataset  # noqa: E402
+from .templates import json_template, workbook_template  # noqa: E402
+from .upload import MAX_UPLOAD_BYTES, UploadValidationError, parse_upload  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 SOLVE_SLOTS = asyncio.Semaphore(2)
@@ -29,6 +45,8 @@ async def lifespan(_: FastAPI):
     emit(
         "startup",
         engine_ready=identity["ready"],
+        engine_source=identity["engine_source"],
+        engine_mismatches=identity["engine_mismatches"],
         engine_version=identity["package_version"],
         engine_commit=identity["installed_commit"],
         active_backend=identity["active_backend"],
@@ -106,6 +124,8 @@ async def health() -> dict[str, Any]:
         "api_schema_version": "1.0.0",
         "engine_package_version": identity["package_version"],
         "engine_commit": identity["installed_commit"],
+        "engine_source": identity["engine_source"],
+        "engine_mismatches": identity["engine_mismatches"],
         "backend": backend
         or {"name": None, "version": None, "installed": False, "ready": False},
         "solver_backends": identity["solver_backends"],
