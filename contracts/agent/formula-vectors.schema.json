@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://quantmeridian.invalid/contracts/agent/formula-vectors.schema.json",
+  "title": "FormulaVectors",
+  "description": "Shared golden vectors for one formula, run by the worker (QuantSmith 0028/0008) and the Node verifier (formula-vectors/1).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "formula-vectors/1"
+    },
+    "formula": {
+      "type": "string",
+      "enum": [
+        "days_act",
+        "leg_cost",
+        "net_financing_cost",
+        "funding_rate_bps",
+        "shocked_net_cost",
+        "pct_to_bps",
+        "spread_bps",
+        "share",
+        "aggregate"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "vectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inputs": {
+            "type": "object"
+          },
+          "params": {
+            "type": "object"
+          },
+          "expected": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "decimals": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 8
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "inputs",
+          "expected",
+          "decimals"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "formula",
+    "vectors"
+  ]
+}

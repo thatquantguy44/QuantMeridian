@@ -1,0 +1,274 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://quantmeridian.invalid/contracts/agent/verification.schema.json",
+  "title": "AgentVerification",
+  "description": "Verifier output stored with a job (agent-verification/1). Written only by the Node verifier; workers never supply verdicts.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "agent-verification/1"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9\\-]{8,64}$"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "registry_version": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "FLAGGED",
+              "DROPPED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "value_mismatch",
+              "revised_since_job",
+              "unknown_series",
+              "unknown_dataset",
+              "DATA_CLASS_NOT_APPROVED",
+              "non_db_provenance",
+              "no_observation",
+              "dropped_input",
+              "unknown_formula",
+              "params_mismatch",
+              "assumption_mismatch",
+              "unsupported_claim",
+              "ungrounded_text",
+              "series_not_in_registry",
+              "extra_series",
+              "no_data"
+            ]
+          },
+          "source_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "verdict"
+        ]
+      }
+    },
+    "charts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "block_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "DROPPED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "value_mismatch",
+              "revised_since_job",
+              "unknown_series",
+              "unknown_dataset",
+              "DATA_CLASS_NOT_APPROVED",
+              "non_db_provenance",
+              "no_observation",
+              "dropped_input",
+              "unknown_formula",
+              "params_mismatch",
+              "assumption_mismatch",
+              "unsupported_claim",
+              "ungrounded_text",
+              "series_not_in_registry",
+              "extra_series",
+              "no_data"
+            ]
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ref": {
+                  "$ref": "#/definitions/SeriesRef"
+                },
+                "provenance": {
+                  "type": "string",
+                  "enum": [
+                    "DB",
+                    "SIM",
+                    "ERR"
+                  ]
+                },
+                "observations": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "ref",
+                "provenance",
+                "observations"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "block_index",
+          "verdict"
+        ]
+      }
+    },
+    "text": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "block_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rule_passed": {
+            "type": "boolean"
+          },
+          "replaced_with_template": {
+            "type": "boolean"
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "value_mismatch",
+                "revised_since_job",
+                "unknown_series",
+                "unknown_dataset",
+                "DATA_CLASS_NOT_APPROVED",
+                "non_db_provenance",
+                "no_observation",
+                "dropped_input",
+                "unknown_formula",
+                "params_mismatch",
+                "assumption_mismatch",
+                "unsupported_claim",
+                "ungrounded_text",
+                "series_not_in_registry",
+                "extra_series",
+                "no_data"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "block_index",
+          "rule_passed",
+          "replaced_with_template"
+        ]
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "verified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "flagged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dropped": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "verified",
+        "flagged",
+        "dropped"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "job_id",
+    "verified_at",
+    "claims",
+    "charts",
+    "text",
+    "summary"
+  ],
+  "definitions": {
+    "SeriesRef": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "econ",
+            "fred",
+            "market",
+            "lens"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_.\\-^=]+$"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "id"
+      ]
+    }
+  }
+}

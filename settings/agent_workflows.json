@@ -1,0 +1,112 @@
+{
+  "schema_version": "agent-workflows/1",
+  "limits": {
+    "max_queued_per_requester": 10,
+    "max_running_per_requester": 1,
+    "queue_ttl_hours": 24,
+    "max_attempts": 2,
+    "lease_seconds": 60,
+    "heartbeat_seconds": 15,
+    "max_context_bytes": 4096,
+    "max_message_chars": 2000
+  },
+  "workflows": {
+    "chart.build": {
+      "version": "1.0.0",
+      "llm": "optional",
+      "uses": ["interpreter"],
+      "timeout_seconds": 60,
+      "data_classes": ["public_market_data", "module_context"],
+      "enabled": true,
+      "requires_capabilities": ["chart_line_form"]
+    },
+    "analysis.answer": {
+      "version": "1.0.0",
+      "llm": "optional",
+      "uses": ["interpreter", "narrator"],
+      "timeout_seconds": 120,
+      "data_classes": ["public_market_data", "module_context", "desk_simulated"],
+      "enabled": true,
+      "requires_capabilities": [],
+      "plan_capabilities": {
+        "non_additive_or_multi_period": ["pit_level_semantics", "pack_rules_applied"],
+        "desk_metric": ["desk_registry"]
+      }
+    },
+    "secfin.carry": {
+      "version": "1.0.0",
+      "llm": "optional",
+      "uses": ["interpreter"],
+      "timeout_seconds": 60,
+      "data_classes": ["public_market_data", "module_context", "desk_simulated"],
+      "enabled": true,
+      "requires_capabilities": ["carry_runtime"]
+    },
+    "story.build": {
+      "version": "1.0.0",
+      "llm": "none",
+      "uses": [],
+      "timeout_seconds": 90,
+      "data_classes": ["public_market_data", "module_context"],
+      "enabled": false,
+      "requires_capabilities": ["domain_packs", "story_recipes"]
+    },
+    "brief.draft": {
+      "version": "1.0.0",
+      "llm": "required",
+      "uses": ["drafter"],
+      "timeout_seconds": 180,
+      "data_classes": ["public_market_data", "module_context", "desk_simulated"],
+      "enabled": false,
+      "requires_capabilities": ["agent_contracts", "claim_bound_drafting"],
+      "kinds": {
+        "macro_backdrop": { "requires_capabilities": ["domain_packs"] },
+        "funding_conditions": { "requires_capabilities": ["domain_packs", "stm_pack"] },
+        "desk_review": { "requires_capabilities": ["desk_registry"] }
+      }
+    }
+  },
+  "modules": {
+    "MGC": {
+      "enabled": true,
+      "workflows": ["chart.build"],
+      "default_profile": null,
+      "profile_override": true,
+      "domains": ["economics_macro", "rates_fixed_income"],
+      "context_fields": ["series", "range", "transform", "chartType"]
+    },
+    "FUND": {
+      "enabled": true,
+      "workflows": ["chart.build", "secfin.carry"],
+      "default_profile": null,
+      "profile_override": true,
+      "domains": ["short_term_markets_funding", "rates_fixed_income"],
+      "context_fields": ["series", "range"]
+    },
+    "SLAB": {
+      "enabled": true,
+      "workflows": ["analysis.answer", "secfin.carry"],
+      "default_profile": null,
+      "profile_override": true,
+      "domains": ["securities_financing_prime"],
+      "desk_datasets": ["sl_inventory", "sl_loans", "sl_borrow_demand"],
+      "context_fields": []
+    },
+    "CURV": {
+      "enabled": false,
+      "workflows": ["chart.build", "story.build"],
+      "default_profile": null,
+      "profile_override": false,
+      "domains": ["rates_fixed_income"],
+      "context_fields": ["asOfDate", "tenors"]
+    },
+    "INFL": {
+      "enabled": false,
+      "workflows": ["chart.build"],
+      "default_profile": null,
+      "profile_override": false,
+      "domains": ["economics_macro"],
+      "context_fields": ["components", "range", "metric"]
+    }
+  }
+}

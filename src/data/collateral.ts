@@ -1,6 +1,9 @@
 import { Rng } from "@/lib/rng";
 import { COUNTERPARTIES } from "./universe";
 
+/** Every value in this module is simulated desk data (spec009 REQ-033; the agent desk-data route requires "SIM"). */
+export const DATA_SOURCE = "SIM" as const;
+
 /** Collateral Management — margin, optimization, constraints, what-if. */
 
 export interface MarginRow {

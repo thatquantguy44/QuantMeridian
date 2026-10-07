@@ -1,5 +1,8 @@
 import { Rng } from "@/lib/rng";
 
+/** Every value in this module is simulated desk data (spec009 REQ-033; the agent desk-data route requires "SIM"). */
+export const DATA_SOURCE = "SIM" as const;
+
 /** Cash Optimizer — treasury funding sources/uses & optimization. */
 
 export interface FundingSource {

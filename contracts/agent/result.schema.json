@@ -1,0 +1,1452 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://quantmeridian.invalid/contracts/agent/result.schema.json",
+  "title": "AgentResult",
+  "description": "Result payload a worker writes for a job (agent-result/1). It carries no verdict: verification is written only by the Node verifier.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "agent-result/1"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9\\-]{8,64}$"
+    },
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "chart.build",
+            "analysis.answer",
+            "secfin.carry",
+            "story.build",
+            "brief.draft"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "macro_backdrop",
+                "funding_conditions",
+                "desk_review"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "kind"
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "answered",
+        "clarification",
+        "unsupported_chart",
+        "unsupported_metric",
+        "data_unavailable"
+      ]
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Block"
+      },
+      "maxItems": 60
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Claim"
+      },
+      "maxItems": 2000
+    },
+    "disclosure": {
+      "$ref": "#/definitions/Disclosure"
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "input_tokens",
+        "output_tokens"
+      ]
+    },
+    "timings_ms": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "additionalProperties": true,
+  "not": {
+    "anyOf": [
+      {
+        "required": [
+          "verdict"
+        ]
+      },
+      {
+        "required": [
+          "status"
+        ]
+      }
+    ]
+  },
+  "required": [
+    "schema_version",
+    "job_id",
+    "workflow",
+    "outcome",
+    "blocks",
+    "claims",
+    "disclosure",
+    "usage"
+  ],
+  "definitions": {
+    "SeriesRef": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "econ",
+            "fred",
+            "market",
+            "lens"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_.\\-^=]+$"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "id"
+      ]
+    },
+    "ClaimRef": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+    },
+    "LevelClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "level"
+        },
+        "provenance": {
+          "type": "string",
+          "const": "DB"
+        },
+        "series": {
+          "$ref": "#/definitions/SeriesRef"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "provenance",
+        "series",
+        "date",
+        "value",
+        "unit",
+        "decimals"
+      ]
+    },
+    "DeltaClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "delta"
+        },
+        "provenance": {
+          "type": "string",
+          "const": "DB"
+        },
+        "series": {
+          "$ref": "#/definitions/SeriesRef"
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "abs",
+            "bps",
+            "pct"
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "provenance",
+        "series",
+        "from",
+        "to",
+        "basis",
+        "value",
+        "unit",
+        "decimals"
+      ]
+    },
+    "TransformPointClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "transform_point"
+        },
+        "provenance": {
+          "type": "string",
+          "const": "DB"
+        },
+        "series": {
+          "$ref": "#/definitions/SeriesRef"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "transform": {
+          "type": "string",
+          "enum": [
+            "yoy",
+            "mom",
+            "pct_change",
+            "log"
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "provenance",
+        "series",
+        "date",
+        "transform",
+        "value",
+        "unit",
+        "decimals"
+      ]
+    },
+    "WindowStatClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "window_stat"
+        },
+        "provenance": {
+          "type": "string",
+          "const": "DB"
+        },
+        "series": {
+          "$ref": "#/definitions/SeriesRef"
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "stat": {
+          "type": "string",
+          "enum": [
+            "min",
+            "max",
+            "mean",
+            "first",
+            "last",
+            "count"
+          ]
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "provenance",
+        "series",
+        "from",
+        "to",
+        "stat",
+        "value",
+        "unit",
+        "decimals"
+      ]
+    },
+    "LatestDateClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "latest_date"
+        },
+        "provenance": {
+          "type": "string",
+          "const": "DB"
+        },
+        "series": {
+          "$ref": "#/definitions/SeriesRef"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "provenance",
+        "series",
+        "date"
+      ]
+    },
+    "AggregateClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "aggregate"
+        },
+        "provenance": {
+          "type": "string",
+          "const": "SIM"
+        },
+        "dataset": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "metric": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.\\-]{1,48}$"
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "provenance",
+        "dataset",
+        "metric",
+        "value",
+        "unit",
+        "decimals"
+      ]
+    },
+    "AssumptionClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "assumption"
+        },
+        "provenance": {
+          "type": "string",
+          "const": "USER"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "provenance",
+        "name",
+        "value"
+      ]
+    },
+    "CalculatedClaim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "const": "calculated"
+        },
+        "formula": {
+          "type": "string",
+          "enum": [
+            "days_act",
+            "leg_cost",
+            "net_financing_cost",
+            "funding_rate_bps",
+            "shocked_net_cost",
+            "pct_to_bps",
+            "spread_bps",
+            "share"
+          ]
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+          }
+        },
+        "params": {
+          "type": "object"
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "pct",
+            "pp",
+            "bps",
+            "index",
+            "currency",
+            "count",
+            "ratio",
+            "hours",
+            "days",
+            "shares"
+          ]
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        }
+      },
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "verdict"
+            ]
+          },
+          {
+            "required": [
+              "status"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "id",
+        "kind",
+        "formula",
+        "inputs",
+        "value",
+        "unit"
+      ]
+    },
+    "Claim": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/LevelClaim"
+        },
+        {
+          "$ref": "#/definitions/DeltaClaim"
+        },
+        {
+          "$ref": "#/definitions/TransformPointClaim"
+        },
+        {
+          "$ref": "#/definitions/WindowStatClaim"
+        },
+        {
+          "$ref": "#/definitions/LatestDateClaim"
+        },
+        {
+          "$ref": "#/definitions/AggregateClaim"
+        },
+        {
+          "$ref": "#/definitions/AssumptionClaim"
+        },
+        {
+          "$ref": "#/definitions/CalculatedClaim"
+        }
+      ]
+    },
+    "ChartBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "chart"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "chart": {
+          "type": "object",
+          "properties": {
+            "range": {
+              "type": "string",
+              "enum": [
+                "1M",
+                "3M",
+                "6M",
+                "1Y",
+                "2Y",
+                "5Y",
+                "MAX"
+              ]
+            },
+            "transform": {
+              "type": "string",
+              "enum": [
+                "none",
+                "index100",
+                "pct_change",
+                "yoy",
+                "mom",
+                "zscore",
+                "log"
+              ]
+            },
+            "series": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ref": {
+                    "$ref": "#/definitions/SeriesRef"
+                  },
+                  "chartType": {
+                    "type": "string",
+                    "enum": [
+                      "line",
+                      "area"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "ref",
+                  "chartType"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 8
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "range",
+            "transform",
+            "series"
+          ]
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "chart"
+      ]
+    },
+    "PlanEchoBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "plan_echo"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "metric": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "window": {
+                "type": "string"
+              },
+              "grain": {
+                "type": "string",
+                "enum": [
+                  "day",
+                  "week",
+                  "month",
+                  "quarter",
+                  "year"
+                ]
+              },
+              "transform": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "index100",
+                  "pct_change",
+                  "yoy",
+                  "mom",
+                  "zscore",
+                  "log"
+                ]
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "metric",
+              "label"
+            ]
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "items"
+      ]
+    },
+    "InsightsBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "insights"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "text_template": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "authored_by": {
+                "type": "string",
+                "enum": [
+                  "template",
+                  "llm"
+                ]
+              },
+              "template_fallback": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "claims": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+                }
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "kind",
+              "text_template",
+              "authored_by"
+            ]
+          }
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "items"
+      ]
+    },
+    "NarrativeBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "narrative"
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "text_template": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "authored_by": {
+          "type": "string",
+          "enum": [
+            "template",
+            "llm"
+          ]
+        },
+        "template_fallback": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "text_template",
+        "authored_by"
+      ]
+    },
+    "TableBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "table"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "minItems": 1,
+          "maxItems": 12
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "maxLength": 200
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "text"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "claim": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_.\\-]{0,31}$"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "claim"
+                  ]
+                }
+              ]
+            },
+            "maxItems": 12
+          },
+          "maxItems": 200
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "columns",
+        "rows"
+      ]
+    },
+    "ClarificationBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "clarification"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "question": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "id"
+            ]
+          },
+          "maxItems": 20
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "reason"
+      ]
+    },
+    "CaveatsBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "caveats"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "id",
+              "source",
+              "text"
+            ]
+          }
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "items"
+      ]
+    },
+    "NoticeBlock": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "notice"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "text_template": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "type",
+        "code",
+        "text_template"
+      ]
+    },
+    "Block": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/ChartBlock"
+        },
+        {
+          "$ref": "#/definitions/PlanEchoBlock"
+        },
+        {
+          "$ref": "#/definitions/InsightsBlock"
+        },
+        {
+          "$ref": "#/definitions/NarrativeBlock"
+        },
+        {
+          "$ref": "#/definitions/TableBlock"
+        },
+        {
+          "$ref": "#/definitions/ClarificationBlock"
+        },
+        {
+          "$ref": "#/definitions/CaveatsBlock"
+        },
+        {
+          "$ref": "#/definitions/NoticeBlock"
+        }
+      ]
+    },
+    "Disclosure": {
+      "type": "object",
+      "properties": {
+        "quantsmith": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "path",
+                "installed"
+              ]
+            },
+            "code_digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "assets_digest": {
+              "type": "string",
+              "pattern": "^(sha256:[0-9a-f]{64}|absent)$"
+            }
+          },
+          "additionalProperties": true,
+          "required": [
+            "mode",
+            "code_digest",
+            "assets_digest"
+          ]
+        },
+        "registry_version": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "interpreter_mode": {
+          "type": "string",
+          "enum": [
+            "form",
+            "keyword",
+            "llm"
+          ]
+        },
+        "llm": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "use": {
+                "type": "string",
+                "enum": [
+                  "copilot",
+                  "interpreter",
+                  "narrator",
+                  "drafter"
+                ]
+              },
+              "input_tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "output_tokens": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "profile",
+              "model",
+              "use"
+            ]
+          }
+        },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "id",
+              "version",
+              "sha256"
+            ]
+          }
+        },
+        "plans_sha256": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "series": {
+                "$ref": "#/definitions/SeriesRef"
+              },
+              "dataset": {
+                "type": "string"
+              },
+              "as_of": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+              },
+              "rows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "provenance": {
+                "type": "string",
+                "enum": [
+                  "DB",
+                  "SIM"
+                ]
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "as_of",
+              "rows",
+              "provenance"
+            ]
+          }
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "packs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "review_status": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "id",
+              "kind",
+              "review_status"
+            ]
+          }
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "quantsmith",
+        "registry_version",
+        "interpreter_mode",
+        "llm",
+        "prompts",
+        "plans_sha256",
+        "data",
+        "content_hash"
+      ]
+    }
+  }
+}
