@@ -27,6 +27,17 @@ plugin adapter (spec `0026`), which is purpose-built for exactly this case
 reimplementing it inside this SDK"). Not yet approved for implementation —
 see item 6 and the updated Decisions Before Implementation table.
 
+**2026-10-06 note:** `docs/specs/spec009/` (draft, pending owner review)
+proposes automating items 2 and 4 in an attended form: module-embedded agent
+panels that queue QuantSmith workflows — including the securities-financing
+agents, as analysis and review roles only — in a separate Python worker, with
+every number re-verified at its source before display. It keeps every non-goal
+below (spec `0023`'s runtime stays unadopted) and adds one invocation mode
+beside the external Claude Code/agent SDK session: a locally supplied
+QuantSmith copy (installed package or repository path, never fetched from
+GitHub) inside a QuantMeridian-hosted worker, checked against content
+fingerprints recorded alongside this file's pin.
+
 ## Owner
 
 Joshua Lutkemuller / Market Terminal
@@ -481,6 +492,7 @@ Phase 3, not yet proven unattended enough to wire into `MPUB` live.
 - `docs/specs/spec005/PHASE2_PILOT_DRAFT.md` (Phase 2 raw agent draft, unverified)
 - `docs/specs/spec005/PHASE2_PILOT_VERIFICATION.md` (Phase 2 verification report and findings)
 - `docs/specs/spec004/SPEC.md` (`MPUB`, the primary consumer for item 2/3/4)
+- `docs/specs/spec009/SPEC.md` (draft: queued, attended automation of items 2 and 4)
 - `services/inventory_optimizer_api/tests/VALIDATION.md` (`IBAL`'s own backend
   test/validation status, primary source for item 6)
 - `docs/handoff.md` (`IBAL` narrative and current state)
