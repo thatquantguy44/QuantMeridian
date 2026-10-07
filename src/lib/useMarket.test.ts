@@ -44,21 +44,20 @@ describe("market snapshots", () => {
     expect(spy2020t.total_return).not.toBe(spy2020p.total_return);
   });
 
-  test("market snapshot cards have required fields", () => {
+  test("market snapshot is an empty placeholder; cards come from the Gold DB", () => {
+    // market_snapshot.json was deleted in the Gold migration (see marketPipeline.ts); the
+    // placeholder keeps the view type valid for /api/market/[view].
     const cards = (SNAPSHOTS.market as any).cards;
     expect(Array.isArray(cards)).toBe(true);
-    expect(cards.length).toBeGreaterThan(0);
-    const card = cards[0];
-    expect(card).toHaveProperty("series_id");
-    expect(card).toHaveProperty("display_name");
-    expect(card).toHaveProperty("price");
+    expect(cards).toHaveLength(0);
   });
 });
 
 describe("legacy market snapshot fixtures", () => {
-  test("total market snapshot fixture is still present", () => {
+  test("market snapshot fixtures were removed by the Gold migration", () => {
     expect(SNAPSHOTS.market).toBeTruthy();
-    expect((SNAPSHOTS.market as any).cards.length).toBeGreaterThan(0);
+    expect((SNAPSHOTS.market as any).cards).toHaveLength(0);
+    expect((PRICE_SNAPSHOTS.market as any).cards).toHaveLength(0);
   });
 
   test("price snapshot exists for price-eligible views", () => {

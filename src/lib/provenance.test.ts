@@ -54,8 +54,9 @@ test("PROVENANCE_META covers all source tiers", () => {
 });
 
 test("live sources are correctly classified", () => {
-  const liveSources: ProvenanceSource[] = ["FRED", "LIVE", "DB", "FILE", "ETL"];
-  const offlineSources: ProvenanceSource[] = ["SNAPSHOT", "ECON", "SIM"];
+  const liveSources: ProvenanceSource[] = ["FRED", "LIVE", "POLY", "DB", "FILE"];
+  // ETL is a frozen committed JSON snapshot (macro_data_etl, cut 2026-06-24), so it is not live.
+  const offlineSources: ProvenanceSource[] = ["ETL", "SNAPSHOT", "ECON", "SIM", "LOADING", "UNAVAILABLE", "ERR"];
   for (const s of liveSources) expect(PROVENANCE_META[s].live).toBe(true);
   for (const s of offlineSources) expect(PROVENANCE_META[s].live).toBe(false);
 });

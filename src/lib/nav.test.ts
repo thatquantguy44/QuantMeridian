@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect } from "vitest";
 import { NAV } from "./nav";
 
@@ -31,6 +33,8 @@ describe("Nav/Route consistency", () => {
       LIQ: ["/liquidity"],
       SXU: ["/sources-uses"],
       OPT: ["/optimization"],
+      IBAL: ["/inventory-optimizer"],
+      MCS: ["/simulations/mcs"],
       DESK: ["/trading-desk"],
       TASSIST: ["/trading-assistant"],
       ECON: ["/economics"],
@@ -106,6 +110,8 @@ describe("Nav/Route consistency", () => {
       "/liquidity",
       "/sources-uses",
       "/optimization",
+      "/inventory-optimizer",
+      "/simulations/mcs",
       "/trading-desk",
       "/trading-assistant",
       "/economics",
@@ -144,5 +150,23 @@ describe("Nav/Route consistency", () => {
       orphaned,
       `Nav items without valid routes:\n${orphaned.map((item) => `  ${item.code}: ${item.href}`).join("\n")}`
     ).toEqual([]);
+  });
+
+  it("every nav item is registered in App.tsx under its own module gate", () => {
+    // The lists above can drift from the router; this reads the router itself. A route is
+    // `on("CODE") && <Route ... path="segment" .../>`, and the nav href must end with that segment.
+    const app = fs.readFileSync(path.resolve(__dirname, "../App.tsx"), "utf8");
+    const missing: string[] = [];
+    for (const item of NAV) {
+      if (item.href === "/") continue;
+      const line = new RegExp(`on\\("${item.code}"\\)[^\\n]*`).exec(app)?.[0];
+      // An index route (ECON) renders at its parent's path, which the section list above covers.
+      if (line && /\bindex\b/.test(line)) continue;
+      const segment = line ? /path="([^"]+)"/.exec(line)?.[1] : undefined;
+      if (!segment || !(item.href === `/${segment}` || item.href.endsWith(`/${segment}`))) {
+        missing.push(`${item.code}: ${item.href} (App.tsx route: ${segment ?? "none"})`);
+      }
+    }
+    expect(missing, `Nav items not routed under their gate:\n  ${missing.join("\n  ")}`).toEqual([]);
   });
 });

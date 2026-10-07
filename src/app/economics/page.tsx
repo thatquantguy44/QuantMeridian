@@ -427,7 +427,7 @@ export default function MacroDashboard() {
                 series={[{ name: "UST 10Y", data: liveValues, color: "#FF8C00", area: true }]}
               />
               <div className="mt-1 flex items-center justify-between px-1 text-3xs text-term-text-mute">
-                <span>120 observations · daily</span>
+                <span>{liveValues.length} observations · daily</span>
                 <span className="tnum">
                   latest {liveValues.length ? liveValues[liveValues.length - 1].toFixed(2) : "—"}%
                 </span>
