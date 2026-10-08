@@ -1,7 +1,7 @@
 # Tasks: Module Agent Workflows
 
 - **Spec:** spec009-module-agent-workflows (`SPEC.md`, `PLAN.md`)
-- **Last updated:** 2026-10-06
+- **Last updated:** 2026-10-08 (validated against the code on `vix_vol_forecaster`)
 
 > Ordered, testable units of work in QuantMeridian. Every task cites the requirements it advances
 > and carries the Definition of Done below. QuantSmith-repository work is tracked separately
@@ -13,7 +13,9 @@ spec009 is a draft. The owner authorized Slice A (T-001–T-004) to start on 202
 D-1 through D-12 and D-14 in `SPEC.md` are not otherwise recorded as approved, so later slices
 should confirm them first (D-13 — QuantSmith as the owner's local checkout, with the worker
 beside it — is already decided). T-001 through T-004 are `done` (see "Slice A implementation
-notes"); every other task is `todo`, except that the yield and other non-additive parts of
+notes"); every other task is `todo` or `in-progress` — the ECOIQ slice (see "ECOIQ slice" below) built
+partial, ECOIQ-only versions of T-005, T-008, T-009, T-010, T-012, and T-029, so those are
+`in-progress`, not `done` — except that the yield and other non-additive parts of
 T-021 and the `curve_levels` part of T-022 are `blocked` on companion items Q-1 and Q-2 (proven at
 run time by the worker's `pit_level_semantics` and `pack_rules_applied` capabilities).
 Implementation starts from the latest QuantMeridian `main`.
@@ -100,28 +102,64 @@ Done; none changes a requirement):
 9. **Worker project file.** `services/agent_worker/pyproject.toml` is minimal (T-012 completes
    it); `quantsmith` is deliberately not a dependency.
 
+### ECOIQ slice (outside this spec's task list)
+
+`ECOIQ.md` records an Economics & Macro module built on spec009's queue, profile, and verification
+shape. Neither `SPEC.md` nor `PLAN.md` mentions it, so none of its work maps to a requirement ID
+and none of it counts as completing a task above. Validated 2026-10-08 as built:
+
+- Module `ECOIQ` (workflows `economics.explain`, `economics.transmission`, `economics.scenario`)
+  added to `settings/modules.config.json`, `settings/agent_workflows.json` (enabled), and
+  `contracts/agent/module-policy.json`; `src/lib/ecoiq`, `src/lib/server/ecoiq`, and the page.
+- `agent/ecoiqExecutor.ts` (five LLM stages over a Gold evidence envelope, JSON/evidence-id
+  validation, deterministic fallback), `agent/ecoiqVerification.ts` (ECOIQ-only checks), and the
+  worker's `ecoiq.py` directive.
+- `ECOIQ_VERIFICATION_MODE=permissive` exists for local testing.
+
+Deviations from the spec to resolve before treating this as done (each needs a decision recorded in
+`SPEC.md` or a change to the code):
+
+1. **Pilot scope.** `SPEC.md` enables `MGC`, `FUND`, and `SLAB` only; `ECOIQ` is enabled and is not
+   in the approved decisions. The test "enables MGC, FUND and SLAB; CURV and INFL stay off" does
+   not assert that nothing else is on.
+2. **Execution path.** The spec has the worker run QuantSmith agents; the ECOIQ stages run inside
+   the Node `execute` route, which calls the LLM directly. `ECOIQ.md` says the worker uses the
+   pinned QuantSmith chain, but `worker.py` only forwards the job to Node. The Definition of Done
+   rule that no QuantSmith code runs from Node is not violated (no QuantSmith import), but the
+   stages are Node prompts, not the pinned agents.
+3. **Verification.** `verifyEcoIq` checks source and evidence-id references; it is not the claim
+   vocabulary, text rule, or per-provenance verifier (T-017). Numeric prose from the LLM is not
+   blocked in strict mode, and nothing reruns values against `resolveChartSeries`.
+4. **Profile layer.** Stage calls bypass retries, budgets, redaction, and normalized errors
+   (T-005, T-014); `think: false`, `format`, and a hard-coded Ollama fallback URL are provider
+   specifics in the shared client.
+5. **Gating.** The `execute` route has no production gate, worker token, or lease; any holder of a
+   requester cookie can trigger an LLM call.
+6. **CI hygiene.** `ruff check` reports 13 findings in `worker.py`, `ecoiq.py`, and
+   `tests/test_worker.py` (line length, `datetime.UTC`); the `agent-worker` CI job runs ruff.
+
 ### Slice B - LLM profiles and the Copilot
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-005 | Build `src/lib/server/llm/` — registry loading, precedence and fail-closed resolution, `anthropic_messages` (`@anthropic-ai/sdk` with `baseURL`, `apiKey`/`authToken`, `defaultHeaders`) and `openai_chat_completions` (new pinned `openai` dependency) clients normalized to the `llm_runtime` contract shape, redaction, dry-run validation — and the shared conformance fixtures in `contracts/agent/fixtures/llm-profiles/`. | REQ-019, REQ-020, REQ-021, REQ-024, NFR-005, NFR-006 | todo | No tools are ever sent. JSON outputs are schema-validated; invalid output is `LLM_OUTPUT_INVALID`, never repaired. |
-| T-006 | Migrate `/api/copilot` to the profile layer: identical default request (model, system prompt, messages, token limit), unchanged `LOCAL` fallbacks, `profile` and `model` added to `AI` responses, badge updated on `/copilot`, usage recorded when the queue database is configured. | REQ-022 | todo | A mocked-SDK test proves the default request is byte-for-byte the same as today's. |
+| T-005 | Build `src/lib/server/llm/` — registry loading, precedence and fail-closed resolution, `anthropic_messages` (`@anthropic-ai/sdk` with `baseURL`, `apiKey`/`authToken`, `defaultHeaders`) and `openai_chat_completions` (new pinned `openai` dependency) clients normalized to the `llm_runtime` contract shape, redaction, dry-run validation — and the shared conformance fixtures in `contracts/agent/fixtures/llm-profiles/`. | REQ-019, REQ-020, REQ-021, REQ-024, NFR-005, NFR-006 | in-progress | No tools are ever sent. JSON outputs are schema-validated; invalid output is `LLM_OUTPUT_INVALID`, never repaired. **Built so far:** `profileConfig.ts` (validation, from T-003) and `agent/profileResolver.ts`, a thin ECOIQ shim: precedence and an `openai_chat_completions` `fetch` for `local-openai` only. **Missing:** `anthropic_messages` client, `openai` SDK, redaction, dry-run validation, fail-closed fallback handling, conformance fixtures, `src/lib/server/llm/` clients. |
+| T-006 | Migrate `/api/copilot` to the profile layer: identical default request (model, system prompt, messages, token limit), unchanged `LOCAL` fallbacks, `profile` and `model` added to `AI` responses, badge updated on `/copilot`, usage recorded when the queue database is configured. | REQ-022 | todo | A mocked-SDK test proves the default request is byte-for-byte the same as today's. Validated 2026-10-08: `/api/copilot` is unchanged (no profile layer). |
 | T-007 | Add the Data Ops profile card (dry-run states) and `POST /api/agent/profiles/[id]/probe` (one tiny completion; closed while the production gate is closed); prove no secret or credential-bearing URL is ever returned. | REQ-023, NFR-005 | todo | Probe results are metadata: status, latency, model as reported, error code. |
 
 ### Slice C - queue and API
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-008 | Implement `src/lib/server/agent/queueStore.ts`: DDL and migrations for SQLite and Postgres (`agent_schema_version`, `agent_control`, `agent_thread`, `agent_job` with `kind` and `inputs_json`, `agent_job_event`, `agent_job_artifact`, `agent_worker_heartbeat` with sourcing mode and fingerprints, `agent_usage_daily`), idempotent create, thread listing, cancel, retry, events, and the control row; SQLite unit tests plus a Postgres integration suite. | REQ-002, REQ-003, REQ-004, NFR-004 | todo | `AGENT_QUEUE_DB_URL` is required — no fallback to `MACRO_DB_URL`. Permission failures are explicit errors. |
-| T-009 | Implement `gate.ts` and `identity.ts`: production gate (same detection as IBAL), deploy-level switch, `agent_control.paused` checks, `agent_sid` cookie with HMAC requester IDs, boundary identity header honored only behind an open gate, the `AGENT_WORKER_TOKEN` check (constant-time), and `scripts/agent-control.mjs`. | REQ-025, NFR-005 | todo | Requester A must never read or cancel requester B's jobs. Browsers never receive the worker token. |
-| T-010 | Add the panel routes (`catalog`, `jobs` POST/GET, `jobs/[id]`, `cancel`, `retry`, `audit`, `health`) with limits, context and structured-input validation, idempotency, correlation IDs, every error code in `PLAN.md`, and the catalog's config ∩ worker-capability rule for workflows and kinds; route contract tests. | REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-007, REQ-025, REQ-027, NFR-007, NFR-010 | todo | The thread GET runs pending verifications (bounded, idempotent) before returning. |
+| T-008 | Implement `src/lib/server/agent/queueStore.ts`: DDL and migrations for SQLite and Postgres (`agent_schema_version`, `agent_control`, `agent_thread`, `agent_job` with `kind` and `inputs_json`, `agent_job_event`, `agent_job_artifact`, `agent_worker_heartbeat` with sourcing mode and fingerprints, `agent_usage_daily`), idempotent create, thread listing, cancel, retry, events, and the control row; SQLite unit tests plus a Postgres integration suite. | REQ-002, REQ-003, REQ-004, NFR-004 | in-progress | `AGENT_QUEUE_DB_URL` is required — no fallback to `MACRO_DB_URL`. Permission failures are explicit errors. **Built so far (ECOIQ):** `queueStore.ts` with one `agent_job` table (SQLite/Postgres), create, get, cancel, retry, finish, requester-scoped reads, and one test. **Missing:** `agent_schema_version`, `agent_control`, `agent_thread`, `agent_job_event`, `agent_job_artifact`, `agent_worker_heartbeat`, `agent_usage_daily`; `kind`/`inputs_json`; idempotent create; thread listing; migrations; Postgres integration suite. |
+| T-009 | Implement `gate.ts` and `identity.ts`: production gate (same detection as IBAL), deploy-level switch, `agent_control.paused` checks, `agent_sid` cookie with HMAC requester IDs, boundary identity header honored only behind an open gate, the `AGENT_WORKER_TOKEN` check (constant-time), and `scripts/agent-control.mjs`. | REQ-025, NFR-005 | in-progress | Requester A must never read or cancel requester B's jobs. Browsers never receive the worker token. **Built so far (ECOIQ):** `requester.ts` sets an `agent_sid` cookie and hashes a boundary header. **Missing:** HMAC-signed requester IDs (the cookie is currently an unsigned random UUID that the server trusts as presented), production gate, deploy switch, `agent_control.paused`, constant-time `AGENT_WORKER_TOKEN` check, `scripts/agent-control.mjs`. The boundary header is honored with no open-gate check. |
+| T-010 | Add the panel routes (`catalog`, `jobs` POST/GET, `jobs/[id]`, `cancel`, `retry`, `audit`, `health`) with limits, context and structured-input validation, idempotency, correlation IDs, every error code in `PLAN.md`, and the catalog's config ∩ worker-capability rule for workflows and kinds; route contract tests. | REQ-001, REQ-002, REQ-003, REQ-004, REQ-005, REQ-007, REQ-025, REQ-027, NFR-007, NFR-010 | in-progress | The thread GET runs pending verifications (bounded, idempotent) before returning. **Built so far:** `POST /api/agent/jobs`, `GET /jobs/[id]`, `cancel`, `retry`, and an `execute` route (not in this spec's route list; see ECOIQ slice). **Missing:** `catalog`, `audit`, `health`; limits, context/structured-input validation, idempotency, correlation IDs, the full error-code set, the config ∩ capability rule, pending verification on thread GET, route contract tests beyond create/isolation. |
 | T-011 | Extract `resolveChartSeries` from `src/app/api/chart/series/route.ts` into `src/lib/server/chartSeries.ts` without changing route behavior (snapshot tests pin current responses for `econ`, `fred`, `market`, `ERR`, and empty cases); the verifier uses the same function. | REQ-010, REQ-015 | todo | Behavior-preserving refactor. The non-`lin` units divergence from `/api/econ/series` is recorded, not fixed here. |
 
 ### Slice D - worker
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-012 | Scaffold `services/agent_worker` (pyproject with pinned dependencies and no `quantsmith` entry; no Dockerfile in version one; `scripts/agent-worker.sh` as `npm run agent:worker`, loading the repository's `.env`), sourcing (`QUANTSMITH_ROOT` path mode with the shadowing check, installed mode with `QUANTSMITH_ASSETS_ROOT`), readiness (fingerprints, schema version, registry, profile dry-runs, `QUANTSMITH_NOT_FOUND`), heartbeats with sourcing mode and fingerprints, the fenced claim loop with leases and stage-boundary cancellation, sweeps (lease expiry, TTL, retention purge), metadata-only telemetry, and confirm the `0070` envelope entry point in `quantsmith.orchestration` on the pinned copy. | REQ-004, REQ-008, REQ-027, REQ-028, REQ-030, NFR-004, NFR-005 | todo | Readiness failure means no claims, ever. A start-up test with outbound network blocked must pass in both modes. |
+| T-012 | Scaffold `services/agent_worker` (pyproject with pinned dependencies and no `quantsmith` entry; no Dockerfile in version one; `scripts/agent-worker.sh` as `npm run agent:worker`, loading the repository's `.env`), sourcing (`QUANTSMITH_ROOT` path mode with the shadowing check, installed mode with `QUANTSMITH_ASSETS_ROOT`), readiness (fingerprints, schema version, registry, profile dry-runs, `QUANTSMITH_NOT_FOUND`), heartbeats with sourcing mode and fingerprints, the fenced claim loop with leases and stage-boundary cancellation, sweeps (lease expiry, TTL, retention purge), metadata-only telemetry, and confirm the `0070` envelope entry point in `quantsmith.orchestration` on the pinned copy. | REQ-004, REQ-008, REQ-027, REQ-028, REQ-030, NFR-004, NFR-005 | in-progress | Readiness failure means no claims, ever. A start-up test with outbound network blocked must pass in both modes. **Built so far (ECOIQ):** `worker.py` claims only `ECOIQ` jobs (Postgres `SKIP LOCKED` or SQLite) and calls the Node `execute` route. **Missing:** `pyproject` completion, `agent:worker` script, sourcing modes and shadowing check, readiness and fingerprints, heartbeats, leases and fencing, stage-boundary cancellation, sweeps, telemetry, the `0070` entry point. A claimed job whose call fails is marked `WORKER_LOST` and not retried; nothing re-queues it. |
 | T-013 | Implement `readers.py` and `periods.py`: Gold series reader with optional headers and the `DB`-only rule; desk reader over the worker-only route with the bearer token and the `SIM` requirement; period encodings for every grain with round-trip tests; `Fact` construction; `evidence_rows` and `desk_rows` artifacts; content hashing. | REQ-010, REQ-033, NFR-002 | todo | A null observation is skipped and counted, never filled. |
 | T-014 | Implement the Python profile clients (`anthropic`, `openai` SDKs) passing the shared conformance fixtures; retries and normalized errors; per-job caps and daily budgets with atomic usage accounting; declared fallback with disclosure. | REQ-020, REQ-021, REQ-026, NFR-006 | todo | A provider without usage data is charged the estimate and flagged. |
 | T-015 | Implement `chart.build`: the deterministic splitter, `KeywordInterpreter` per fragment, `LlmInterpreter` (structured `ChartRequest`, also registered via `register_interpreter`), `validate_plan` → `authorize_plan` → `execute` → `choose_chart` per series, overlay and transform rules, range mapping with disclosure, pack caveats (or the no-packs notice) and chart conventions, `unsupported_chart` and clarification outcomes, result payload and disclosure; golden tests including `FUND` funding overlays, and deterministic replay. | REQ-006, REQ-011, REQ-017, REQ-024, NFR-002 | todo | The executed `Result` drives form, staleness, and hashes only; its values are never displayed. |
@@ -131,7 +169,7 @@ Done; none changes a requirement):
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-029 | Build the desk dataset registry (`src/lib/server/agent/deskDatasets.ts`) for `sl_inventory`, `sl_loans`, and `sl_borrow_demand` with the five initial `SLAB` metrics; add `DATA_SOURCE = "SIM"` to `securitiesLending.ts`, `collateral.ts`, and `cash.ts`; add the worker-only `GET /api/agent/desk-data/[dataset]` (bearer token, production gate, declared fields only, `DATA_CLASS_NOT_APPROVED` for any non-`SIM` source); share the dataset loader with the verifier. | REQ-009, REQ-010, REQ-015, REQ-029, REQ-033 | todo | `PB`, `COLL`, and `CASH` datasets are registered only when those modules are enabled after the pilot. |
+| T-029 | Build the desk dataset registry (`src/lib/server/agent/deskDatasets.ts`) for `sl_inventory`, `sl_loans`, and `sl_borrow_demand` with the five initial `SLAB` metrics; add `DATA_SOURCE = "SIM"` to `securitiesLending.ts`, `collateral.ts`, and `cash.ts`; add the worker-only `GET /api/agent/desk-data/[dataset]` (bearer token, production gate, declared fields only, `DATA_CLASS_NOT_APPROVED` for any non-`SIM` source); share the dataset loader with the verifier. | REQ-009, REQ-010, REQ-015, REQ-029, REQ-033 | in-progress | `PB`, `COLL`, and `CASH` datasets are registered only when those modules are enabled after the pilot. **Built so far:** `deskDatasets.ts` registry and `DATA_SOURCE = "SIM"` (pulled forward under T-004). **Missing:** the worker-only `GET /api/agent/desk-data/[dataset]` route with token and gate, `DATA_CLASS_NOT_APPROVED`, the shared loader, and the verifier's use. |
 | T-030 | Implement the formula set (`src/lib/server/agent/formulas.ts`: `days_act`, `leg_cost`, `net_financing_cost`, `funding_rate_bps`, `shocked_net_cost`, `pct_to_bps`, `spread_bps`, `share`, `aggregate`) and the shared vectors in `contracts/agent/fixtures/formulas/`; the worker's tests run spec `0028` and spec `0008` on the same vectors. | REQ-015, REQ-032, NFR-010 | todo | Vectors cover ACT/360, the zero floor on shocked rates, absent legs, and every aggregation. |
 | T-031 | Implement `secfin.carry`: `CarryRequest` schema and `carry_request.v1.md` interpreter prompt, term validation, benchmark selection (historical start vs. future start), optional `SLAB` weighted-fee input as a `SIM` claim, spec `0028` `decompose`/`spread_sensitivity`/`check_point_in_time`, assumption, level, aggregate, and calculated claims, the carry table, flat-rate and look-ahead notices, `0063` and pack caveats; plus the panel's carry form with "edit and re-run". | REQ-017, REQ-024, REQ-031, REQ-032, NFR-002 | todo | The form path needs no LLM. Every user term is an `assumption` claim checked against the stored inputs. |
 | T-032 | Implement simulated-data labeling: `ProvenanceBadge` (`GOLD`, `SIM`, `ASSUMPTION`, `CALC` with input provenances), the non-dismissable `SimDataBanner`, and text-not-color cues; component tests and an e2e check on a `SLAB` result. | REQ-034, NFR-008 | todo | Simulated values are never described as market data anywhere in the UI. |
@@ -169,15 +207,15 @@ Status values: `todo` | `in-progress` | `blocked` | `done`.
 
 | Acceptance criterion | Test(s) | Status |
 | --- | --- | --- |
-| AC-001 | `src/lib/server/agent/config.test.ts::module enablement`; `test/agent-panel.spec.ts::panel renders only on enabled modules` | todo |
-| AC-002 | `queueStore.test.ts::idempotent create`; `agent-panel.spec.ts::worker offline then started` | todo |
+| AC-001 | `src/lib/server/agent/config.test.ts::module enablement`; `test/agent-panel.spec.ts::panel renders only on enabled modules` | partial — `config.test.ts` enablement checks pass; the e2e panel test does not exist |
+| AC-002 | `queueStore.test.ts::idempotent create`; `agent-panel.spec.ts::worker offline then started` | partial — `queueStore.test.ts` covers create, isolation, cancel, retry; idempotent create is not implemented |
 | AC-003 | `queueStore.test.ts::thread FIFO`; `agent-panel.spec.ts::queue three, cancel, retry, reload` | todo |
 | AC-004 | `queueStore.test.ts::queued limit`; `services/agent_worker/tests/test_queue.py::test_lease_expiry_requeues_then_fails` | todo |
 | AC-005 | `jobs.route.test.ts::context allowlist and size`; `ContextChip.test.tsx::shows sent context` | todo |
 | AC-006 | `test_chart_build.py::test_ambiguous_request_clarifies`; `agent-panel.spec.ts::clarification reply links jobs` | todo |
 | AC-007 | `catalog.route.test.ts::workflow without capability hidden and rejected` | todo |
 | AC-008 | `test_readiness.py::test_code_fingerprint_mismatch_blocks_claims`, `::test_assets_fingerprint_mismatch_blocks_claims`; `architecture.test.ts::no quantsmith in node` | todo |
-| AC-009 | `export-agent-metric-registry.test.ts::no drift`; `test_registry.py::test_plan_outside_registry_rejected` | todo |
+| AC-009 | `export-agent-metric-registry.test.ts::no drift`; `test_registry.py::test_plan_outside_registry_rejected` | partial — `metricRegistry.test.ts` (no drift) and `test_registry.py::test_plans_may_only_name_registry_metrics` pass; test names differ from the map |
 | AC-010 | `test_readers.py::test_non_db_provenance_is_unavailable` | todo |
 | AC-011 | `test_chart_build.py::test_overlay_dgs2_dgs10_keyword`, `::test_mixed_units_clarify`, `::test_kpi_form_unsupported`; `agent-panel.spec.ts::overlay chart renders with provenance` | todo |
 | AC-012 | `test_analysis_answer.py::test_desk_revenue_by_borrower`, `::test_nonadditive_plan_unsupported_metric`, `::test_level_is_latest_and_change_in_bps` | todo (yield case blocked) |
@@ -187,7 +225,7 @@ Status values: `todo` | `in-progress` | `blocked` | `done`.
 | AC-016 | `ClaimText.test.tsx`; `ResultBlocks.test.tsx::no unverified numbers in DOM` | todo |
 | AC-017 | `DisclosureDrawer.test.tsx::all disclosure fields` | todo |
 | AC-018 | `ChartStudio.agentChart.test.tsx`; `agent-panel.spec.ts::open in chart studio` | todo |
-| AC-019 | `llm/profiles.test.ts::registry schema and secret scan` | todo |
+| AC-019 | `llm/profiles.test.ts::registry schema and secret scan` | done — `llm/profileConfig.test.ts` (registry schema and secret scan) and `config.test.ts::secrets` pass |
 | AC-020 | `llm/profiles.test.ts::precedence and fail-closed`; `test_profiles.py::test_precedence_and_fail_closed` | todo |
 | AC-021 | `llm/conformance.test.ts`; `test_profiles_conformance.py`; stub gateway tests on both sides | todo |
 | AC-022 | `copilot.route.test.ts::default profile request identical`; `::local fallback unchanged` | todo |
@@ -197,7 +235,7 @@ Status values: `todo` | `in-progress` | `blocked` | `done`.
 | AC-026 | `test_budget.py::test_budget_exceeded_before_call`, `::test_per_job_cap`, `::test_usage_recorded` | todo |
 | AC-027 | `health.route.test.ts::states including missing assets`; Data Ops agent card component test | todo |
 | AC-028 | `test_replay.py::test_deterministic_replay_identical`; `test_retention.py::test_purge_and_delete` | todo |
-| AC-029 | `config.test.ts::ineligible modules rejected`; `test_profiles.py::test_data_class_enforcement` | todo |
+| AC-029 | `config.test.ts::ineligible modules rejected`; `test_profiles.py::test_data_class_enforcement` | partial — `config.test.ts::module eligibility` passes; `test_profiles.py::test_data_class_enforcement` does not exist |
 | AC-030 | Benchmark suite with retained p50/p95/max and runtime manifest | todo |
 | AC-031 | `agent-panel.spec.ts` viewport and keyboard runs (including the carry form) with overlap and console assertions | todo |
 | AC-032 | `ResultBlocks.test.tsx::incompatible schema version` | todo |

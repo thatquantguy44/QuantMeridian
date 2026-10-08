@@ -12,7 +12,7 @@ import sqlite3
 import time
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 @dataclass(frozen=True)
@@ -34,10 +34,17 @@ def config_from_env() -> WorkerConfig:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class EcoIqWorker:
+    _LOST = (
+        "UPDATE agent_job SET status = 'failed', error_code = 'WORKER_LOST', "
+        "updated_at = {} WHERE job_id = {}"
+    )
+    _LOST_PG = _LOST.format("%s", "%s")
+    _LOST_SQLITE = _LOST.format("?", "?")
+
     def __init__(self, config: WorkerConfig):
         self.config = config
         if not config.postgres and not config.queue_url.startswith("sqlite:"):
@@ -66,17 +73,28 @@ class EcoIqWorker:
                     if row is None:
                         db.commit()
                         return None
-                    cur.execute("UPDATE agent_job SET status = 'running', attempts = attempts + 1, updated_at = %s WHERE job_id = %s", (_now(), row["job_id"]))
+                    cur.execute(
+                        "UPDATE agent_job SET status = 'running', attempts = attempts + 1, "
+                        "updated_at = %s WHERE job_id = %s",
+                        (_now(), row["job_id"]),
+                    )
                     db.commit()
                     return dict(row)
         with sqlite3.connect(self.path) as db:
             db.row_factory = sqlite3.Row
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT * FROM agent_job WHERE module = 'ECOIQ' AND status = 'queued' ORDER BY created_at LIMIT 1").fetchone()
+            row = db.execute(
+                "SELECT * FROM agent_job WHERE module = 'ECOIQ' AND status = 'queued' "
+                "ORDER BY created_at LIMIT 1"
+            ).fetchone()
             if row is None:
                 db.commit()
                 return None
-            db.execute("UPDATE agent_job SET status = 'running', attempts = attempts + 1, updated_at = ? WHERE job_id = ?", (_now(), row["job_id"]))
+            db.execute(
+                "UPDATE agent_job SET status = 'running', attempts = attempts + 1, "
+                "updated_at = ? WHERE job_id = ?",
+                (_now(), row["job_id"]),
+            )
             db.commit()
             return dict(row)
 
@@ -87,7 +105,10 @@ class EcoIqWorker:
         request = urllib.request.Request(
             f"{self.config.api_url}/api/agent/jobs/{job['job_id']}/execute",
             data=b"{}",
-            headers={"content-type": "application/json", "cookie": f"agent_sid={job['requester_id']}"},
+            headers={
+                "content-type": "application/json",
+                "cookie": f"agent_sid={job['requester_id']}",
+            },
             method="POST",
         )
         try:
@@ -96,11 +117,11 @@ class EcoIqWorker:
         except Exception:
             if self.config.postgres:
                 with self._postgres_connection() as db:
-                    db.execute("UPDATE agent_job SET status = 'failed', error_code = 'WORKER_LOST', updated_at = %s WHERE job_id = %s", (_now(), job["job_id"]))
+                    db.execute(self._LOST_PG, (_now(), job["job_id"]))
                     db.commit()
             else:
                 with sqlite3.connect(self.path) as db:
-                    db.execute("UPDATE agent_job SET status = 'failed', error_code = 'WORKER_LOST', updated_at = ? WHERE job_id = ?", (_now(), job["job_id"]))
+                    db.execute(self._LOST_SQLITE, (_now(), job["job_id"]))
                     db.commit()
         return True
 
