@@ -11,8 +11,9 @@ import os
 import sqlite3
 import time
 import urllib.request
+import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 
 @dataclass(frozen=True)
@@ -43,15 +44,19 @@ def _now() -> str:
 
 
 class EcoIqWorker:
-    _LOST = (
-        "UPDATE agent_job SET status = 'failed', error_code = 'WORKER_LOST', "
-        "updated_at = {} WHERE job_id = {}"
-    )
-    _LOST_PG = _LOST.format("%s", "%s")
-    _LOST_SQLITE = _LOST.format("?", "?")
+    """Claims queued ECOIQ jobs from the T-008 schema and runs them through the Node endpoint.
 
-    def __init__(self, config: WorkerConfig):
+    Leases, fencing, heartbeats, and sweeps arrive with T-012; until then a claimed job is marked
+    running with this worker's id and a lease deadline, and a failed call marks it WORKER_LOST.
+    """
+
+    LEASE_SECONDS = 60
+
+    def __init__(self, config: WorkerConfig, worker_id: str | None = None):
         self.config = config
+        self.worker_id = (
+            worker_id or os.environ.get("AGENT_WORKER_ID") or f"worker-{uuid.uuid4().hex[:8]}"
+        )
         if not config.postgres and not config.queue_url.startswith("sqlite:"):
             raise RuntimeError("AGENT_QUEUE_URL_UNSUPPORTED")
         self.path = config.queue_url.removeprefix("sqlite:")
@@ -64,17 +69,40 @@ class EcoIqWorker:
             raise RuntimeError("psycopg is required for a PostgreSQL agent queue") from error
         return psycopg.connect(self.config.queue_url, row_factory=dict_row)
 
+    def _sql(self, sql: str) -> str:
+        return sql.replace("?", "%s") if self.config.postgres else sql
+
+    def _run(self, sql: str, params: tuple = ()) -> None:
+        if self.config.postgres:
+            with self._postgres_connection() as db:
+                db.execute(self._sql(sql), params)
+                db.commit()
+        else:
+            with sqlite3.connect(self.path) as db:
+                db.execute(sql, params)
+                db.commit()
+
+    def _event(self, job_id: str, to_status: str, code: str | None = None) -> None:
+        self._run(
+            "INSERT INTO agent_job_event (id, job_id, at, from_status, to_status, actor, code) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                str(uuid.uuid4()), job_id, _now(), "running", to_status,
+                f"worker:{self.worker_id}", code,
+            ),
+        )
+
     def is_paused(self) -> bool:
-        """Run-time kill switch (agent_control.paused), checked on every poll."""
-        query = "SELECT paused FROM agent_control WHERE id = 1"
+        """Run-time kill switch (agent_control key 'paused'), checked on every poll."""
+        query = "SELECT value FROM agent_control WHERE key = 'paused'"
         try:
             if self.config.postgres:
                 with self._postgres_connection() as db:
                     row = db.execute(query).fetchone()
-                    return bool(row and row["paused"])
+                    return bool(row and row["value"] == "1")
             with sqlite3.connect(self.path) as db:
                 row = db.execute(query).fetchone()
-                return bool(row and row[0])
+                return bool(row and row[0] == "1")
         except (sqlite3.OperationalError, RuntimeError):
             return False
         except Exception as error:  # a missing agent_control table on Postgres
@@ -82,53 +110,57 @@ class EcoIqWorker:
                 return False
             raise
 
+    def _claim_updates(self, job_id: str) -> tuple[str, tuple]:
+        now = datetime.now(UTC)
+        lease = (now + timedelta(seconds=self.LEASE_SECONDS)).isoformat()
+        return (
+            "UPDATE agent_job SET status = 'running', attempt = attempt + 1, lease_owner = ?, "
+            "lease_expires_at = ?, started_at = COALESCE(started_at, ?), updated_at = ? "
+            "WHERE id = ?",
+            (self.worker_id, lease, now.isoformat(), now.isoformat(), job_id),
+        )
+
     def claim_once(self) -> dict[str, object] | None:
         if self.is_paused():
             return None
+        select = (
+            "SELECT * FROM agent_job WHERE module = 'ECOIQ' AND status = 'queued' "
+            "AND cancel_requested = 0 AND expires_at > ? ORDER BY created_at LIMIT 1"
+        )
         if self.config.postgres:
             with self._postgres_connection() as db:
                 with db.cursor() as cur:
-                    cur.execute("""
-                        SELECT * FROM agent_job
-                        WHERE module = 'ECOIQ' AND status = 'queued'
-                        ORDER BY created_at
-                        FOR UPDATE SKIP LOCKED LIMIT 1
-                    """)
+                    locking = self._sql(select).replace("LIMIT 1", "FOR UPDATE SKIP LOCKED LIMIT 1")
+                    cur.execute(locking, (_now(),))
                     row = cur.fetchone()
                     if row is None:
                         db.commit()
                         return None
-                    cur.execute(
-                        "UPDATE agent_job SET status = 'running', attempts = attempts + 1, "
-                        "updated_at = %s WHERE job_id = %s",
-                        (_now(), row["job_id"]),
-                    )
+                    sql, params = self._claim_updates(row["id"])
+                    cur.execute(self._sql(sql), params)
                     db.commit()
-                    return dict(row)
-        with sqlite3.connect(self.path) as db:
-            db.row_factory = sqlite3.Row
-            db.execute("BEGIN IMMEDIATE")
-            row = db.execute(
-                "SELECT * FROM agent_job WHERE module = 'ECOIQ' AND status = 'queued' "
-                "ORDER BY created_at LIMIT 1"
-            ).fetchone()
-            if row is None:
+                    job = dict(row)
+        else:
+            with sqlite3.connect(self.path) as db:
+                db.row_factory = sqlite3.Row
+                db.execute("BEGIN IMMEDIATE")
+                row = db.execute(select, (_now(),)).fetchone()
+                if row is None:
+                    db.commit()
+                    return None
+                sql, params = self._claim_updates(row["id"])
+                db.execute(sql, params)
                 db.commit()
-                return None
-            db.execute(
-                "UPDATE agent_job SET status = 'running', attempts = attempts + 1, "
-                "updated_at = ? WHERE job_id = ?",
-                (_now(), row["job_id"]),
-            )
-            db.commit()
-            return dict(row)
+                job = dict(row)
+        self._event(str(job["id"]), "running")
+        return job
 
     def execute_once(self) -> bool:
         job = self.claim_once()
         if job is None:
             return False
         request = urllib.request.Request(
-            f"{self.config.api_url}/api/agent/jobs/{job['job_id']}/execute",
+            f"{self.config.api_url}/api/agent/jobs/{job['id']}/execute",
             data=b"{}",
             headers={
                 "content-type": "application/json",
@@ -140,14 +172,13 @@ class EcoIqWorker:
             with urllib.request.urlopen(request, timeout=180):
                 pass
         except Exception:
-            if self.config.postgres:
-                with self._postgres_connection() as db:
-                    db.execute(self._LOST_PG, (_now(), job["job_id"]))
-                    db.commit()
-            else:
-                with sqlite3.connect(self.path) as db:
-                    db.execute(self._LOST_SQLITE, (_now(), job["job_id"]))
-                    db.commit()
+            now = _now()
+            self._run(
+                "UPDATE agent_job SET status = 'failed', error_code = 'WORKER_LOST', "
+                "finished_at = ?, updated_at = ? WHERE id = ? AND status = 'running'",
+                (now, now, job["id"]),
+            )
+            self._event(str(job["id"]), "failed", "WORKER_LOST")
         return True
 
     def run(self) -> None:

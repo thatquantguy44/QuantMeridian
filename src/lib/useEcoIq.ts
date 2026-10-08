@@ -8,7 +8,7 @@ export function useEcoIq() {
   const run = useCallback(async (question: string, workflow: EcoIqWorkflow) => {
     setLoading(true);
     try {
-      const queued = await fetch("/api/agent/jobs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ schema_version: "agent-job/1", module: "ECOIQ", thread_id: crypto.randomUUID(), workflow, message: question, context: { series: [{ source: "econ", id: "DGS2" }, { source: "econ", id: "DGS10" }], tenors: ["2Y", "10Y"] } }) });
+      const queued = await fetch("/api/agent/jobs", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() }, body: JSON.stringify({ schema_version: "agent-job/1", module: "ECOIQ", thread_id: crypto.randomUUID(), workflow, message: question, context: { series: [{ source: "econ", id: "DGS2" }, { source: "econ", id: "DGS10" }], tenors: ["2Y", "10Y"] } }) });
       if (queued.ok) {
         const created = await queued.json() as { job: { job_id: string } };
         setQueueStatus("queued");
