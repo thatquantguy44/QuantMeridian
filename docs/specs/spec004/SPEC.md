@@ -274,6 +274,11 @@ Market reaction should be included only when approved market observations cover
 the required pre/post window. Otherwise the package should omit that section
 rather than infer a reaction.
 
+The field-level data contract for this package — release values from FRED
+vintages, consensus through the Source Gate, and the unavailable states — is
+proposed in `PHASE0_DATA_CONTRACT.md`, "Post-Release Value Contract"
+(pending approval).
+
 ### Market Close Wrap
 
 The close package should be anchored to the latest completed observation in the
@@ -737,6 +742,8 @@ Recommended defaults are included so work can proceed once approved.
 | First output | PNG plus copyable text and alt text |
 | Direct posting | Defer; always human-reviewed in early phases |
 | Earnings | Keep disabled until a separate source/Gold contract is approved |
+| Post-release values | Approve Part A of the Post-Release Value Contract (FRED/ALFRED vintages into new Gold tables; no new provider) |
+| Consensus | Decide the provider through the Source Gate (Part B); until then notes show "not available" and no surprise vs. consensus |
 | Archive | Local versioned definitions and metadata; never write to Gold |
 | Audience modes | Macro investors, active traders, financial professionals, quants, and broader investing Twitter |
 | Tone and approach | Independently selectable and saved per publication |

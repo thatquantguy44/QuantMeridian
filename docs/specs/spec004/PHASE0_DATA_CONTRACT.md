@@ -91,7 +91,171 @@ cards for gated areas such as earnings/valuation.
   detectors still need dedicated Gold-only transforms.
 - Post-release notes need a release-specific Gold value contract for actual,
   prior, revised prior, and consensus/expectation fields where available.
+  Proposed below in "Post-Release Value Contract" (pending approval): Part A
+  from FRED vintages, Part B consensus through the Source Gate.
 - Earnings/valuation remains intentionally blocked.
+
+## Post-Release Value Contract — Proposed 2026-10-08 (pending approval)
+
+Closes the "release-specific Gold value contract" gap above, which keeps the
+Post-Release Note `partial` (`src/lib/marketPublishing.ts`). It names the
+fields the note needs, where each must come from, and how `MPUB` behaves when
+any of them is missing. Nothing here is built. Part A asks the upstream
+pipeline for new Gold tables built from FRED, an already-approved source. Part
+B is a new data source and goes through the Source Gate
+(`SPEC.md`, "Data Policy"). Each part needs Joshua's approval before ingestion
+starts.
+
+### Why the current tables are not enough
+
+- `gold_fred_latest_observation` holds one value per observation: the latest
+  vintage (`realtime_start` says when it became known). A revision overwrites
+  the value, so "prior as first published" versus "revised prior" cannot be
+  reconstructed, and a month-over-month change computed from it silently mixes
+  vintages.
+- `gold_release_calendar` has `release_id`, `release_name`, `release_date`,
+  `importance`, `econ_category`, `representative_series_id`, and `fetched_at`:
+  no time of day, no reference period, no list of the release's series, and no
+  signal that Gold has actually refreshed for that release.
+- `gold_macro_indicator_dashboard.surprise` / `surprise_z` measure a print
+  against its own **trend**, not against a consensus forecast, and the table
+  keeps only the current snapshot. It is valid context but must never be
+  labeled "vs. consensus" or "vs. expectations".
+- No approved source carries consensus. `src/lib/server/finnhubCalendar.ts`
+  can read Finnhub's calendar, but Finnhub is not an approved `MPUB` source.
+
+### Part A — Release values from FRED vintages (no new provider)
+
+Built upstream from FRED/ALFRED real-time data (`realtime_start` /
+`realtime_end`), which FRED already provides. `MPUB` reads them through
+`goldStore`, read-only.
+
+**A1. `gold_release_event`** — one row per release occurrence.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `release_id` | integer | FRED release ID (same key as `gold_release_calendar`) |
+| `release_date` | date | Publication date |
+| `released_at` | timestamp, nullable | Publication time (UTC) when an approved calendar provides it; otherwise null, never guessed |
+| `reference_period` | date | Period the headline print covers (e.g. `2026-09-01` for September CPI) |
+| `representative_series_id` | text | Headline series |
+| `gold_refreshed_at` | timestamp | When Gold finished loading this release's vintage rows |
+
+**A2. `gold_release_observation_vintage`** — one row per release occurrence ×
+series × observation affected by that release (the new print and every
+revised earlier period).
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `release_id`, `release_date` | | Key to A1 |
+| `series_id` | text | FRED series |
+| `observation_date` | date | Period the value belongs to |
+| `value` | numeric | Value as published in this release |
+| `previous_value` | numeric, nullable | Same observation as published before this release; null for a first print |
+| `is_first_print` | boolean | True for the new reference period |
+| `realtime_start` | date | Vintage start, from ALFRED |
+| `units` | text | FRED units (e.g. `Index 1982-1984=100`, `Thousands of Persons`) |
+| `seasonal_adjustment` | text | `SA`, `NSA`, or `SAAR` |
+| `frequency` | text | `M`, `Q`, `W` |
+
+**A3. `gold_release_series_map`** — reviewed mapping of a release to its series.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `release_id` | integer | |
+| `series_id` | text | |
+| `role` | text | `headline`, `core`, or `component` |
+| `parent_series_id` | text, nullable | For components |
+| `display_transform` | text | `level`, `mom_pct`, `yoy_pct`, `level_change`, or `annualized_qoq_pct` |
+| `seasonal_adjustment` | text | Must match A2; a release never mixes SA and NSA in one comparison |
+
+Initial release set (the spec's own list), each mapped in A3 with its headline
+and core series: CPI (`CPIAUCSL`, `CPILFESL`), PCE (`PCEPI`, `PCEPILFE`),
+Employment Situation (`PAYEMS`, `UNRATE`), GDP (`GDPC1`), retail sales
+(`RSAFS`), industrial production (`INDPRO`), housing starts (`HOUST`), and
+initial claims (`ICSA`). FOMC-related data stays with the existing FOMC routes.
+
+**How `MPUB` uses Part A**
+
+- The note is generated only when `gold_release_event.gold_refreshed_at`
+  exists for the release, never because `release_date` has passed.
+- **Actual** = A2 `value` where `is_first_print`. **Prior (as first published)**
+  and **revised prior** come from A2 rows for the previous reference period:
+  `previous_value` and `value`. **Revision** = revised prior − prior as first
+  published.
+- Every change (MoM %, YoY %, level change, annualized QoQ) is computed from
+  values of a single vintage, the one this release produced. Never mix
+  vintages.
+- Historical percentile and comparable episodes may use latest-vintage
+  history from `gold_fred_latest_observation`, labeled "revised history", per
+  the Trust and Citation Contract.
+
+### Part B — Consensus (new data source; Source Gate decision)
+
+**B1. `gold_release_consensus`** — one row per release occurrence × series ×
+basis.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `release_id`, `release_date`, `series_id` | | Key to A1/A2 |
+| `basis` | text | Same vocabulary as A3 `display_transform`; consensus is compared only on its own basis (a `mom_pct` consensus is never compared with a level) |
+| `consensus_value` | numeric | Median or mean forecast, as the provider defines it |
+| `consensus_definition` | text | Median, mean, or provider-specific |
+| `n_estimates`, `low`, `high` | nullable | When the provider supplies them |
+| `provider` | text | Cited in every note |
+| `captured_at` | timestamp | Must be before `released_at` (or before `release_date` when time is unknown); a value captured after the release is rejected upstream, never shown |
+
+Source Gate decision — to be completed and approved by Joshua:
+
+| Gate item | Proposal / open question |
+| --- | --- |
+| Business use and fields | Post-Release Note "expected" value and surprise vs. consensus; B1 fields only |
+| Provider and licensing | Open. Candidates: Finnhub (client already in the codebase; free-tier terms must allow redistribution in published cards), Trading Economics, Bloomberg/Refinitiv exports if licensed, or manually entered consensus with a cited source. Redistribution terms decide it, because `MPUB` output is shared publicly. |
+| Depth, frequency, revisions | Needed: at least 5 years per release for surprise percentiles; consensus is not revised, but `captured_at` must be kept |
+| Ingestion and schema ownership | Upstream pipeline repository; `MPUB` stays a read-only consumer |
+| Quality, freshness, outage | Missing consensus for a release renders the explicit missing-consensus state; it never blocks the rest of the note |
+| Cost and credentials | Provider-dependent; credentials live upstream only, never in Market Terminal |
+| Owner approval | Pending |
+
+Until B is approved and loaded, every Post-Release Note shows "Consensus: not
+available (no approved source)" and computes no surprise vs. consensus. The
+trend-based `surprise` from `gold_macro_indicator_dashboard` may appear only
+under a label such as "vs. recent trend".
+
+### Unavailable states
+
+Each renders with its reason, never as a blank or an inferred value:
+
+| State | When |
+| --- | --- |
+| `release_not_refreshed` | No `gold_release_event` row with `gold_refreshed_at` for the release |
+| `no_vintage_rows` | A2 has no first print for the headline series |
+| `prior_unavailable` | No A2 row for the previous reference period (e.g. the first release loaded) |
+| `consensus_unapproved` | Part B not approved |
+| `consensus_missing` | Part B approved, but no B1 row for this release and basis |
+| `consensus_late` | B1 row has `captured_at` after the release |
+| `basis_mismatch` | Consensus basis differs from every displayed transform |
+| `sa_nsa_mixed` | A comparison would mix seasonal-adjustment types |
+
+Market reaction stays out of scope for this contract. `released_at` is
+recorded so a later reaction section can use it, but under the current Gold
+data, which is daily closes only, a reaction can be stated only as
+"on the release date", with other same-day events listed.
+
+### Contract checks (to build with the consumer)
+
+When `MPUB` implements the note, a route test in the style of
+`candidates/route.test.ts` should prove, on Gold fixtures:
+
+- no note before `gold_refreshed_at`;
+- actual, prior as first published, revised prior, and revision match
+  hand-computed values from A2 fixtures;
+- MoM and YoY use one vintage (a fixture with a revision changes the prior, not
+  the current-vintage change);
+- with Part B absent, the note shows `consensus_unapproved` and no surprise vs.
+  consensus, and the trend surprise is never labeled as consensus;
+- a late-captured consensus row is not shown;
+- SQL touches only the approved Gold tables listed in this document.
 
 ## Spec006 Signal Table Audit — Approved 2026-09-02
 
