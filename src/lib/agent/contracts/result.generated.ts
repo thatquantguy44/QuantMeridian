@@ -43,7 +43,15 @@ export interface AgentResult {
   schema_version: "agent-result/1";
   job_id: string;
   workflow: {
-    id: "chart.build" | "analysis.answer" | "secfin.carry" | "story.build" | "brief.draft";
+    id:
+      | "chart.build"
+      | "analysis.answer"
+      | "secfin.carry"
+      | "story.build"
+      | "brief.draft"
+      | "economics.explain"
+      | "economics.transmission"
+      | "economics.scenario";
     version: string;
     kind: ("macro_backdrop" | "funding_conditions" | "desk_review") | null;
   };

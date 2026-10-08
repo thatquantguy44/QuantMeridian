@@ -64,6 +64,34 @@
         "funding_conditions": { "requires_capabilities": ["domain_packs", "stm_pack"] },
         "desk_review": { "requires_capabilities": ["desk_registry"] }
       }
+    },
+    "economics.explain": {
+      "version": "1.0.0",
+      "llm": "optional",
+      "uses": ["interpreter", "narrator"],
+      "timeout_seconds": 180,
+      "data_classes": ["public_market_data", "module_context"],
+      "enabled": true,
+      "requires_capabilities": ["agent_contracts"],
+      "plan_capabilities": { "non_additive_or_multi_period": ["pit_level_semantics"] }
+    },
+    "economics.transmission": {
+      "version": "1.0.0",
+      "llm": "optional",
+      "uses": ["interpreter", "narrator"],
+      "timeout_seconds": 180,
+      "data_classes": ["public_market_data", "module_context"],
+      "enabled": true,
+      "requires_capabilities": ["agent_contracts"]
+    },
+    "economics.scenario": {
+      "version": "1.0.0",
+      "llm": "optional",
+      "uses": ["interpreter", "narrator"],
+      "timeout_seconds": 180,
+      "data_classes": ["public_market_data", "module_context"],
+      "enabled": true,
+      "requires_capabilities": ["agent_contracts"]
     }
   },
   "modules": {
@@ -74,6 +102,14 @@
       "profile_override": true,
       "domains": ["economics_macro", "rates_fixed_income"],
       "context_fields": ["series", "range", "transform", "chartType"]
+    },
+    "ECOIQ": {
+      "enabled": true,
+      "workflows": ["economics.explain", "economics.transmission", "economics.scenario"],
+      "default_profile": null,
+      "profile_override": false,
+      "domains": ["economics_macro", "rates_fixed_income"],
+      "context_fields": ["asOfDate", "tenors", "series"]
     },
     "FUND": {
       "enabled": true,

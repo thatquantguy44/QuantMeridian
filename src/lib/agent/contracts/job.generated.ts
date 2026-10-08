@@ -11,7 +11,15 @@ export type AgentJobCreateRequest = {
   schema_version: "agent-job/1";
   module: string;
   thread_id: string;
-  workflow: "chart.build" | "analysis.answer" | "secfin.carry" | "story.build" | "brief.draft";
+  workflow:
+    | "chart.build"
+    | "analysis.answer"
+    | "secfin.carry"
+    | "story.build"
+    | "brief.draft"
+    | "economics.explain"
+    | "economics.transmission"
+    | "economics.scenario";
   kind?: ("macro_backdrop" | "funding_conditions" | "desk_review") | null;
   message?: string;
   inputs?: CarryInputs | null;

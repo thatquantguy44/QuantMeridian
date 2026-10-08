@@ -3,7 +3,7 @@
   "note": "Reviewed policy shared by the Node and worker config validators (spec009 REQ-005, REQ-029). Changing eligibility needs a spec change; the audit doc is docs/gold-db/MODULE_DATA_AUDIT.md.",
   "audit_reviewed_on": "2026-10-07",
   "eligible_modules": {
-    "gold": ["MGC", "MKC", "ECON", "CURV", "INFL", "GCPI", "GPOL", "CRDT", "STAT", "REGIME", "SFE", "FUND", "BMRK", "BRA", "YCURV", "RVOL", "FCOST", "MOTN"],
+    "gold": ["MGC", "MKC", "ECON", "ECOIQ", "CURV", "INFL", "GCPI", "GPOL", "CRDT", "STAT", "REGIME", "SFE", "FUND", "BMRK", "BRA", "YCURV", "RVOL", "FCOST", "MOTN"],
     "desk": ["SLAB", "PB", "COLL", "CASH"]
   },
   "never_eligible": ["IBAL", "OPT", "DESK", "TASSIST", "AI"],
@@ -14,6 +14,7 @@
     "SLAB": [],
     "CURV": ["asOfDate", "tenors"],
     "INFL": ["components", "range", "metric"]
+    ,"ECOIQ": ["asOfDate", "tenors", "series"]
   },
   "known_domains": [
     "economics_macro",

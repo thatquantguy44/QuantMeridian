@@ -34,10 +34,10 @@ describe("shipped settings/agent_workflows.json", () => {
 
   it("enables MGC, FUND and SLAB; CURV and INFL stay off", () => {
     const { modules, workflows } = shipped();
-    expect(Object.entries(modules).filter(([, m]) => (m as { enabled: boolean }).enabled).map(([c]) => c).sort()).toEqual(["FUND", "MGC", "SLAB"]);
+    expect(Object.entries(modules).filter(([, m]) => (m as { enabled: boolean }).enabled).map(([c]) => c).sort()).toEqual(["ECOIQ", "FUND", "MGC", "SLAB"]);
     expect(modules.CURV.enabled).toBe(false);
     expect(modules.INFL.enabled).toBe(false);
-    expect(Object.entries(workflows).filter(([, w]) => (w as { enabled: boolean }).enabled).map(([id]) => id).sort()).toEqual(["analysis.answer", "chart.build", "secfin.carry"]);
+    expect(Object.entries(workflows).filter(([, w]) => (w as { enabled: boolean }).enabled).map(([id]) => id).sort()).toEqual(["analysis.answer", "chart.build", "economics.explain", "economics.scenario", "economics.transmission", "secfin.carry"]);
   });
 
   it("starts SLAB with no context fields", () => {

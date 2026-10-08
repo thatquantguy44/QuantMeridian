@@ -16,6 +16,9 @@ export interface AgentWorkflowsConfig {
     "secfin.carry": Workflow;
     "story.build": Workflow;
     "brief.draft": Workflow;
+    "economics.explain": Workflow;
+    "economics.transmission": Workflow;
+    "economics.scenario": Workflow;
   };
   modules: {
     [k: string]: Module;
@@ -75,7 +78,16 @@ export interface Workflow {
  */
 export interface Module {
   enabled: boolean;
-  workflows: ("chart.build" | "analysis.answer" | "secfin.carry" | "story.build" | "brief.draft")[];
+  workflows: (
+    | "chart.build"
+    | "analysis.answer"
+    | "secfin.carry"
+    | "story.build"
+    | "brief.draft"
+    | "economics.explain"
+    | "economics.transmission"
+    | "economics.scenario"
+  )[];
   default_profile: string | null;
   profile_override: boolean;
   domains: string[];

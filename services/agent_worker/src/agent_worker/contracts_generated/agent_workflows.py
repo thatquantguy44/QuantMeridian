@@ -113,6 +113,9 @@ class Workflow1(StrEnum):
     secfin_carry = 'secfin.carry'
     story_build = 'story.build'
     brief_draft = 'brief.draft'
+    economics_explain = 'economics.explain'
+    economics_transmission = 'economics.transmission'
+    economics_scenario = 'economics.scenario'
 
 
 class DefaultProfile(RootModel[str]):
@@ -160,6 +163,9 @@ class Workflows(BaseModel):
     secfin_carry: Annotated[Workflow, Field(alias='secfin.carry')]
     story_build: Annotated[Workflow, Field(alias='story.build')]
     brief_draft: Annotated[Workflow, Field(alias='brief.draft')]
+    economics_explain: Annotated[Workflow, Field(alias='economics.explain')]
+    economics_transmission: Annotated[Workflow, Field(alias='economics.transmission')]
+    economics_scenario: Annotated[Workflow, Field(alias='economics.scenario')]
 
 
 class AgentWorkflowsConfig(BaseModel):
