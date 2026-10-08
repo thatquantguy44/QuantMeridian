@@ -34,10 +34,15 @@ def build_ecoiq_directive(workflow: Workflow, question: str) -> dict[str, object
         "workflow": workflow,
         "question": question[:2000],
         "stages": [{"agent": s.agent, "purpose": s.purpose} for s in ECOIQ_STAGES],
+        "output_schema": {
+            "claims": [{"id": "string", "type": "observation|mechanism|effect|alternative|falsifier", "text": "string", "evidenceIds": ["gold evidence id"], "confidence": "high|medium|low"}],
+            "stages": [{"agent": "string", "status": "completed|failed", "summary": "string", "evidenceIds": ["gold evidence id"]}],
+        },
         "rules": [
             "Use only evidence rows supplied by the Gold reader.",
             "Label observations, mechanism hypotheses, alternatives, and falsifiers separately.",
             "Do not claim causation from correlation without an identification design.",
             "Do not invent values, releases, probabilities, or effect sizes.",
+            "Return JSON matching output_schema; reject any claim without evidenceIds.",
         ],
     }

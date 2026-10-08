@@ -13,14 +13,17 @@ export function useEcoIq() {
         const created = await queued.json() as { job: { job_id: string } };
         setQueueStatus("queued");
         setQueueStatus("running");
-        await fetch(`/api/agent/jobs/${created.job.job_id}/execute`, { method: "POST" });
+        const executed = await fetch(`/api/agent/jobs/${created.job.job_id}/execute`, { method: "POST" });
+        if (!executed.ok) throw new Error(`ECOIQ execution failed (${executed.status})`);
+        let resolved = false;
         for (let attempt = 0; attempt < 20; attempt++) {
           const status = await fetch(`/api/agent/jobs/${created.job.job_id}`, { cache: "no-store" });
           const body = await status.json() as { job?: { status?: string; result?: EcoIqResponse } };
-          if (body.job?.result) { setData(body.job.result); break; }
+          if (body.job?.result) { setData(body.job.result); resolved = true; break; }
           if (body.job?.status === "failed" || body.job?.status === "cancelled") break;
           await new Promise(resolve => window.setTimeout(resolve, 250));
         }
+        if (!resolved) throw new Error("ECOIQ job did not return a result.");
       } else {
         setQueueStatus("deterministic");
         const res = await fetch("/api/economics/ecoiq", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question, workflow }) });

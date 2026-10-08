@@ -18,9 +18,17 @@ export function resolveLlmProfile(requested?: string | null, env: Record<string,
 }
 
 export async function completeWithProfile(profile: ResolvedProfile, system: string, user: string): Promise<string | null> {
+  return completeRaw(profile, system, user, false);
+}
+
+export async function completeJsonWithProfile(profile: ResolvedProfile, system: string, user: string): Promise<string | null> {
+  return completeRaw(profile, system, user, true);
+}
+
+async function completeRaw(profile: ResolvedProfile, system: string, user: string, json: boolean): Promise<string | null> {
   if (!profile.available || profile.apiStyle === "none" || profile.apiStyle !== "openai_chat_completions" || !profile.model) return null;
   const endpoint = `${profile.baseUrl ?? "http://127.0.0.1:11434/v1"}/chat/completions`;
-  const response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: profile.model, think: false, temperature: 0.1, max_tokens: 1200, messages: [{ role: "system", content: system }, { role: "user", content: user }] }) });
+  const response = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: profile.model, think: false, temperature: 0.1, max_tokens: json ? 900 : 1200, ...(json ? { response_format: { type: "json_object" }, format: "json" } : {}), messages: [{ role: "system", content: system }, { role: "user", content: user }] }) });
   if (!response.ok) throw new Error(`LLM_PROVIDER_ERROR:${response.status}`);
   const body = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
   return body.choices?.[0]?.message?.content ?? null;
