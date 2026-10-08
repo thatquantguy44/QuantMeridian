@@ -50,6 +50,9 @@ export interface PolicyRate {
   fredId?: string; // OECD central-bank-rate / ECB series where available
   source: DataSource;
   asOf: string | null;
+  rateAsOf: string | null;
+  decisionDate: string | null;
+  decisionSource: "GOLD_CALENDAR" | "OFFICIAL" | "UNAVAILABLE";
 }
 
 // country, flag, region, fredId, current CPI YoY, target
@@ -322,6 +325,9 @@ export function getGlobalPolicyRates(): PolicyRate[] {
       fredId,
       source: "SIM" as const,
       asOf: null,
+      rateAsOf: null,
+      decisionDate: null,
+      decisionSource: "UNAVAILABLE" as const,
     };
   }).sort((a, b) => b.rate - a.rate);
 }

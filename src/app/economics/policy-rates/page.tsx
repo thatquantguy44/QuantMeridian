@@ -9,9 +9,9 @@ import { Sparkline } from "@/components/charts/Sparkline";
 import { Donut } from "@/components/charts/Radial";
 import { useDrill } from "@/components/econ/DrillProvider";
 import { SourceBadge } from "@/components/econ/SourceBadge";
-import { isRealEconSource, useLiveSeriesSet, type DataSource } from "@/lib/useEcon";
-import { worstSource } from "@/lib/provenance";
-import { getGlobalPolicyRates, getGlobalSummary, livePolicyRate, type PolicyRate, type Region } from "@/data/globalMacro";
+import { type DataSource } from "@/lib/useEcon";
+import { classifyFreshness, worstSource } from "@/lib/provenance";
+import { getGlobalPolicyRates, getGlobalSummary, type PolicyRate, type Region } from "@/data/globalMacro";
 import { fmtNum, fmtSigned, pnlClass } from "@/lib/format";
 
 const REGIONS: ("All" | Region)[] = ["All", "AMER", "EMEA", "APAC"];
@@ -60,6 +60,8 @@ interface GoldPolicyRateRow {
   stance: string | null;
   real_rate_pct: number | null;
   observation_date: string;
+  next_meeting_date?: string | null;
+  meeting_source?: "GOLD_CALENDAR" | null;
 }
 
 function goldCycle(stance: string | null): PolicyRate["cycle"] {
@@ -95,6 +97,9 @@ function policyRateFromGold(row: GoldPolicyRateRow): PolicyRate | null {
     fredId: undefined,
     source: "DB",
     asOf: row.observation_date,
+    rateAsOf: row.observation_date,
+    decisionDate: row.next_meeting_date ?? null,
+    decisionSource: row.meeting_source ?? "UNAVAILABLE",
   };
 }
 
@@ -129,7 +134,8 @@ export default function GlobalPolicyRates() {
   // to RATE_DEFS's `country` field 1:1 for the 18 countries both cover.
   const goldByCountry = new Map(goldRows.map((r) => [r.country, r]));
 
-  // Source order: live FRED/OECD snapshots → Gold DB (BIS) → deterministic SIM.
+  // Gold/BIS is authoritative for this page. Avoid a redundant FRED/OECD
+  // fan-out that can be stale and materially delays first render.
   const baseAll = getGlobalPolicyRates();
   const baseWithGold = baseAll.map((r) => {
     const gold = goldByCountry.get(r.country);
@@ -144,19 +150,13 @@ export default function GlobalPolicyRates() {
       bias: gold.real_rate_pct != null ? goldBias(gold.real_rate_pct) : r.bias,
       source: "DB" as const,
       asOf: gold.observation_date,
+      rateAsOf: gold.observation_date,
+      decisionDate: gold.next_meeting_date ?? null,
+      decisionSource: gold.meeting_source ?? "UNAVAILABLE" as const,
     };
   });
 
   const base = getGlobalSummary();
-  // Live FRED for central banks with an OECD / ECB rate series.
-  const { data: liveMap, source } = useLiveSeriesSet(baseWithGold.map((r) => r.fredId).filter(Boolean) as string[], "lin", 36);
-  const merged = baseWithGold.map((r) => {
-    const L = r.fredId ? liveMap[r.fredId] : undefined;
-    // Gold/BIS is the authoritative policy-rate source when present. Do not
-    // replace a current Gold observation with a stale FRED/OECD series (for
-    // example Canada's OECD-linked series stops in 2023).
-    return r.source === "DB" ? r : L && isRealEconSource(L.source) && L.observations.length ? { ...livePolicyRate(r, L.observations), source: L.source } : r;
-  });
 
   // Append Gold-only countries (no RATE_DEFS entry) so the page reflects the
   // BIS connector's full 38-country reach, not just the 18-country SIM seed.
@@ -166,11 +166,11 @@ export default function GlobalPolicyRates() {
     .map(policyRateFromGold)
     .filter((r): r is PolicyRate => r !== null);
 
-  const all = [...merged, ...extraFromGold].sort((a, b) => b.rate - a.rate);
+  const all = [...baseWithGold, ...extraFromGold].sort((a, b) => b.rate - a.rate);
   const allSources = all.map((r) => r.source).filter((s) => s && s !== "LOADING");
   const realSources = allSources.filter((s) => s === "DB" || s === "FRED");
   const isRealMajority = realSources.length > allSources.length / 2;
-  const pageSource: DataSource = source === "LOADING" && !allSources.length
+  const pageSource: DataSource = goldRows.length === 0
     ? "LOADING"
     : isRealMajority
     ? (worstSource(realSources) as DataSource)
@@ -225,11 +225,11 @@ export default function GlobalPolicyRates() {
       render: (r) => <span className="font-semibold text-term-amber">{fmtNum(r.rate, 2)}</span>,
     },
     {
-      key: "asOf",
-      header: "Latest Rate Date",
+      key: "rateAsOf",
+      header: "Rate As Of",
       align: "right",
-      sortVal: (r) => r.asOf ?? "",
-      render: (r) => <span className="text-term-text-dim" title={r.asOf ? `Rate observation date: ${r.asOf}` : "No observation date available"}>{r.asOf ?? "—"}</span>,
+      sortVal: (r) => r.rateAsOf ?? "",
+      render: (r) => { const freshness = classifyFreshness(r.rateAsOf); return <span className="text-term-text-dim" title={freshness.title}>{r.rateAsOf ? <>{r.rateAsOf}{freshness.label && <span className="ml-1 text-3xs text-term-amber">{freshness.label}</span>}</> : "—"}</span>; },
     },
     {
       key: "lastMove",
@@ -275,7 +275,7 @@ export default function GlobalPolicyRates() {
       header: "Next Mtg",
       align: "right",
       sortVal: (r) => r.nextMeeting,
-      render: (r) => <span className="text-term-text-mute">{r.nextMeeting}</span>,
+      render: (r) => <span className="text-term-text-mute" title={r.decisionSource === "GOLD_CALENDAR" ? "Gold release calendar; official FOMC schedule" : "No approved meeting-calendar source connected"}>{r.decisionDate ?? "—"}</span>,
     },
 
     {
