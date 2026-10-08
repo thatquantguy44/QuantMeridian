@@ -1,5 +1,5 @@
 import { json } from "@/lib/server/http";
-import { goldStore, goldTable } from "@/lib/server/goldStore";
+import { goldParam, goldStore, goldTable } from "@/lib/server/goldStore";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,7 @@ interface GoldInflationRow {
   vs_target_pp: number | null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const store = goldStore();
   if (!store) {
     return json({ rows: [], source: "ERR" });
@@ -27,11 +27,20 @@ export async function GET() {
   // GoldStore docstring); this table carries annual World Bank CPI back to
   // the 1990s for 38 countries. Select only the latest observation per iso3.
   const table = goldTable("global_inflation");
+  const country = new URL(request.url).searchParams.get("country");
+  if (country) {
+    const history = await store.raw<GoldInflationRow>(
+      `SELECT observation_date, cpi_yoy_pct FROM ${table} WHERE country = ${goldParam(1)} AND cpi_yoy_pct IS NOT NULL ORDER BY observation_date`,
+      [country],
+    );
+    return json({ observations: history.map((r) => ({ date: r.observation_date, value: r.cpi_yoy_pct })), source: "DB" }, { headers: { "cache-control": "public, max-age=300, stale-while-revalidate=600" } });
+  }
   const rows = await store.raw<GoldInflationRow>(
-    `SELECT * FROM ${table} p1
-     WHERE observation_date = (
-       SELECT MAX(observation_date) FROM ${table} p2 WHERE p2.iso3 = p1.iso3
-     )`
+    `SELECT * FROM (
+       SELECT p.*, ROW_NUMBER() OVER (PARTITION BY iso3 ORDER BY observation_date DESC) AS rn
+       FROM ${table} p
+     ) latest
+     WHERE rn = 1`
   );
   return json({
     rows: rows.map((r) => ({
@@ -47,5 +56,5 @@ export async function GET() {
       observation_date: r.observation_date,
     })),
     source: "DB",
-  });
+  }, { headers: { "cache-control": "public, max-age=300, stale-while-revalidate=600" } });
 }
