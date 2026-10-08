@@ -1,5 +1,5 @@
 import { json } from "@/lib/server/http";
-import { goldStore, goldTable } from "@/lib/server/goldStore";
+import { goldParam, goldStore, goldTable } from "@/lib/server/goldStore";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ interface GoldPolicyRateRow {
   real_rate_pct: number | null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const store = goldStore();
   if (!store) {
     return json({ rows: [], source: "ERR" });
@@ -28,12 +28,26 @@ export async function GET() {
   // iso3 so the page gets one current row per country, not an arbitrary
   // historical one.
   const table = goldTable("global_policy_rates");
+  const params = new URL(request.url).searchParams;
+  const country = params.get("country");
+  if (country) {
+    const history = await store.raw<GoldPolicyRateRow>(
+      `SELECT observation_date, policy_rate_pct FROM ${table} WHERE country = ${goldParam(1)} AND policy_rate_pct IS NOT NULL ORDER BY observation_date`,
+      [country],
+    );
+    return json({ observations: history.map((r) => ({ date: r.observation_date, value: r.policy_rate_pct })), source: "DB" }, { headers: { "cache-control": "public, max-age=300, stale-while-revalidate=600" } });
+  }
   const rows = await store.raw<GoldPolicyRateRow>(
-    `SELECT * FROM ${table} p1
-     WHERE observation_date = (
-       SELECT MAX(observation_date) FROM ${table} p2 WHERE p2.iso3 = p1.iso3
-     )`
+    `SELECT * FROM (
+       SELECT p.*, ROW_NUMBER() OVER (PARTITION BY iso3 ORDER BY observation_date DESC) AS rn
+       FROM ${table} p
+     ) latest
+     WHERE rn = 1`
   );
+  const meetings = await store.raw<{ release_date: string }>(
+    `SELECT release_date FROM ${goldTable("release_calendar")} WHERE LOWER(release_name) LIKE '%fomc%' AND release_date >= CURRENT_DATE ORDER BY release_date ASC LIMIT 1`
+  ).catch(() => []);
+  const nextFomc = meetings[0]?.release_date ?? null;
   return json({
     rows: rows.map((r) => ({
       iso3: r.iso3,
@@ -45,7 +59,9 @@ export async function GET() {
       stance: r.stance,
       real_rate_pct: r.real_rate_pct,
       observation_date: r.observation_date,
+      next_meeting_date: r.iso3 === "USA" ? nextFomc : null,
+      meeting_source: r.iso3 === "USA" && nextFomc ? "GOLD_CALENDAR" : null,
     })),
     source: "DB",
-  });
+  }, { headers: { "cache-control": "public, max-age=300, stale-while-revalidate=600" } });
 }

@@ -55,7 +55,7 @@ async function readCurveInversion(store: ReturnType<typeof goldStore>, workflow:
 async function readInflationMoves(store: ReturnType<typeof goldStore>, workflow: EcoIqWorkflow, question: string): Promise<EcoIqResponse> {
   const ids = FRED_CATALOG.filter((s) => s.category === "INFLATION" && s.freq === "M").map((s) => s.id);
   const placeholders = ids.map((_id, i) => goldParam(i + 1)).join(", ");
-  const rows = await store.raw<InflationObservation>(`SELECT series_id, observation_date, value FROM (SELECT series_id, observation_date, value, ROW_NUMBER() OVER (PARTITION BY series_id ORDER BY observation_date DESC) AS rn FROM ${goldTable("fred_latest_observation")} WHERE series_id IN (${placeholders}) AND NOT is_missing) ranked WHERE rn <= 2 ORDER BY series_id, observation_date DESC`, ids);
+  const rows = await store.raw<InflationObservation>(`SELECT series_id, observation_date, value FROM (SELECT series_id, observation_date, value, ROW_NUMBER() OVER (PARTITION BY series_id ORDER BY observation_date DESC) AS rn FROM ${goldTable("fred_latest_observation")} WHERE series_id IN (${placeholders}) AND COALESCE(is_missing, 0) = 0) ranked WHERE rn <= 2 ORDER BY series_id, observation_date DESC`, ids);
   const bySeries = new Map<string, InflationObservation[]>();
   for (const row of rows) bySeries.set(row.series_id, [...(bySeries.get(row.series_id) ?? []), row]);
   const meta = new Map(FRED_CATALOG.map((s) => [s.id, s]));

@@ -23,4 +23,13 @@ describe("/api/economics/ecoiq", () => {
     expect(workflow).toBe("economics.explain");
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
+
+  test("POST routes the deepest 2s10s inversion question unchanged", async () => {
+    mocks.read.mockResolvedValue({ ok: true, module: "ECOIQ", workflow: "economics.explain", source: "macro_medallion" });
+    const question = "Largest and deepest 2s10s curve inversion, when and why?";
+    await POST(new Request("http://localhost/api/economics/ecoiq", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question, workflow: "economics.explain" }),
+    }));
+    expect(mocks.read).toHaveBeenCalledWith(question, "economics.explain");
+  });
 });

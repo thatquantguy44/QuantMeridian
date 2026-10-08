@@ -47,6 +47,12 @@ const CREATE_SQL = `CREATE TABLE IF NOT EXISTS agent_job (
   result_json TEXT
 )`;
 
+const CONTROL_SQL = `CREATE TABLE IF NOT EXISTS agent_control (
+  id INTEGER PRIMARY KEY,
+  paused INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL
+)`;
+
 function sqlitePath(url: string): string { return url.replace(/^sqlite:/i, ""); }
 
 export class AgentQueueStore {
@@ -65,8 +71,8 @@ export class AgentQueueStore {
   }
 
   async migrate(): Promise<void> {
-    if (this.config.backend === "postgres") { await this.postgres(CREATE_SQL); await this.postgres("ALTER TABLE agent_job ADD COLUMN IF NOT EXISTS result_json TEXT"); return; }
-    this.sqlite((db) => { db.exec(CREATE_SQL); try { db.exec("ALTER TABLE agent_job ADD COLUMN result_json TEXT"); } catch { /* already migrated */ } });
+    if (this.config.backend === "postgres") { await this.postgres(CREATE_SQL); await this.postgres(CONTROL_SQL); await this.postgres("ALTER TABLE agent_job ADD COLUMN IF NOT EXISTS result_json TEXT"); return; }
+    this.sqlite((db) => { db.exec(CREATE_SQL); db.exec(CONTROL_SQL); try { db.exec("ALTER TABLE agent_job ADD COLUMN result_json TEXT"); } catch { /* already migrated */ } });
   }
 
   async create(requesterId: string, body: AgentJobCreateRequest): Promise<AgentQueueJob> {
@@ -77,6 +83,31 @@ export class AgentQueueStore {
       await this.postgres(`INSERT INTO agent_job (job_id, requester_id, module, workflow, message, context_json, profile, status, attempts, created_at, updated_at, error_code, result_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, values);
     } else this.sqlite((db) => db.prepare(`INSERT INTO agent_job VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(...values));
     return (await this.get(jobId, requesterId))!;
+  }
+
+  /** Run-time kill switch (`node scripts/agent-control.mjs pause|resume`); checked on job creation and worker claims. */
+  async isPaused(): Promise<boolean> {
+    await this.migrate();
+    const rows = this.config.backend === "postgres"
+      ? await this.postgres<any>("SELECT paused FROM agent_control WHERE id = 1")
+      : this.sqlite<any[]>((db) => db.prepare("SELECT paused FROM agent_control WHERE id = 1").all());
+    return Number(rows[0]?.paused ?? 0) === 1;
+  }
+
+  async setPaused(paused: boolean): Promise<void> {
+    await this.migrate(); const timestamp = now(); const flag = paused ? 1 : 0;
+    if (this.config.backend === "postgres") await this.postgres("INSERT INTO agent_control (id, paused, updated_at) VALUES (1, $1, $2) ON CONFLICT (id) DO UPDATE SET paused = $1, updated_at = $2", [flag, timestamp]);
+    else this.sqlite((db) => db.prepare("INSERT INTO agent_control (id, paused, updated_at) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET paused = excluded.paused, updated_at = excluded.updated_at").run(flag, timestamp));
+  }
+
+  /** Worker-only lookup with no requester filter; never expose the result to a different requester. */
+  async getForWorker(jobId: string): Promise<AgentQueueJob | null> {
+    await this.migrate();
+    const rows = this.config.backend === "postgres"
+      ? await this.postgres<any>("SELECT * FROM agent_job WHERE job_id = $1", [jobId])
+      : this.sqlite<any[]>((db) => db.prepare("SELECT * FROM agent_job WHERE job_id = ?").all(jobId));
+    const row = rows[0]; if (!row) return null;
+    return { ...row, context: JSON.parse(row.context_json) as Record<string, unknown>, result: row.result_json ? JSON.parse(row.result_json) : null } as AgentQueueJob;
   }
 
   async get(jobId: string, requesterId: string): Promise<AgentQueueJob | null> {

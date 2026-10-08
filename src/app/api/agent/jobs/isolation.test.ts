@@ -1,0 +1,43 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { POST as create } from "./route";
+import { GET as read } from "./[id]/route";
+import { POST as cancel } from "./[id]/cancel/route";
+import { POST as retry } from "./[id]/retry/route";
+import { POST as execute } from "./[id]/execute/route";
+
+const file = path.join(os.tmpdir(), `agent-iso-${Date.now()}-${Math.random()}.db`);
+const job = { schema_version: "agent-job/1", module: "ECOIQ", thread_id: "5d0c7a2e-1111-4222-8333-444455556666", workflow: "economics.explain", context: {} };
+const cookieOf = (response: Response) => response.headers.get("set-cookie")!.split(";")[0];
+const ctx = (id: string) => ({ params: { id } });
+const call = (cookie: string, init: RequestInit = {}) => new Request("http://localhost/api/agent/jobs/x", { ...init, headers: { cookie, ...(init.headers as object) } });
+
+beforeEach(() => { process.env.AGENT_QUEUE_DB_URL = `sqlite:${file}`; process.env.AGENT_WORKER_TOKEN = "w".repeat(32); });
+afterEach(() => { delete process.env.AGENT_QUEUE_DB_URL; delete process.env.AGENT_WORKER_TOKEN; fs.rmSync(file, { force: true }); });
+
+describe("requester isolation (AC-025)", () => {
+  it("never lets requester B read, cancel, retry, or execute requester A's job", async () => {
+    const made = await create(new Request("http://localhost/api/agent/jobs", { method: "POST", body: JSON.stringify(job) }));
+    expect(made.status).toBe(202);
+    const a = cookieOf(made); const id = ((await made.json()) as { job: { job_id: string } }).job.job_id;
+    const bMade = await create(new Request("http://localhost/api/agent/jobs", { method: "POST", body: JSON.stringify(job) }));
+    const b = cookieOf(bMade);
+    expect(b).not.toBe(a);
+    expect((await read(call(a), ctx(id))).status).toBe(200);
+    for (const response of [await read(call(b), ctx(id)), await cancel(call(b, { method: "POST" }), ctx(id)), await retry(call(b, { method: "POST" }), ctx(id)), await execute(call(b, { method: "POST" }), ctx(id))]) {
+      expect(response.status).toBe(404);
+    }
+    expect(((await (await read(call(a), ctx(id))).json()) as { job: { status: string } }).job.status).toBe("queued");
+  });
+
+  it("rejects a wrong worker token and an anonymous caller on execute", async () => {
+    const made = await create(new Request("http://localhost/api/agent/jobs", { method: "POST", body: JSON.stringify(job) }));
+    const id = ((await made.json()) as { job: { job_id: string } }).job.job_id;
+    const wrong = await execute(call("", { method: "POST", headers: { authorization: `Bearer ${"x".repeat(32)}` } }), ctx(id));
+    expect(wrong.status).toBe(404); // falls through to requester identity, which does not own the job
+    const anon = await execute(new Request("http://localhost/x", { method: "POST" }), ctx(id));
+    expect(anon.status).toBe(404);
+  });
+});

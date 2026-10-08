@@ -18,6 +18,8 @@ export interface DrillTarget {
   growthMetrics?: boolean;
   /** When true, fetch quarterly raw levels and derive annualized QoQ growth plus QoQ deltas. */
   qoqAnnualizedMetrics?: boolean;
+  /** Optional alternate observations endpoint, used by non-FRED Gold series. */
+  endpoint?: string;
 }
 
 interface DrillCtx {
@@ -57,7 +59,7 @@ export function DrillProvider({ children }: { children: ReactNode }) {
     const units = target.growthMetrics || target.qoqAnnualizedMetrics ? "lin" : target.units;
     const n = target.growthMetrics ? 37 : target.qoqAnnualizedMetrics ? 40 : 24;
     const u = units ? `&units=${units}` : "";
-    fetch(`/api/econ/series?id=${encodeURIComponent(target.id)}&n=${n}${u}`)
+    fetch(target.endpoint ?? `/api/econ/series?id=${encodeURIComponent(target.id)}&n=${n}${u}`)
       .then((r) => r.json())
       .then((j) => {
         if (!alive) return;

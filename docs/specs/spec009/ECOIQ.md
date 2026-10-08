@@ -52,7 +52,12 @@ For the PostgreSQL queue, install the worker extras and point the worker at the 
 pip install -e 'services/agent_worker[dev]'
 export AGENT_QUEUE_DB_URL=postgresql://fred:fred@localhost:55432/macro_medallion
 export QUANTMERIDIAN_API_URL=http://127.0.0.1:3000
+export AGENT_WORKER_TOKEN=<same value as the server>
 PYTHONPATH=services/agent_worker/src python3 -m agent_worker.worker
 ```
 
 PostgreSQL claims use a transaction with `FOR UPDATE SKIP LOCKED`, so multiple local workers do not claim the same job. The worker only claims `ECOIQ` rows and records `running`/`failed` transitions; production heartbeat, lease expiry, and worker-token gates remain required before unattended deployment.
+
+## Gate, identity, and pause
+
+Requester IDs are `HMAC(AGENT_SESSION_SECRET, sid)`; in production the gate (`AGENT_WORKFLOWS_PRODUCTION_ENABLED`, `AGENT_WORKFLOWS_TRUSTED_ACCESS_BOUNDARY`, `AGENT_TRUSTED_IDENTITY_HEADER`, `AGENT_SESSION_SECRET`) must pass and identity comes from the boundary header. The worker authenticates to `execute` with `Authorization: Bearer $AGENT_WORKER_TOKEN`. Pause or resume everything without a redeploy with `node scripts/agent-control.mjs pause|resume|status`; `AGENT_WORKFLOWS_DISABLED=1` is the deploy-level switch.

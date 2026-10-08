@@ -50,6 +50,9 @@ export interface PolicyRate {
   fredId?: string; // OECD central-bank-rate / ECB series where available
   source: DataSource;
   asOf: string | null;
+  rateAsOf: string | null;
+  decisionDate: string | null;
+  decisionSource: "GOLD_CALENDAR" | "OFFICIAL" | "UNAVAILABLE";
 }
 
 // country, flag, region, fredId, current CPI YoY, target
@@ -310,16 +313,21 @@ export function getGlobalPolicyRates(): PolicyRate[] {
     return {
       country, flag, region, centralBank,
       rate, priorRate, lastMoveBps,
-      lastMeeting: ["2026-06-11", "2026-05-28", "2026-06-04", "2026-06-17"][rng.int(0, 3)],
+      // No approved global central-bank meeting calendar is connected yet.
+      // Never present generated dates as scheduled meetings.
+      lastMeeting: "—",
       cycle,
       streak: Math.max(1, streak),
-      nextMeeting: ["2026-07-29", "2026-07-24", "2026-08-06", "2026-07-31"][rng.int(0, 3)],
+      nextMeeting: "—",
       realRate: Number(realRate.toFixed(1)),
       bias,
       history: hist,
       fredId,
       source: "SIM" as const,
       asOf: null,
+      rateAsOf: null,
+      decisionDate: null,
+      decisionSource: "UNAVAILABLE" as const,
     };
   }).sort((a, b) => b.rate - a.rate);
 }
