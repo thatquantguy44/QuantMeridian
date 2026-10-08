@@ -1,5 +1,5 @@
 import { json } from "@/lib/server/http";
-import { goldStore, goldTable } from "@/lib/server/goldStore";
+import { goldParam, goldStore, goldTable } from "@/lib/server/goldStore";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ interface GoldPolicyRateRow {
   real_rate_pct: number | null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const store = goldStore();
   if (!store) {
     return json({ rows: [], source: "ERR" });
@@ -28,6 +28,15 @@ export async function GET() {
   // iso3 so the page gets one current row per country, not an arbitrary
   // historical one.
   const table = goldTable("global_policy_rates");
+  const params = new URL(request.url).searchParams;
+  const country = params.get("country");
+  if (country) {
+    const history = await store.raw<GoldPolicyRateRow>(
+      `SELECT observation_date, policy_rate_pct FROM ${table} WHERE country = ${goldParam(1)} AND policy_rate_pct IS NOT NULL ORDER BY observation_date`,
+      [country],
+    );
+    return json({ observations: history.map((r) => ({ date: r.observation_date, value: r.policy_rate_pct })), source: "DB" });
+  }
   const rows = await store.raw<GoldPolicyRateRow>(
     `SELECT * FROM ${table} p1
      WHERE observation_date = (

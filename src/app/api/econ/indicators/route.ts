@@ -246,7 +246,7 @@ export async function GET() {
                SELECT series_id, observation_date, value,
                  ROW_NUMBER() OVER (PARTITION BY series_id ORDER BY observation_date DESC) AS rn
                FROM ${obsTable}
-               WHERE series_id IN (${placeholders}) AND NOT is_missing
+               WHERE series_id IN (${placeholders}) AND COALESCE(is_missing, 0) = 0
              ) ranked
              WHERE rn <= 40
              ORDER BY series_id, observation_date ASC`,

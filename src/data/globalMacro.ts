@@ -310,10 +310,12 @@ export function getGlobalPolicyRates(): PolicyRate[] {
     return {
       country, flag, region, centralBank,
       rate, priorRate, lastMoveBps,
-      lastMeeting: ["2026-06-11", "2026-05-28", "2026-06-04", "2026-06-17"][rng.int(0, 3)],
+      // No approved global central-bank meeting calendar is connected yet.
+      // Never present generated dates as scheduled meetings.
+      lastMeeting: "—",
       cycle,
       streak: Math.max(1, streak),
-      nextMeeting: ["2026-07-29", "2026-07-24", "2026-08-06", "2026-07-31"][rng.int(0, 3)],
+      nextMeeting: "—",
       realRate: Number(realRate.toFixed(1)),
       bias,
       history: hist,

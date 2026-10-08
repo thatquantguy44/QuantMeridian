@@ -152,7 +152,10 @@ export default function GlobalPolicyRates() {
   const { data: liveMap, source } = useLiveSeriesSet(baseWithGold.map((r) => r.fredId).filter(Boolean) as string[], "lin", 36);
   const merged = baseWithGold.map((r) => {
     const L = r.fredId ? liveMap[r.fredId] : undefined;
-    return L && isRealEconSource(L.source) && L.observations.length ? { ...livePolicyRate(r, L.observations), source: L.source } : r;
+    // Gold/BIS is the authoritative policy-rate source when present. Do not
+    // replace a current Gold observation with a stale FRED/OECD series (for
+    // example Canada's OECD-linked series stops in 2023).
+    return r.source === "DB" ? r : L && isRealEconSource(L.source) && L.observations.length ? { ...livePolicyRate(r, L.observations), source: L.source } : r;
   });
 
   // Append Gold-only countries (no RATE_DEFS entry) so the page reflects the
@@ -193,6 +196,7 @@ export default function GlobalPolicyRates() {
       units: "lin",
       unitLabel: r.source === "ETL" ? "% · ETL policy snapshot" : r.source === "SIM" ? "simulation" : "%",
       decimals: 2,
+      endpoint: r.source === "DB" ? `/api/econ/global-policy-rates?country=${encodeURIComponent(r.country)}` : undefined,
     });
 
   const columns: Column<PolicyRate>[] = [
@@ -219,6 +223,13 @@ export default function GlobalPolicyRates() {
       align: "right",
       sortVal: (r) => r.rate,
       render: (r) => <span className="font-semibold text-term-amber">{fmtNum(r.rate, 2)}</span>,
+    },
+    {
+      key: "asOf",
+      header: "Latest Rate Date",
+      align: "right",
+      sortVal: (r) => r.asOf ?? "",
+      render: (r) => <span className="text-term-text-dim" title={r.asOf ? `Rate observation date: ${r.asOf}` : "No observation date available"}>{r.asOf ?? "—"}</span>,
     },
     {
       key: "lastMove",
