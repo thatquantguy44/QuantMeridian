@@ -4,7 +4,7 @@
 - **Plan:** `PLAN.md`
 - **Status:** Draft implementation backlog
 - **Last updated:** 2026-10-07
-- **Overall progress:** 2 of 27 tasks done (7%)
+- **Overall progress:** 8 of 27 tasks done (30%)
 
 > This is the build ledger. Update it in every implementation PR. Requirements describe intended
 > behavior; only this file records execution status and completion evidence.
@@ -65,12 +65,12 @@ Every implementation task is done only when:
 
 | ID | Task | Covers | Status | Owner | Updated | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| T-004 | Implement backend support/gate and exhaustive logical-to-physical object mapping for SQLite/PostgreSQL; fail closed on Databricks. | REQ-021, NFR-001 | in-progress | Codex | 2026-10-07 | Branch: `spec_010-implementation`; PostgreSQL target is the configured `macro_medallion` warehouse. |
-| T-005 | Implement parameter validation: composite keys, strict dates, escaped search, limits, allowlisted sorts/filters, and normalized errors. | REQ-019–020, NFR-003 | todo | — | — | Fuzz invalid Unicode/control/date/limit inputs. |
-| T-006 | Implement API/domain contracts, database row decoders, numeric/boolean coercion, metadata-completeness rules, and stored-error sanitization. | REQ-007–018, REQ-020 | todo | — | — | Live audit columns are authoritative. |
-| T-007 | Implement endpoint-bound cursor validation/signing and bounded short-TTL cache. | REQ-005, REQ-009, NFR-009 | todo | — | — | Production cursors signed; filters hash included. |
+| T-004 | Implement backend support/gate and exhaustive logical-to-physical object mapping for SQLite/PostgreSQL; fail closed on Databricks. | REQ-021, NFR-001 | done | Codex | 2026-10-07 | Nine-object map verified against `macro_medallion`; backend/gate tests pass. Current local `fred` role is write-capable, so production remains gated. |
+| T-005 | Implement parameter validation: composite keys, strict dates, escaped search, limits, allowlisted sorts/filters, and normalized errors. | REQ-019–020, NFR-003 | done | Codex | 2026-10-07 | Composite identity, strict dates, bounds, enums, booleans, safe text, LIKE escaping, and invalid-input tests pass. |
+| T-006 | Implement API/domain contracts, database row decoders, numeric/boolean coercion, metadata-completeness rules, and stored-error sanitization. | REQ-007–018, REQ-020 | done | Codex | 2026-10-07 | Implemented from live `macro_medallion` columns; decoder and sanitization tests pass. |
+| T-007 | Implement endpoint-bound cursor validation/signing and bounded short-TTL cache. | REQ-005, REQ-009, NFR-009 | done | Codex | 2026-10-07 | Endpoint/backend/filter-bound cursors, production HMAC signing, and hashed 60-second-max cache verified. |
 | T-008 | Build shared logical fixtures and contract harness for temporary SQLite/PostgreSQL databases. | NFR-001 | todo | — | — | Include shared ID across sources and PIT edge cases. |
-| T-009 | Implement the shared warehouse audit adapter for runs, series runs, and DQ results. | REQ-015–018 | todo | — | — | Must not reference `finished_at` or `checked_at`. |
+| T-009 | Implement the shared warehouse audit adapter for runs, series runs, and DQ results. | REQ-015–018 | done | Codex | 2026-10-07 | Live-schema adapter verified against `macro_medallion`; no `finished_at` or `checked_at` references. |
 
 ### Slice C — Read-only API routes
 
@@ -80,7 +80,7 @@ Every implementation task is done only when:
 | T-011 | Implement source-aware series search and optional metadata enrichment. | REQ-007–008, REQ-014 | todo | — | — | Coverage row survives missing metadata. |
 | T-012 | Implement bounded latest-vintage observation history and pagination. | REQ-009–010 | todo | — | — | Preserve explicit missing values. |
 | T-013 | Implement PIT reconstruction and FRED-only revision summary/exact-observation modes. | REQ-011–014 | todo | — | — | `latest realtime_start <= asOf`; empty realtime warning. |
-| T-014 | Implement runs and DQ routes using the shared audit adapter. | REQ-015–017 | todo | — | — | No fabricated DQ timestamps. |
+| T-014 | Implement runs and DQ routes using the shared audit adapter. | REQ-015–017 | done | Codex | 2026-10-07 | DB-only routes with filters, hard limits, keyset cursors, normalized errors, and live `macro_medallion` verification. |
 
 ### Slice D — Module shell and user experience
 
@@ -157,6 +157,56 @@ Every implementation task is done only when:
 - **Evidence:** `SPEC.md`, `PLAN.md`, and `TASKS.md` created under `docs/specs/spec010/`.
 - **Review:** Pending owner approval; documents remain Draft.
 
+### T-004 — Backend boundary and production gate
+
+- **Completed:** 2026-10-07
+- **Evidence:** Added the exhaustive nine-object SQLite/PostgreSQL physical-name map, dialect
+  placeholders, redacted targets, bounded timeout configuration, explicit Databricks rejection,
+  and a fail-closed production acknowledgement matrix.
+- **Live validation:** All nine mapped objects exist in `macro_medallion`. The local `fred` role
+  reported `transaction_read_only=off`, so it is accepted for local development only and does not
+  satisfy the production-readiness dependency.
+- **Tests:** `backend.test.ts` — 9 tests passed; `npm run typecheck`; `git diff --check`.
+
+### T-005/T-006 — Validation and contracts
+
+- **Completed:** 2026-10-07
+- **Evidence:** Added composite series-key validation, strict calendar dates, bounded limits,
+  allowlisted enums, wildcard escaping, response/domain contracts, live-schema row decoders,
+  numeric/boolean coercion, metadata-completeness rules, and stored-error sanitization.
+- **Live validation:** Decoder fields were derived from `information_schema.columns` for all nine
+  approved `macro_medallion` objects.
+- **Tests:** `validation.test.ts` and `contracts.test.ts` — 16 tests passed.
+
+### T-009 — Shared warehouse audit adapter
+
+- **Completed:** 2026-10-07
+- **Evidence:** Added fixed, bounded run, series-run, and DQ queries using the authoritative live
+  column names. The adapter excludes `manifest_path`, sanitizes stored errors, and requires a run
+  ID before series-level access.
+- **Live validation:** Queried recent runs and DQ failures from `macro_medallion` through the new
+  adapter; current `running`, `succeeded`, and `partial` records decoded successfully.
+- **Tests:** `audit.test.ts` — 6 tests passed, including obsolete-column and cursor assertions.
+
+### T-007 — Cursor integrity and bounded cache
+
+- **Completed:** 2026-10-07
+- **Evidence:** Added endpoint/backend/filter/sort-bound cursor payloads, HMAC signing required in
+  production, local unsigned cursors, safe cursor validation, hashed cache keys, concurrent-load
+  deduplication, LRU-style bounds, and a maximum 60-second TTL.
+- **Tests:** `cursor.test.ts` and `cache.test.ts` — 9 tests passed.
+
+### T-014 — Runs and DQ routes
+
+- **Completed:** 2026-10-07
+- **Evidence:** Added `/api/warehouse/runs` and `/api/warehouse/dq` with allowlisted filters,
+  200-row request limits, keyset pagination, DB-only envelopes, production gates, and sanitized
+  failures. DQ responses do not fabricate a check timestamp.
+- **Live validation:** Both routes returned successful PostgreSQL responses from `macro_medallion`
+  through the localhost-only Vite server, including current run state and filtered DQ failures.
+- **Tests:** Route/foundation suite — 46 tests passed; `npm run typecheck`; `npm run build:server`;
+  full repository suite — 409 tests passed; `git diff --check`.
+
 ## Blockers & External Dependencies
 
 | ID | Dependency/blocker | Owner | Affected tasks | Status | Next action |
@@ -185,6 +235,7 @@ Every implementation task is done only when:
 | --- | --- | --- | --- |
 | 2026-10-07 | Initial spec, plan, backlog, evidence, and dependency ledger created. | Codex | T-001, T-002 |
 | 2026-10-07 | Began implementation on `spec_010-implementation`; started the backend boundary and production gate with PostgreSQL preferred. | Codex | T-003, T-004 |
+| 2026-10-07 | Added validated contracts, cursor/cache foundation, shared live-schema audit adapter, and the first DB-only runs/DQ endpoints. | Codex | T-005–T-007, T-009, T-014 |
 
 ## Follow-Ups Outside Version One
 
