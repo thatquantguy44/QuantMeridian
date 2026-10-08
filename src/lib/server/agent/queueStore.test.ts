@@ -27,4 +27,20 @@ describe("AgentQueueStore", () => {
     expect((await store.transition(created.job_id, "requester-a", "cancelled"))?.status).toBe("cancelled");
     expect((await store.transition(created.job_id, "requester-a", "queued"))?.status).toBe("queued");
   });
+
+  it("pauses and resumes through agent_control", async () => {
+    const file = path.join(os.tmpdir(), `ecoiq-agent-${Date.now()}-${Math.random()}.db`); files.push(file);
+    const store = new AgentQueueStore({ url: `sqlite:${file}`, backend: "sqlite" });
+    expect(await store.isPaused()).toBe(false);
+    await store.setPaused(true); expect(await store.isPaused()).toBe(true);
+    await store.setPaused(false); expect(await store.isPaused()).toBe(false);
+  });
+
+  it("looks up a job for the worker without a requester filter", async () => {
+    const file = path.join(os.tmpdir(), `ecoiq-agent-${Date.now()}-${Math.random()}.db`); files.push(file);
+    const store = new AgentQueueStore({ url: `sqlite:${file}`, backend: "sqlite" });
+    const created = await store.create("requester-a", body as never);
+    expect((await store.getForWorker(created.job_id))?.requester_id).toBe("requester-a");
+    expect(await store.getForWorker("missing")).toBeNull();
+  });
 });

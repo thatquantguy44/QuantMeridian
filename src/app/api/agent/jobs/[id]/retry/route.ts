@@ -1,13 +1,14 @@
 import { json } from "@/lib/server/http";
 import { AgentQueueStore } from "@/lib/server/agent/queueStore";
-import { requesterHeaders, requesterId } from "@/lib/server/agent/requester";
+import { guardPanelRequest } from "@/lib/server/agent/guard";
 
 export const runtime = "nodejs";
 export async function POST(request: Request, ctx: { params: Record<string, string> }) {
-  const identity = requesterId(request);
+  const guard = guardPanelRequest(request);
+  if (!guard.ok) return guard.response;
   try {
-    const job = await new AgentQueueStore().transition(ctx.params.id, identity.id, "queued");
-    if (!job) return json({ error_code: "JOB_NOT_FOUND" }, { status: 404, headers: requesterHeaders(identity.id, identity.isNew) });
-    return json({ job }, { status: 202, headers: requesterHeaders(identity.id, identity.isNew) });
+    const job = await new AgentQueueStore().transition(ctx.params.id, guard.requesterId, "queued");
+    if (!job) return json({ error_code: "JOB_NOT_FOUND" }, { status: 404, headers: guard.headers });
+    return json({ job }, { status: 202, headers: guard.headers });
   } catch (error) { return json({ error_code: "AGENT_QUEUE_ERROR", message: (error as Error).message }, { status: 503 }); }
 }

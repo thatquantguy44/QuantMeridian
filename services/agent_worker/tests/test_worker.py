@@ -33,3 +33,28 @@ def test_worker_claims_only_queued_ecoiq(tmp_path: Path) -> None:
     with sqlite3.connect(db_path) as db:
         row = db.execute("SELECT status FROM agent_job WHERE job_id='j1'").fetchone()
         assert row[0] == "running"
+
+
+def test_worker_does_not_claim_while_paused(tmp_path: Path) -> None:
+    db_path = tmp_path / "queue.db"
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "CREATE TABLE agent_job (job_id TEXT, requester_id TEXT, module TEXT, workflow TEXT, "
+            "status TEXT, attempts INTEGER, created_at TEXT, updated_at TEXT, message TEXT, "
+            "context_json TEXT, profile TEXT, error_code TEXT, result_json TEXT)"
+        )
+        db.execute(
+            "INSERT INTO agent_job VALUES "
+            "('j1','r1','ECOIQ','economics.explain','queued',0,'1','1','why','{}',NULL,NULL,NULL)"
+        )
+        db.execute(
+            "CREATE TABLE agent_control (id INTEGER PRIMARY KEY, paused INTEGER, updated_at TEXT)"
+        )
+        db.execute("INSERT INTO agent_control VALUES (1, 1, '1')")
+        db.commit()
+    worker = EcoIqWorker(WorkerConfig(f"sqlite:{db_path}", "http://127.0.0.1:1"))
+    assert worker.claim_once() is None
+    with sqlite3.connect(db_path) as db:
+        db.execute("UPDATE agent_control SET paused = 0")
+        db.commit()
+    assert worker.claim_once()["job_id"] == "j1"

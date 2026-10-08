@@ -20,6 +20,7 @@ class WorkerConfig:
     queue_url: str
     api_url: str
     poll_seconds: float = 1.0
+    worker_token: str = ""
 
     @property
     def postgres(self) -> bool:
@@ -30,7 +31,11 @@ def config_from_env() -> WorkerConfig:
     queue = os.environ.get("AGENT_QUEUE_DB_URL", "").strip()
     if not queue:
         raise RuntimeError("AGENT_QUEUE_NOT_CONFIGURED")
-    return WorkerConfig(queue, os.environ.get("QUANTMERIDIAN_API_URL", "http://127.0.0.1:3000"))
+    return WorkerConfig(
+        queue,
+        os.environ.get("QUANTMERIDIAN_API_URL", "http://127.0.0.1:3000"),
+        worker_token=os.environ.get("AGENT_WORKER_TOKEN", "").strip(),
+    )
 
 
 def _now() -> str:
@@ -59,7 +64,27 @@ class EcoIqWorker:
             raise RuntimeError("psycopg is required for a PostgreSQL agent queue") from error
         return psycopg.connect(self.config.queue_url, row_factory=dict_row)
 
+    def is_paused(self) -> bool:
+        """Run-time kill switch (agent_control.paused), checked on every poll."""
+        query = "SELECT paused FROM agent_control WHERE id = 1"
+        try:
+            if self.config.postgres:
+                with self._postgres_connection() as db:
+                    row = db.execute(query).fetchone()
+                    return bool(row and row["paused"])
+            with sqlite3.connect(self.path) as db:
+                row = db.execute(query).fetchone()
+                return bool(row and row[0])
+        except (sqlite3.OperationalError, RuntimeError):
+            return False
+        except Exception as error:  # a missing agent_control table on Postgres
+            if type(error).__name__ == "UndefinedTable":
+                return False
+            raise
+
     def claim_once(self) -> dict[str, object] | None:
+        if self.is_paused():
+            return None
         if self.config.postgres:
             with self._postgres_connection() as db:
                 with db.cursor() as cur:
@@ -107,7 +132,7 @@ class EcoIqWorker:
             data=b"{}",
             headers={
                 "content-type": "application/json",
-                "cookie": f"agent_sid={job['requester_id']}",
+                "authorization": f"Bearer {self.config.worker_token}",
             },
             method="POST",
         )
