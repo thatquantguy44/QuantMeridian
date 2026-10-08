@@ -26,6 +26,7 @@ import TradingDesk from "./app/trading-desk/page";
 import TradingAssistant from "./app/trading-assistant/page";
 import MacroChart from "./app/macro-chart/page";
 import Mcs from "./app/simulations/mcs/page";
+import VolatilityForecaster from "./app/ml/volatility-forecaster/page";
 import Polymarket from "./app/polymarket/page";
 import News from "./app/news/page";
 import Sentiment from "./app/sentiment/page";
@@ -114,6 +115,7 @@ export function App() {
         {on("TASSIST") && <Route path="trading-assistant" element={<TradingAssistant />} />}
         {on("MGC") && <Route path="macro-chart" element={<MacroChart />} />}
         {on("MCS") && <Route path="simulations/mcs" element={<Mcs />} />}
+        {on("VOLF") && <Route path="ml/volatility-forecaster" element={<VolatilityForecaster />} />}
         {on("POLY") && <Route path="polymarket" element={<Polymarket />} />}
         {on("NEWS") && <Route path="news" element={<News />} />}
         {on("SENT") && <Route path="sentiment" element={<Sentiment />} />}

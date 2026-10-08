@@ -22,12 +22,14 @@
  *
  * Tier B sources (kept live — deliberate exceptions to DB-only policy):
  *   POLY      Polymarket Gamma API (non-series prediction market)
+ *   QR_HAVEN  QR Haven shadow-model service (model output, not market data)
  */
 
 export type ProvenanceSource =
   | "FRED"
   | "LIVE"
   | "POLY"
+  | "QR_HAVEN"
   | "DB"
   | "FILE"
   | "ETL"
@@ -53,6 +55,7 @@ export const PROVENANCE_META: Record<ProvenanceSource, ProvenanceMeta> = {
   FRED: { label: "LIVE · FRED", live: true, tone: "live", title: "Live data from FRED (api.stlouisfed.org)" },
   LIVE: { label: "LIVE · PIPELINE", live: true, tone: "live", title: "Live from market data (legacy — MARKET_PIPELINE_URL decommissioned)" },
   POLY: { label: "LIVE · POLY", live: true, tone: "live", title: "Live from Polymarket CLOB + Gamma APIs (public, no auth)" },
+  QR_HAVEN: { label: "QR HAVEN", live: false, tone: "etl", title: "Forecast and shadow-run metadata from the QR Haven model service" },
   DB: { label: "LIVE · DB", live: true, tone: "live", title: "Gold macro database — fred-bronze-to-gold-pipeline (MACRO_DB_URL)" },
   FILE: { label: "LIVE · FILE", live: true, tone: "live", title: "Local exported-file cache (legacy — MARKET_DATA_DIR decommissioned)" },
   ETL: { label: "ETL · MACRO", live: false, tone: "etl", title: "macro_data_etl gold tables (frozen 2026-06-24). Committed JSON snapshot — not live. Enable SIM or configure a live source (MACRO_DB_URL, FRED_API_KEY) for fresh data." },
@@ -139,7 +142,7 @@ export function classifyDbStaleness(
  * If sources are mixed across live/non-live, returns the worst one present.
  */
 const SOURCE_TIER: Record<string, number> = {
-  FRED: 0, LIVE: 1, POLY: 2, DB: 3, FILE: 4, ETL: 5, SNAPSHOT: 6, ECON: 7, SIM: 8, UNAVAILABLE: 9, ERR: 10,
+  FRED: 0, LIVE: 1, POLY: 2, DB: 3, FILE: 4, QR_HAVEN: 5, ETL: 6, SNAPSHOT: 7, ECON: 8, SIM: 9, UNAVAILABLE: 10, ERR: 11,
 };
 
 export function worstSource<T extends string>(sources: T[]): T {

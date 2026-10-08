@@ -73,6 +73,7 @@ export function fetchJson<T>(
 }
 
 /** Clear the cache (testing / manual refresh). */
-export function clearFetchCache(): void {
-  cache.clear();
+export function clearFetchCache(url?: string): void {
+  if (url) cache.delete(url);
+  else cache.clear();
 }

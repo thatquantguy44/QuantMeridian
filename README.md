@@ -796,6 +796,10 @@ no second source of truth:
 
 ## Run locally
 
+For the complete multi-service startup order (Docker/Postgres, Market Terminal, IBAL, VOLF, News
+NLP, health checks, shutdown, and common failures), use
+[`docs/architecture/LOCAL_SERVICES_RUNBOOK.md`](docs/architecture/LOCAL_SERVICES_RUNBOOK.md).
+
 The terminal is a **Vite + React** SPA — **zero config, no database, no keys**.
 All 47 modules render offline; Gold-only modules show explicit empty/error states when the database is absent, and IBAL shows explicit service-unavailable state until its Python service/token are configured. For live economics/macro data,
 set `MACRO_DB_URL` to read from Gold DB (the **production data path as of 2026-07-17**).
