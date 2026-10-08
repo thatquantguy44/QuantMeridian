@@ -13,7 +13,7 @@ const WORKFLOWS: Array<{ id: EcoIqWorkflow; label: string; description: string }
 ];
 
 export default function EconIqPage() {
-  const { data, loading, run } = useEcoIq();
+  const { data, loading, queueStatus, run } = useEcoIq();
   const [question, setQuestion] = useState("Why did the 2s10s Treasury curve move, and what are the second- and third-order effects?");
   const [workflow, setWorkflow] = useState<EcoIqWorkflow>("economics.explain");
   const submit = (event: FormEvent) => { event.preventDefault(); void run(question, workflow); };
@@ -26,7 +26,7 @@ export default function EconIqPage() {
       <Stat label="Source" value={data?.source === "macro_medallion" ? "GOLD" : "—"} sub="macro_medallion" tone={data?.source === "macro_medallion" ? "up" : "amber"} />
       <Stat label="Causal Status" value="HYPOTHESIS" sub="not identification" tone="amber" />
       <Stat label="Worker" value="LOCAL" sub="pinned QuantSmith" />
-      <Stat label="Run" value={loading ? "RUNNING" : data ? "READY" : "IDLE"} sub="read-only" tone={loading ? "amber" : "up"} />
+      <Stat label="Run" value={loading ? queueStatus.toUpperCase() : data ? "READY" : "IDLE"} sub="read-only" tone={loading ? "amber" : "up"} />
     </KpiStrip>
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-2">
       <Panel title="Ask ECOIQ" code="QUERY" accent bodyClassName="p-3" resizable={false}>
@@ -45,7 +45,7 @@ export default function EconIqPage() {
         <Panel title="Mechanism hypothesis" code="WHY" className="xl:col-span-7" bodyClassName="p-3" accent><p className="text-sm leading-relaxed text-term-text">{data.explanation}</p><div className="mt-3 grid gap-2 md:grid-cols-3">{data.effects.map(effect => <div key={effect.order} className="border border-term-border bg-term-panel-2 p-3"><div className="flex items-center justify-between"><Tag tone={effect.confidence === "high" ? "up" : effect.confidence === "medium" ? "amber" : "neutral"}>ORDER {effect.order}</Tag><span className="text-3xs uppercase text-term-text-mute">{effect.confidence} confidence</span></div><div className="mt-2 text-sm font-semibold text-term-text">{effect.title}</div><p className="mt-1 text-xs leading-relaxed text-term-text-dim">{effect.detail}</p></div>)}</div></Panel>
         <Panel title="Alternative explanations" code="ALT" className="xl:col-span-6" bodyClassName="p-3"><ul className="space-y-2 text-sm text-term-text-dim">{data.alternatives.map(item => <li key={item} className="border-b border-term-border-soft pb-2">{item}</li>)}</ul></Panel>
         <Panel title="What would change the view?" code="FALS" className="xl:col-span-6" bodyClassName="p-3"><ul className="space-y-2 text-sm text-term-text-dim">{data.falsifiers.map(item => <li key={item} className="border-b border-term-border-soft pb-2">{item}</li>)}</ul></Panel>
-        <Panel title="Disclosures & provenance" code="GOV" className="xl:col-span-12" bodyClassName="p-3"><div className="flex flex-wrap gap-2">{data.disclosures.map(item => <Tag key={item} tone="neutral">{item}</Tag>)}</div></Panel>
+        <Panel title="Disclosures & provenance" code="GOV" className="xl:col-span-12" bodyClassName="p-3"><div className="flex flex-wrap gap-2"><Tag tone={data.verification?.ok ? "up" : "amber"}>{data.verification?.ok ? "VERIFIED" : "PENDING VERIFICATION"}</Tag>{data.llmProfile && <Tag tone="violet">PROFILE {data.llmProfile}</Tag>}{data.disclosures.map(item => <Tag key={item} tone="neutral">{item}</Tag>)}</div></Panel>
       </div>}
     </div>
   </div>;
