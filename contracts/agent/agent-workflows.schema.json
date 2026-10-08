@@ -29,6 +29,15 @@
         },
         "brief.draft": {
           "$ref": "#/definitions/Workflow"
+        },
+        "economics.explain": {
+          "$ref": "#/definitions/Workflow"
+        },
+        "economics.transmission": {
+          "$ref": "#/definitions/Workflow"
+        },
+        "economics.scenario": {
+          "$ref": "#/definitions/Workflow"
         }
       },
       "additionalProperties": false,
@@ -38,6 +47,9 @@
         "secfin.carry",
         "story.build",
         "brief.draft"
+        ,"economics.explain"
+        ,"economics.transmission"
+        ,"economics.scenario"
       ]
     },
     "modules": {
@@ -277,7 +289,10 @@
               "analysis.answer",
               "secfin.carry",
               "story.build",
-              "brief.draft"
+              "brief.draft",
+              "economics.explain",
+              "economics.transmission",
+              "economics.scenario"
             ]
           },
           "uniqueItems": true

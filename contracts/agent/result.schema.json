@@ -23,7 +23,10 @@
             "analysis.answer",
             "secfin.carry",
             "story.build",
-            "brief.draft"
+            "brief.draft",
+            "economics.explain",
+            "economics.transmission",
+            "economics.scenario"
           ]
         },
         "version": {

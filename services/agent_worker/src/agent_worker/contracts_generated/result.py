@@ -16,6 +16,9 @@ class Id(StrEnum):
     secfin_carry = 'secfin.carry'
     story_build = 'story.build'
     brief_draft = 'brief.draft'
+    economics_explain = 'economics.explain'
+    economics_transmission = 'economics.transmission'
+    economics_scenario = 'economics.scenario'
 
 
 class Kind(StrEnum):

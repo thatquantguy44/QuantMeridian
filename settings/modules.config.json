@@ -23,6 +23,7 @@
     "DESK":   { "enabled": true, "label": "Trading Desk" },
     "TASSIST": { "enabled": true, "label": "Trading Assistant" },
     "ECON":   { "enabled": true, "label": "Macro Dashboard" },
+    "ECOIQ":  { "enabled": true, "label": "ECOIQ Economic Intelligence" },
     "CURV":   { "enabled": true, "label": "Treasury Curve Lab" },
     "INFL":   { "enabled": true, "label": "Inflation Explorer" },
     "GCPI":   { "enabled": true, "label": "Global Inflation" },

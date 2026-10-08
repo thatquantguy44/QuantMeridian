@@ -587,3 +587,7 @@ These affect SIM-generated positions, P&L, margin calculations in PB, COLL, and 
 | AI | Copilot | None | **Yes** | **Missing** | No LLM, misleading label |
 | DATAOPS | Data Ops | Health probes | Partial | Custom | Clean |
 | ALRT | Alerts | FRED | Partial | Yes | Clean |
+
+#### ECOIQ — Economic Intelligence
+
+ECOIQ is a read-only synthesis module. It consumes Treasury curve, curve-metric, and macro-indicator evidence from `macro_medallion` Gold tables through QuantMeridian routes. It does not query QuantSmith or any external source from the browser. Mechanism and first/second/third-order effect language is explicitly hypothesis-based and must retain provenance and falsifier disclosures.

@@ -56,6 +56,7 @@ import EconYieldCurve from "./app/economics/yield-curve/page";
 import EconRateVol from "./app/economics/rate-vol/page";
 import EconFundingCost from "./app/economics/funding-cost/page";
 import EconRateAnalysis from "./app/economics/rate-analysis/page";
+import EconIQ from "./app/economics/ecoiq/page";
 
 import NotFound from "./app/not-found";
 
@@ -66,6 +67,7 @@ function on(code: string) {
 export function App() {
   const econChildren = [
     on("ECON") && <Route key="econ-idx" index element={<Economics />} />,
+    on("ECOIQ") && <Route key="ecoiq" path="ecoiq" element={<EconIQ />} />,
     on("CURV") && <Route key="curv" path="curve" element={<EconCurve />} />,
     on("INFL") && <Route key="infl" path="inflation" element={<EconInflation />} />,
     on("GCPI") && <Route key="gcpi" path="global-cpi" element={<EconGlobalCpi />} />,

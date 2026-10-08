@@ -42,7 +42,7 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   desc: string;
-  group: "MARKETS" | "FINANCE" | "OPTIMIZATION" | "DESK" | "TRADING_ASSISTANT" | "ECONOMICS" | "SIMULATIONS" | "MLTOOLS" | "INTELLIGENCE" | "DATAOPERATIONS";
+  group: "MARKETS" | "FINANCE" | "OPTIMIZATION" | "DESK" | "TRADING_ASSISTANT" | "ECONOMICS" | "SIMULATIONS" | "MLTOOLS" | "INTELLIGENCE" | "AGENTIC_INTELLIGENCE" | "DATAOPERATIONS";
 }
 
 const ALL_NAV: NavItem[] = [
@@ -67,6 +67,7 @@ const ALL_NAV: NavItem[] = [
   { code: "DESK", label: "Trading Desk", href: "/trading-desk", icon: LineChart, desc: "Scorecards & execution analytics", group: "DESK" },
   { code: "TASSIST", label: "Trading Assistant", href: "/trading-assistant", icon: Bot, desc: "Bot selector, signals & paper trading", group: "TRADING_ASSISTANT" },
   { code: "ECON", label: "Macro Dashboard", href: "/economics", icon: Globe, desc: "FRED-connected economic analytics", group: "ECONOMICS" },
+  { code: "ECOIQ", label: "ECOIQ Economic Intelligence", href: "/economics/ecoiq", icon: BrainCircuit, desc: "Causal macro explanations and effect chains", group: "AGENTIC_INTELLIGENCE" },
   { code: "CURV", label: "Treasury Curve Lab", href: "/economics/curve", icon: Spline, desc: "Curve shape, history & inversions", group: "ECONOMICS" },
   { code: "INFL", label: "Inflation Explorer", href: "/economics/inflation", icon: Flame, desc: "CPI/PCE to item level, MoM & YoY", group: "ECONOMICS" },
   { code: "GCPI", label: "Global Inflation", href: "/economics/global-cpi", icon: Globe2, desc: "CPI by country, trend & streaks", group: "ECONOMICS" },
@@ -110,5 +111,6 @@ export const NAV_GROUPS: { id: NavItem["group"]; label: string }[] = [
   { id: "TRADING_ASSISTANT", label: "Trading Assistant" },
   { id: "ECONOMICS", label: "Economics & Macro" },
   { id: "INTELLIGENCE", label: "Intelligence" },
+  { id: "AGENTIC_INTELLIGENCE", label: "Agentic Intelligence" },
   { id : "DATAOPERATIONS", label: "Data Operations & Alerts"},
 ];
