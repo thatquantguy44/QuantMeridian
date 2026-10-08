@@ -32,6 +32,8 @@ export interface EcoIqResponse {
   source: "macro_medallion" | "ERR";
   error?: string;
   llmProfile?: string;
+  llmProvider?: string;
+  llmModel?: string | null;
   verification?: { ok: boolean; verifiedEvidence: string[]; issues: string[] };
   llmUsed?: boolean;
   llmOutputAccepted?: boolean;

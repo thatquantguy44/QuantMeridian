@@ -8,7 +8,7 @@ export async function executeEcoIqJob(jobId: string, requesterId: string, questi
   const store = new AgentQueueStore();
   const base = await readEcoIq(question, workflow);
   const profile = resolveLlmProfile(requestedProfile);
-  let result = { ...base, llmProfile: profile.id, llmUsed: false, llmOutputAccepted: false };
+  let result = { ...base, llmProfile: profile.id, llmProvider: profile.apiStyle === "openai_chat_completions" ? "OpenAI-compatible local endpoint" : profile.apiStyle === "none" ? "deterministic" : profile.apiStyle, llmModel: profile.model, llmUsed: false, llmOutputAccepted: false };
   if (base.ok && profile.available && profile.apiStyle === "openai_chat_completions") {
     try {
       const narrative = await completeWithProfile(profile,

@@ -1,11 +1,40 @@
 import { goldEnabled, goldStore } from "@/lib/server/goldStore";
+import { goldParam, goldTable } from "@/lib/server/goldStore";
+import { FRED_CATALOG } from "@/data/econSeries";
 import type { EcoIqEvidence, EcoIqResponse, EcoIqWorkflow } from "@/lib/ecoiq";
 
 interface CurveMetric { as_of_date?: string; slope_10y2y?: number | null; curve_move?: string | null; }
 interface CurvePoint { as_of_date?: string; tenor?: string; tenor_label?: string; yield_pct?: number; }
 interface Indicator { series_id?: string; latest_value?: number; prior_value?: number | null; as_of_date?: string | null; }
+interface InflationObservation { series_id: string; observation_date: string; value: number; }
 
 const fmt = (value: number | null | undefined, suffix = "") => value == null || !Number.isFinite(value) ? "—" : `${value.toFixed(2)}${suffix}`;
+const isInflationQuestion = (question: string) => /inflation|cpi|pce|month[- ]over[- ]month|m\/?m/i.test(question);
+
+async function readInflationMoves(store: ReturnType<typeof goldStore>, workflow: EcoIqWorkflow, question: string): Promise<EcoIqResponse> {
+  const ids = FRED_CATALOG.filter((s) => s.category === "INFLATION" && s.freq === "M").map((s) => s.id);
+  const placeholders = ids.map((_id, i) => goldParam(i + 1)).join(", ");
+  const rows = await store.raw<InflationObservation>(`SELECT series_id, observation_date, value FROM (SELECT series_id, observation_date, value, ROW_NUMBER() OVER (PARTITION BY series_id ORDER BY observation_date DESC) AS rn FROM ${goldTable("fred_latest_observation")} WHERE series_id IN (${placeholders}) AND NOT is_missing) ranked WHERE rn <= 2 ORDER BY series_id, observation_date DESC`, ids);
+  const bySeries = new Map<string, InflationObservation[]>();
+  for (const row of rows) bySeries.set(row.series_id, [...(bySeries.get(row.series_id) ?? []), row]);
+  const meta = new Map(FRED_CATALOG.map((s) => [s.id, s]));
+  const moves = [...bySeries.entries()].flatMap(([id, values]) => {
+    if (values.length < 2) return [];
+    const latest = values[0]; const prior = values[1];
+    const m = meta.get(id); const rateSeries = Boolean(m?.unit.match(/%\s*(m\/m|y\/y|ann\.)/i)); const delta = rateSeries ? latest.value - prior.value : (prior.value === 0 ? null : (latest.value - prior.value) / Math.abs(prior.value) * 100);
+    if (delta == null || !Number.isFinite(delta)) return [];
+    return [{ id, label: m?.label ?? id, latest, prior, delta }];
+  }).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 8);
+  const asOf = moves.map((m) => m.latest.observation_date).sort().at(-1) ?? null;
+  const evidence: EcoIqEvidence[] = moves.map((m) => ({ id: `inflation.${m.id}`, label: m.label, value: `${m.delta >= 0 ? "+" : ""}${m.delta.toFixed(2)}% m/m`, asOf: m.latest.observation_date, source: "GOLD", interpretation: `Observed change from ${m.prior.observation_date} to ${m.latest.observation_date}; calculated from Gold observations.` }));
+  const observed = moves.length ? [`The largest absolute monthly inflation moves in the available Gold series are ranked below.`, `The most recent observation dates range through ${asOf ?? "—"}.`] : ["No two-period monthly inflation observations were returned from Gold."];
+  const explanation = moves.length ? "These are descriptive month-over-month moves, not causal attribution. Large changes can reflect energy, food, base effects, seasonal adjustment, or release/revision timing; ECOIQ needs additional evidence before assigning a mechanism." : "ECOIQ could not establish a two-period monthly inflation comparison.";
+  return { ok: moves.length > 0, module: "ECOIQ", workflow, question, observed, explanation, evidence, effects: [
+    { order: 1, title: "Print-level move", detail: "The ranked changes identify which inflation series moved most month over month.", confidence: "high" },
+    { order: 2, title: "Basket transmission", detail: "Persistent component moves can change headline/core momentum depending on weights and persistence.", confidence: "medium" },
+    { order: 3, title: "Policy and rates", detail: "A sustained inflation impulse can alter policy expectations and rates, subject to corroboration.", confidence: "low" },
+  ], alternatives: ["Energy or food shock", "Seasonal adjustment or base effect", "Revision or release-timing effect"], falsifiers: ["The move disappears on the next vintage refresh.", "Other inflation measures do not corroborate the direction.", "The largest component is immaterial after basket weights are applied."], disclosures: ["Numbers are calculated from macro_medallion Gold observations.", "Ranking is descriptive; it does not establish causation.", "Component weights and seasonal-adjustment attribution are not inferred without a governed pack."], asOf, source: "macro_medallion" };
+}
 
 export async function readEcoIq(question: string, workflow: EcoIqWorkflow): Promise<EcoIqResponse> {
   const fallback = (error: string): EcoIqResponse => ({
@@ -15,6 +44,7 @@ export async function readEcoIq(question: string, workflow: EcoIqWorkflow): Prom
   if (!goldEnabled()) return fallback("MACRO_DB_URL is not configured");
   try {
     const store = goldStore();
+    if (isInflationQuestion(question)) return await readInflationMoves(store, workflow, question);
     const [curve, metrics, indicators] = await Promise.all([
       store.latest<CurvePoint>("treasury_curve"),
       store.latest<CurveMetric>("treasury_curve_metrics"),
