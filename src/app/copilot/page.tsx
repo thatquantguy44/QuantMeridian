@@ -32,6 +32,7 @@ interface ChatMsg {
   text?: string; // raw text for user msgs
   answer?: Answer; // structured payload for assistant msgs
   source?: "AI" | "LOCAL"; // provenance of the assistant answer
+  model?: string; // profile · model that answered, when source is AI
 }
 
 const SUGGESTED = [
@@ -324,7 +325,7 @@ export default function AICopilot() {
           chart: local.chart,
           actions: local.actions,
         };
-        setMessages((m) => [...m, { id: ++MSG_ID, role: "assistant", answer: merged, source: "AI" }]);
+        setMessages((m) => [...m, { id: ++MSG_ID, role: "assistant", answer: merged, source: "AI", model: typeof j.profile === "string" && typeof j.model === "string" ? `${j.profile} · ${j.model}` : undefined }]);
       } else {
         setMessages((m) => [...m, { id: ++MSG_ID, role: "assistant", answer: local, source: "LOCAL" }]);
       }
@@ -360,7 +361,7 @@ export default function AICopilot() {
                       {msg.source && (
                         <div className="mb-1.5 flex items-center gap-1">
                           <Tag tone={msg.source === "AI" ? "up" : "amber"}>
-                            {msg.source === "AI" ? "Claude · claude-opus-4-8" : "Local engine"}
+                            {msg.source === "AI" ? msg.model ?? "AI model" : "Local engine"}
                           </Tag>
                         </div>
                       )}

@@ -24,10 +24,10 @@ describe("shipped settings/llm_profiles.json", () => {
   });
 
   it("seeds anthropic-direct with the Copilot's current model and token limit", () => {
-    const copilot = fs.readFileSync(path.join(ROOT, "src/app/api/copilot/route.ts"), "utf8");
+    // The Copilot route reads these from the profile now; src/app/api/copilot/route.test.ts pins the request it sends.
     const profile = shipped().profiles["anthropic-direct"];
-    expect(copilot).toContain(`model: "${profile.model}"`);
-    expect(copilot).toContain(`max_tokens: ${profile.limits.max_output_tokens}`);
+    expect(profile.model).toBe("claude-opus-4-8");
+    expect(profile.limits.max_output_tokens).toBe(1500);
     expect(profile.auth.credential_env).toBe("ANTHROPIC_API_KEY");
   });
 

@@ -1,18 +1,20 @@
 // Exception to DB-only policy — LLM call is the live piece; context is sourced from Gold (see GOLD_DB_MIGRATION_HANDOFF §7 D1).
 import { json } from "@/lib/server/http";
-import Anthropic from "@anthropic-ai/sdk";
 import { buildCopilotContext } from "@/lib/server/copilotContext";
+import { callLlm } from "@/lib/server/llm/client";
+import { resolveProfile } from "@/lib/server/llm/profiles";
+import { AgentQueueStore, queueConfig } from "@/lib/server/agent/queueStore";
 
 
 /**
  * POST /api/copilot  { question: string }
  *
- * Natural-language answer over the securities-finance desk data. When
- * ANTHROPIC_API_KEY is set, Claude answers from a factual desk-data snapshot
- * (it is instructed to use only the supplied figures). Without a key — or on any
- * error — returns source "LOCAL" so the client falls back to its deterministic
- * keyword engine. Mirrors the terminal's provenance-honest fallback pattern:
- * always 200, always a `source` badge.
+ * Natural-language answer over the securities-finance desk data. The model comes from the LLM
+ * profile layer (spec009): by default `anthropic-direct`, which sends the same request this route
+ * always has (claude-opus-4-8, 1500 tokens). When the profile is unavailable or has no model — or on
+ * any error — returns source "LOCAL" so the client falls back to its deterministic keyword engine.
+ * Mirrors the terminal's provenance-honest fallback pattern: always 200, always a `source` badge.
+ * `AI` responses name the `profile` and `model` that answered.
  */
 
 const SYSTEM = `You are the AI Copilot for a Bloomberg-style securities-finance terminal, covering Securities Lending, Prime Finance, Collateral Management, and Cash/Treasury.
@@ -48,38 +50,45 @@ export async function POST(req: Request) {
   }
   if (!question) return json({ error: "question required" }, { status: 400 });
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  // The Copilot snapshot is simulated desk data. An unavailable default profile degrades to LOCAL.
+  const resolved = resolveProfile({ use: "copilot", dataClasses: ["desk_simulated"], optional: true });
+  if (!resolved.ok || resolved.api_style === "none") {
     return json({ source: "LOCAL" });
   }
 
   try {
-    const client = new Anthropic();
     const context = buildCopilotContext();
-    const response = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 1500,
+    const response = await callLlm(resolved, {
+      workflow_id: "copilot",
+      run_id: crypto.randomUUID(),
+      task_type: "copilot",
+      prompt_id: "copilot.v1",
       system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: `Desk data snapshot (JSON):\n${JSON.stringify(context)}\n\nQuestion: ${question}`,
-        },
-      ],
+      user: `Desk data snapshot (JSON):\n${JSON.stringify(context)}\n\nQuestion: ${question}`,
+      data_classes: ["desk_simulated"],
+      correlation_id: crypto.randomUUID(),
     });
+    if (response.status !== "completed" || !response.output_text) return json({ source: "LOCAL" });
+    recordUsage(resolved.profile_id, response.usage.input_tokens, response.usage.output_tokens);
 
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
-    if (!textBlock) return json({ source: "LOCAL" });
-
-    const parsed = extractJson(textBlock.text);
+    const parsed = extractJson(response.output_text);
     if (!parsed?.text) return json({ source: "LOCAL" });
 
     return json({
       source: "AI",
       text: parsed.text,
       bullets: Array.isArray(parsed.bullets) ? parsed.bullets.slice(0, 8) : [],
+      profile: resolved.profile_id,
+      model: response.model ?? resolved.model,
     });
   } catch {
-    // Any failure (auth, rate limit, parse) → deterministic fallback.
+    // Any failure (context build, parse) → deterministic fallback.
     return json({ source: "LOCAL" });
   }
+}
+
+/** Counts tokens against the profile's daily usage when the queue database is configured; never affects the answer. */
+function recordUsage(profileId: string, input: number | null, output: number | null) {
+  if (!queueConfig()) return;
+  new AgentQueueStore().recordUsage(profileId, input ?? 0, output ?? 0).catch(() => {});
 }
