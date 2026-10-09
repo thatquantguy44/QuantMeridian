@@ -3,10 +3,9 @@
  * IDs, error responses, and the workflow-offer rule (config ∩ live worker capabilities).
  */
 import workflowsJson from "../../../../settings/agent_workflows.json";
-import profilesJson from "../../../../settings/llm_profiles.json";
 import type { AgentWorkflowsConfig, Module, Workflow } from "@/lib/agent/contracts/agent-workflows.generated";
 import { json } from "@/lib/server/http";
-import { resolveLlmProfile } from "./profileResolver";
+import { profileStates } from "@/lib/server/llm/profiles";
 
 export const agentConfig = workflowsJson as unknown as AgentWorkflowsConfig;
 
@@ -39,9 +38,8 @@ export function moduleConfig(code: string): Module | undefined {
   return agentConfig.modules[code as keyof typeof agentConfig.modules];
 }
 
-export function profileOptions(mod: Module) {
-  return Object.entries(profilesJson.profiles as Record<string, { label?: string; enabled?: boolean }>).map(([id, profile]) => {
-    const resolved = resolveLlmProfile(id);
-    return { id, label: profile.label ?? id, available: resolved.available, reason: resolved.reason ?? null, selectable: mod.profile_override };
-  });
+export function profileOptions(mod: Module, workflow?: Workflow) {
+  const use = workflow?.uses[0] ?? "interpreter";
+  const states = profileStates(use, workflow?.data_classes ?? ["public_market_data", "module_context"]);
+  return states.map((s) => ({ id: s.id, label: s.label, available: s.state === "ready", reason: s.state === "ready" ? null : s.state, selectable: mod.profile_override }));
 }

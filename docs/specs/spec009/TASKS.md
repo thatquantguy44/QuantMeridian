@@ -130,9 +130,9 @@ Deviations from the spec to resolve before treating this as done (each needs a d
 3. **Verification.** `verifyEcoIq` checks source and evidence-id references; it is not the claim
    vocabulary, text rule, or per-provenance verifier (T-017). Numeric prose from the LLM is not
    blocked in strict mode, and nothing reruns values against `resolveChartSeries`.
-4. **Profile layer.** Stage calls bypass retries, budgets, redaction, and normalized errors
-   (T-005, T-014); `think: false`, `format`, and a hard-coded Ollama fallback URL are provider
-   specifics in the shared client.
+4. **Profile layer.** Resolved by T-005 (2026-10-08): stage calls go through the profile layer's
+   resolution, client, retries, and redaction; `think: false` and `format` are passed as the call's
+   `extra_body`. Budgets and usage accounting remain T-014.
 5. **Gating.** Resolved by T-009 (2026-10-08): `execute` is behind the gate and requires the job's
    own requester or the worker token. Leases are still missing (T-012).
 6. **CI hygiene.** `ruff check` reports 13 findings in `worker.py`, `ecoiq.py`, and
@@ -142,7 +142,7 @@ Deviations from the spec to resolve before treating this as done (each needs a d
 
 | ID | Task | Covers | Status | Notes |
 | --- | --- | --- | --- | --- |
-| T-005 | Build `src/lib/server/llm/` — registry loading, precedence and fail-closed resolution, `anthropic_messages` (`@anthropic-ai/sdk` with `baseURL`, `apiKey`/`authToken`, `defaultHeaders`) and `openai_chat_completions` (new pinned `openai` dependency) clients normalized to the `llm_runtime` contract shape, redaction, dry-run validation — and the shared conformance fixtures in `contracts/agent/fixtures/llm-profiles/`. | REQ-019, REQ-020, REQ-021, REQ-024, NFR-005, NFR-006 | in-progress | No tools are ever sent. JSON outputs are schema-validated; invalid output is `LLM_OUTPUT_INVALID`, never repaired. **Built so far:** `profileConfig.ts` (validation, from T-003) and `agent/profileResolver.ts`, a thin ECOIQ shim: precedence and an `openai_chat_completions` `fetch` for `local-openai` only. **Missing:** `anthropic_messages` client, `openai` SDK, redaction, dry-run validation, fail-closed fallback handling, conformance fixtures, `src/lib/server/llm/` clients. |
+| T-005 | Build `src/lib/server/llm/` — registry loading, precedence and fail-closed resolution, `anthropic_messages` (`@anthropic-ai/sdk` with `baseURL`, `apiKey`/`authToken`, `defaultHeaders`) and `openai_chat_completions` (new pinned `openai` dependency) clients normalized to the `llm_runtime` contract shape, redaction, dry-run validation — and the shared conformance fixtures in `contracts/agent/fixtures/llm-profiles/`. | REQ-019, REQ-020, REQ-021, REQ-024, NFR-005, NFR-006 | done | No tools are ever sent. JSON outputs are schema-validated; invalid output is `LLM_OUTPUT_INVALID`, never repaired. **Done 2026-10-08:** `src/lib/server/llm/profiles.ts` (precedence, fail-closed `LLM_PROFILE_UNKNOWN`/`NOT_ALLOWED`/`UNAVAILABLE`, optional-workflow degrade to `deterministic` with `degraded_from`, per-profile dry-run states), `client.ts` (`callLlm`/`callLlmJson` normalized to the `llm_runtime` shape, retries, timeouts, `retryable`), `redact.ts`, and 21 conformance fixtures in `contracts/agent/fixtures/llm-profiles/` run by `conformance.test.ts`. **Deviation:** `openai_chat_completions` uses built-in `fetch`, not the `openai` package, so no new dependency is added (owner: the OpenAI SDK should not be a hard requirement); `anthropic_messages` uses `@anthropic-ai/sdk`. `agent/profileResolver.ts` is now a thin ECOIQ view over this layer (ECOIQ still calls a model only for OpenAI-compatible profiles, so the `anthropic-direct` default makes no calls). The worker's Python clients and the same fixtures on that side are T-014. |
 | T-006 | Migrate `/api/copilot` to the profile layer: identical default request (model, system prompt, messages, token limit), unchanged `LOCAL` fallbacks, `profile` and `model` added to `AI` responses, badge updated on `/copilot`, usage recorded when the queue database is configured. | REQ-022 | todo | A mocked-SDK test proves the default request is byte-for-byte the same as today's. Validated 2026-10-08: `/api/copilot` is unchanged (no profile layer). |
 | T-007 | Add the Data Ops profile card (dry-run states) and `POST /api/agent/profiles/[id]/probe` (one tiny completion; closed while the production gate is closed); prove no secret or credential-bearing URL is ever returned. | REQ-023, NFR-005 | todo | Probe results are metadata: status, latency, model as reported, error code. |
 
@@ -226,8 +226,8 @@ Status values: `todo` | `in-progress` | `blocked` | `done`.
 | AC-017 | `DisclosureDrawer.test.tsx::all disclosure fields` | todo |
 | AC-018 | `ChartStudio.agentChart.test.tsx`; `agent-panel.spec.ts::open in chart studio` | todo |
 | AC-019 | `llm/profiles.test.ts::registry schema and secret scan` | done — `llm/profileConfig.test.ts` (registry schema and secret scan) and `config.test.ts::secrets` pass |
-| AC-020 | `llm/profiles.test.ts::precedence and fail-closed`; `test_profiles.py::test_precedence_and_fail_closed` | todo |
-| AC-021 | `llm/conformance.test.ts`; `test_profiles_conformance.py`; stub gateway tests on both sides | todo |
+| AC-020 | `llm/profiles.test.ts::precedence and fail-closed`; `test_profiles.py::test_precedence_and_fail_closed` | partial — Node `conformance.test.ts` passes (precedence and fail-closed); `test_profiles.py` is T-014 |
+| AC-021 | `llm/conformance.test.ts`; `test_profiles_conformance.py`; stub gateway tests on both sides | partial — Node `conformance.test.ts` and `client.test.ts` (stub fetch) pass; worker side is T-014 |
 | AC-022 | `copilot.route.test.ts::default profile request identical`; `::local fallback unchanged` | todo |
 | AC-023 | `profiles.route.test.ts::dry-run states redacted` | todo |
 | AC-024 | `test_interpreter.py::test_invalid_llm_outputs_never_execute`; `test_secfin_carry.py::test_unknown_benchmark_rejected` | todo |

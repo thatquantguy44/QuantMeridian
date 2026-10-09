@@ -1,36 +1,48 @@
-import profiles from "../../../../settings/llm_profiles.json";
+/**
+ * ECOIQ's view of the LLM profile layer (src/lib/server/llm). Resolution and the provider clients live
+ * there; this keeps the small surface the attended executor and the job route use.
+ */
+import { callLlm, type LlmRequest } from "@/lib/server/llm/client";
+import { resolveProfile, type ProfileErrorCode, type ResolvedCall } from "@/lib/server/llm/profiles";
 
-export type ResolvedProfile = { id: string; apiStyle: "none" | "openai_chat_completions" | "anthropic_messages"; model: string | null; baseUrl: string | null; available: boolean; reason?: string };
+type Env = Record<string, string | undefined>;
 
-export function resolveLlmProfile(requested?: string | null, env: Record<string, string | undefined> = process.env): ResolvedProfile {
-  const id = requested || env.LLM_PROFILE_DEFAULT || profiles.default_profile;
-  const raw = profiles.profiles[id as keyof typeof profiles.profiles] as any;
-  if (!raw) return { id, apiStyle: "none", model: null, baseUrl: null, available: false, reason: "LLM_PROFILE_UNKNOWN" };
-  const localOptIn = id === "local-openai" && Boolean(env.LOCAL_LLM_BASE_URL && env.LOCAL_LLM_MODEL);
-  if (!raw.enabled && !localOptIn) return { id, apiStyle: raw.api_style, model: null, baseUrl: null, available: false, reason: "LLM_PROFILE_UNAVAILABLE" };
-  const model = raw.model ?? (raw.model_env ? env[raw.model_env] : null) ?? null;
-  const baseUrl = raw.base_url_env ? env[raw.base_url_env] ?? null : null;
-  if (raw.api_style === "none") return { id, apiStyle: "none", model: null, baseUrl: null, available: true };
-  const credential = raw.auth?.credential_env ? env[raw.auth.credential_env] : "local";
-  if (!model || (raw.api_style !== "openai_chat_completions" && !credential)) return { id, apiStyle: raw.api_style, model, baseUrl, available: false, reason: "LLM_PROFILE_UNAVAILABLE" };
-  if (raw.api_style === "openai_chat_completions" && !baseUrl && !credential) return { id, apiStyle: raw.api_style, model, baseUrl, available: false, reason: "LLM_PROFILE_UNAVAILABLE" };
-  return { id, apiStyle: raw.api_style, model, baseUrl, available: true };
+export type ResolvedProfile = {
+  id: string;
+  apiStyle: "none" | "openai_chat_completions" | "anthropic_messages";
+  model: string | null;
+  baseUrl: string | null;
+  available: boolean;
+  reason?: ProfileErrorCode;
+  detail?: string;
+  call?: ResolvedCall;
+};
+
+// ECOIQ sends governed Gold evidence and UI state only: public market data plus module context.
+const ECOIQ_CLASSES = ["public_market_data", "module_context"] as const;
+
+export function resolveLlmProfile(requested?: string | null, env: Env = process.env): ResolvedProfile {
+  // ECOIQ.md documents selecting the local server by setting its two environment variables, without editing the registry.
+  const localOptIn = Boolean(env.LOCAL_LLM_BASE_URL && env.LOCAL_LLM_MODEL);
+  const resolved = resolveProfile({ requested: requested || undefined, use: "interpreter", dataClasses: ECOIQ_CLASSES }, { env, assumeEnabled: localOptIn ? ["local-openai"] : [] });
+  if (!resolved.ok) return { id: resolved.profile_id, apiStyle: "none", model: null, baseUrl: null, available: false, reason: resolved.code, detail: resolved.detail };
+  return { id: resolved.profile_id, apiStyle: resolved.api_style, model: resolved.model, baseUrl: resolved.base_url, available: true, call: resolved };
 }
 
-export async function completeWithProfile(profile: ResolvedProfile, system: string, user: string): Promise<string | null> {
-  return completeRaw(profile, system, user, false);
-}
-
-export async function completeJsonWithProfile(profile: ResolvedProfile, system: string, user: string): Promise<string | null> {
-  return completeRaw(profile, system, user, true);
-}
-
-async function completeRaw(profile: ResolvedProfile, system: string, user: string, json: boolean): Promise<string | null> {
-  if (!profile.available || profile.apiStyle === "none" || profile.apiStyle !== "openai_chat_completions" || !profile.model) return null;
-  const endpoint = `${profile.baseUrl ?? "http://127.0.0.1:11434/v1"}/chat/completions`;
+async function complete(profile: ResolvedProfile, system: string, user: string, json: boolean): Promise<string | null> {
+  if (!profile.available || !profile.call || profile.apiStyle !== "openai_chat_completions") return null;
   const timeoutMs = Math.max(1000, Number(process.env.ECOIQ_STAGE_TIMEOUT_MS ?? 15000));
-  const response = await fetch(endpoint, { method: "POST", signal: AbortSignal.timeout(timeoutMs), headers: { "content-type": "application/json" }, body: JSON.stringify({ model: profile.model, think: false, temperature: 0.1, max_tokens: json ? 900 : 1200, ...(json ? { response_format: { type: "json_object" }, format: "json" } : {}), messages: [{ role: "system", content: system }, { role: "user", content: user }] }) });
-  if (!response.ok) throw new Error(`LLM_PROVIDER_ERROR:${response.status}`);
-  const body = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-  return body.choices?.[0]?.message?.content ?? null;
+  const request: LlmRequest = {
+    workflow_id: "economics", run_id: "attended", task_type: "interpretation", prompt_id: json ? "ecoiq.stage.json" : "ecoiq.text",
+    system, user, temperature: 0.1, max_output_tokens: json ? 900 : 1200, data_classes: ECOIQ_CLASSES, correlation_id: "ecoiq",
+    response_format: json ? { type: "json" } : null,
+    // Local servers (Ollama): skip reasoning traces and ask for JSON natively.
+    extra_body: { think: false, ...(json ? { format: "json" } : {}) },
+  };
+  const response = await callLlm({ ...profile.call, limits: { ...profile.call.limits, timeout_ms: timeoutMs } }, request);
+  if (response.status === "failed") throw new Error(`${response.error_code}:${response.error_message_redacted ?? ""}`);
+  return response.output_text;
 }
+
+export const completeWithProfile = (profile: ResolvedProfile, system: string, user: string) => complete(profile, system, user, false);
+export const completeJsonWithProfile = (profile: ResolvedProfile, system: string, user: string) => complete(profile, system, user, true);

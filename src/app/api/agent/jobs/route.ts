@@ -1,7 +1,7 @@
 import { validateContract } from "@/lib/agent/validate";
 import { AgentQueueStore } from "@/lib/server/agent/queueStore";
 import { guardPanelRequest } from "@/lib/server/agent/guard";
-import { resolveLlmProfile } from "@/lib/server/agent/profileResolver";
+import { resolveProfile } from "@/lib/server/llm/profiles";
 import { agentConfig, apiError, apiJson, correlationId, missingCapabilities, moduleConfig } from "@/lib/server/agent/runtime";
 import type { AgentJobCreateRequest } from "@/lib/agent/contracts/job.generated";
 
@@ -41,9 +41,12 @@ export async function POST(request: Request) {
 
   if (job.profile) {
     if (!mod.profile_override) return fail("LLM_PROFILE_NOT_ALLOWED", 403);
-    const resolved = resolveLlmProfile(job.profile);
-    if (resolved.reason === "LLM_PROFILE_UNKNOWN") return fail("LLM_PROFILE_UNKNOWN", 400);
-    if (!resolved.available) return fail("LLM_PROFILE_UNAVAILABLE", 409);
+    const uses = workflow.uses.length ? workflow.uses : (["interpreter"] as const);
+    for (const use of uses) {
+      const resolved = resolveProfile({ requested: job.profile, use, dataClasses: workflow.data_classes });
+      if (resolved.ok) continue;
+      return fail(resolved.code, resolved.code === "LLM_PROFILE_UNKNOWN" ? 400 : resolved.code === "LLM_PROFILE_NOT_ALLOWED" ? 403 : 409, { message: resolved.detail });
+    }
   }
 
   try {

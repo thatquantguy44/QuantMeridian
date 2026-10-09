@@ -104,10 +104,10 @@ describe("POST /api/agent/jobs", () => {
     expect((await post(mgc)).status).toBe(202);
   });
 
-  it("rejects an unavailable or unknown profile on a module that allows overrides", async () => {
+  it("rejects a disabled or unknown profile on a module that allows overrides", async () => {
     const mgc = { schema_version: "agent-job/1", module: "MGC", thread_id: THREAD, workflow: "chart.build", message: "x", context: {} };
     await new AgentQueueStore().migrate(); heartbeat(["chart_line_form"]);
-    expect(await code(await post({ ...mgc, profile: "openai-direct" }))).toBe("LLM_PROFILE_UNAVAILABLE");
+    expect(await code(await post({ ...mgc, profile: "openai-direct" }))).toBe("LLM_PROFILE_NOT_ALLOWED"); // shipped disabled
     expect(await code(await post({ ...mgc, profile: "no-such-profile" }))).toBe("LLM_PROFILE_UNKNOWN");
     expect((await post({ ...mgc, profile: "deterministic" })).status).toBe(202);
   });

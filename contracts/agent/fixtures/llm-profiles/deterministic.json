@@ -1,0 +1,63 @@
+{
+  "name": "deterministic",
+  "registry": {
+    "schema_version": "llm-profiles/1",
+    "default_profile": "p",
+    "profiles": {
+      "p": {
+        "enabled": true,
+        "label": "Fixture profile",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "copilot",
+          "interpreter",
+          "narrator",
+          "drafter"
+        ],
+        "limits": {
+          "max_output_tokens": 1500,
+          "timeout_ms": 60000,
+          "max_retries": 2,
+          "per_job_token_cap": 20000,
+          "daily_token_budget": null
+        },
+        "api_style": "none"
+      },
+      "deterministic": {
+        "enabled": true,
+        "label": "No LLM",
+        "api_style": "none",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "interpreter",
+          "narrator"
+        ]
+      }
+    },
+    "default_profile_env": "LLM_PROFILE_DEFAULT"
+  },
+  "env": {},
+  "input": {
+    "use": "interpreter",
+    "data_classes": [
+      "public_market_data"
+    ],
+    "requested": null,
+    "optional": false
+  },
+  "expected": {
+    "ok": true,
+    "endpoint_url": null,
+    "auth_header": null,
+    "extra_header_names": [],
+    "model": null
+  }
+}

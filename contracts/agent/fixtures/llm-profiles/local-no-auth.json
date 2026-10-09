@@ -1,0 +1,71 @@
+{
+  "name": "local-no-auth",
+  "registry": {
+    "schema_version": "llm-profiles/1",
+    "default_profile": "p",
+    "profiles": {
+      "p": {
+        "enabled": true,
+        "label": "Fixture profile",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "interpreter",
+          "narrator"
+        ],
+        "limits": {
+          "max_output_tokens": 1500,
+          "timeout_ms": 120000,
+          "max_retries": 0,
+          "per_job_token_cap": 20000,
+          "daily_token_budget": null
+        },
+        "api_style": "openai_chat_completions",
+        "base_url_env": "LB",
+        "model_env": "LM",
+        "auth": {
+          "scheme": "none"
+        }
+      },
+      "deterministic": {
+        "enabled": true,
+        "label": "No LLM",
+        "api_style": "none",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "interpreter",
+          "narrator"
+        ]
+      }
+    },
+    "default_profile_env": "LLM_PROFILE_DEFAULT"
+  },
+  "env": {
+    "LB": "http://127.0.0.1:11434/v1",
+    "LM": "qwen3:14b"
+  },
+  "input": {
+    "use": "interpreter",
+    "data_classes": [
+      "public_market_data"
+    ],
+    "requested": null,
+    "optional": false
+  },
+  "expected": {
+    "ok": true,
+    "endpoint_url": "http://127.0.0.1:11434/v1/chat/completions",
+    "auth_header": null,
+    "extra_header_names": [],
+    "model": "qwen3:14b",
+    "max_retries": 0,
+    "timeout_ms": 120000
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "name": "anthropic-gateway-bearer",
+  "registry": {
+    "schema_version": "llm-profiles/1",
+    "default_profile": "p",
+    "profiles": {
+      "p": {
+        "enabled": true,
+        "label": "Fixture profile",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "copilot",
+          "interpreter",
+          "narrator",
+          "drafter"
+        ],
+        "limits": {
+          "max_output_tokens": 1500,
+          "timeout_ms": 60000,
+          "max_retries": 2,
+          "per_job_token_cap": 20000,
+          "daily_token_budget": null
+        },
+        "api_style": "anthropic_messages",
+        "base_url_env": "ANTHROPIC_GATEWAY_BASE_URL",
+        "model_env": "ANTHROPIC_GATEWAY_MODEL",
+        "auth": {
+          "scheme": "bearer",
+          "credential_env": "ANTHROPIC_GATEWAY_API_KEY"
+        }
+      },
+      "deterministic": {
+        "enabled": true,
+        "label": "No LLM",
+        "api_style": "none",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "interpreter",
+          "narrator"
+        ]
+      }
+    },
+    "default_profile_env": "LLM_PROFILE_DEFAULT"
+  },
+  "env": {
+    "ANTHROPIC_GATEWAY_BASE_URL": "https://gw.test/anthropic/",
+    "ANTHROPIC_GATEWAY_MODEL": "claude-alias",
+    "ANTHROPIC_GATEWAY_API_KEY": "{x24}"
+  },
+  "input": {
+    "use": "interpreter",
+    "data_classes": [
+      "public_market_data"
+    ],
+    "requested": null,
+    "optional": false
+  },
+  "expected": {
+    "ok": true,
+    "endpoint_url": "https://gw.test/anthropic/v1/messages",
+    "auth_header": "authorization",
+    "extra_header_names": [],
+    "model": "claude-alias"
+  }
+}
