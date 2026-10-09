@@ -72,8 +72,7 @@
       "timeout_seconds": 180,
       "data_classes": ["public_market_data", "module_context"],
       "enabled": true,
-      "requires_capabilities": ["agent_contracts"],
-      "plan_capabilities": { "non_additive_or_multi_period": ["pit_level_semantics"] }
+      "requires_capabilities": []
     },
     "economics.transmission": {
       "version": "1.0.0",
@@ -82,7 +81,7 @@
       "timeout_seconds": 180,
       "data_classes": ["public_market_data", "module_context"],
       "enabled": true,
-      "requires_capabilities": ["agent_contracts"]
+      "requires_capabilities": []
     },
     "economics.scenario": {
       "version": "1.0.0",
@@ -91,7 +90,7 @@
       "timeout_seconds": 180,
       "data_classes": ["public_market_data", "module_context"],
       "enabled": true,
-      "requires_capabilities": ["agent_contracts"]
+      "requires_capabilities": []
     }
   },
   "modules": {

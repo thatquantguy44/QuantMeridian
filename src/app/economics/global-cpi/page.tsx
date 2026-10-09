@@ -7,9 +7,9 @@ import { BarChart } from "@/components/charts/BarChart";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { useDrill } from "@/components/econ/DrillProvider";
 import { SourceBadge } from "@/components/econ/SourceBadge";
-import { isRealEconSource, useLiveSeriesSet, type DataSource } from "@/lib/useEcon";
-import { worstSource } from "@/lib/provenance";
-import { getGlobalCPI, getGlobalSummary, liveCountryCPI, type CountryInflation, type Region, type Trend } from "@/data/globalMacro";
+import { type DataSource } from "@/lib/useEcon";
+import { classifyFreshness, worstSource } from "@/lib/provenance";
+import { getGlobalCPI, getGlobalSummary, type CountryInflation, type Region, type Trend } from "@/data/globalMacro";
 import { fmtNum, fmtSigned, pnlClass } from "@/lib/format";
 
 const REGIONS: Array<"ALL" | Region> = ["ALL", "AMER", "EMEA", "APAC"];
@@ -62,8 +62,8 @@ function cpiFromGold(row: GoldInflationRow): CountryInflation | null {
     target: row.target_pct ?? 2,
     vsTarget: row.vs_target_pp ?? row.cpi_yoy_pct - (row.target_pct ?? 2),
     history: [],
-    source: "DB",
-    asOf: row.observation_date,
+      source: "DB",
+      asOf: row.observation_date,
   };
 }
 
@@ -130,23 +130,24 @@ export default function GlobalInflation() {
       ...c,
       yoy: gold.cpi_yoy_pct,
       priorYoy: gold.change_pp != null ? gold.cpi_yoy_pct - gold.change_pp : c.priorYoy,
-      yoyDelta: gold.change_pp ?? c.yoyDelta,
+      // Gold global inflation is annual World Bank CPI. Do not carry the
+      // initial SIM monthly fields into a Gold row or present them as real.
+      mom: null,
+      momDelta: null,
+      history: [],
+      yoyDelta: gold.change_pp ?? null,
       trend: goldTrend(gold.trend),
-      streak: gold.streak ?? c.streak,
-      vsTarget: gold.vs_target_pp ?? c.vsTarget,
-      target: gold.target_pct ?? c.target,
+      streak: gold.streak ?? 0,
+      vsTarget: gold.vs_target_pp ?? gold.cpi_yoy_pct - (gold.target_pct ?? 2),
+      target: gold.target_pct ?? 2,
       source: "DB" as const,
       asOf: gold.observation_date,
     };
   });
 
-  const { data: liveMap, source } = useLiveSeriesSet(baseWithGold.map((c) => c.fredId), "lin", 26);
-  const merged = baseWithGold.map((c) => {
-    const L = liveMap[c.fredId];
-    return L && isRealEconSource(L.source) && L.observations.length
-      ? { ...liveCountryCPI(c, L.observations), source: L.source }
-      : c;
-  });
+  // Gold/World Bank is authoritative for this page. Avoid a redundant FRED
+  // fan-out that can overwrite annual Gold data with stale series.
+  const merged = baseWithGold;
 
   // Append Gold-only countries (no CPI_DEFS entry) so the page reflects Gold's
   // full 38-country reach, not just the 20-country SIM seed.
@@ -160,7 +161,7 @@ export default function GlobalInflation() {
   const allSources = all.map((c) => c.source).filter((s) => s && s !== "LOADING");
   const realSources = allSources.filter((s) => s === "DB" || s === "FRED");
   const isRealMajority = realSources.length > allSources.length / 2;
-  const pageSource = source === "LOADING" && !allSources.length
+  const pageSource = goldRows.length === 0
     ? ("LOADING" as const)
     : isRealMajority
     ? worstSource(realSources)
@@ -189,14 +190,15 @@ export default function GlobalInflation() {
   const rows = region === "ALL" ? all : all.filter((c) => c.region === region);
 
   const drill = (row: CountryInflation) => {
-    const hasRawLevels = isRealEconSource(row.source);
+    const hasRawLevels = false;
     open({
       id: row.fredId,
       label: `${row.country} CPI`,
       units: "lin",
-      unitLabel: hasRawLevels ? "level · derived MoM/YoY" : row.source === "ETL" ? "YoY % · ETL annual" : "simulation",
+      unitLabel: hasRawLevels ? "level · derived MoM/YoY" : row.source === "DB" ? "YoY % · Gold annual" : row.source === "ETL" ? "YoY % · ETL annual" : "simulation",
       decimals: hasRawLevels ? 2 : 1,
       growthMetrics: hasRawLevels,
+      endpoint: row.source === "DB" ? `/api/econ/global-inflation?country=${encodeURIComponent(row.country)}` : undefined,
     });
   };
 
@@ -228,6 +230,20 @@ export default function GlobalInflation() {
       align: "right",
       render: (c) => <span className={yoyClass(c.yoy)}>{fmtNum(c.yoy, 1)}</span>,
       sortVal: (c) => c.yoy,
+    },
+    {
+      key: "target",
+      header: "Target %",
+      align: "right",
+      render: (c) => <span className="text-term-text-dim" title={`Inflation target used for the vs target calculation: ${fmtNum(c.target, 1)}%`}>{fmtNum(c.target, 1)}</span>,
+      sortVal: (c) => c.target,
+    },
+    {
+      key: "asOf",
+      header: "CPI As Of",
+      align: "right",
+      sortVal: (c) => c.asOf ?? "",
+      render: (c) => { const freshness = classifyFreshness(c.asOf); return <span className="text-term-text-dim" title={freshness.title}>{c.asOf ? <>{c.asOf}{freshness.label && <span className="ml-1 text-3xs text-term-amber">{freshness.label}</span>}</> : "—"}</span>; },
     },
     {
       key: "yoyDelta",
@@ -382,7 +398,7 @@ export default function GlobalInflation() {
       </div>
 
       <div className="border-t border-term-border bg-term-panel px-3 py-1.5 text-3xs text-term-text-mute">
-        Source order: live FRED raw levels → Gold DB (fred-bronze-to-gold-pipeline) → deterministic SIM. MoM / ΔMoM are shown only when raw monthly index levels are available; Gold-sourced World Bank rows (annual updates) show YoY / ΔYoY without monthly interpolation. Click any country to drill into raw index-level history where available.
+        Gold DB (World Bank annual CPI) is authoritative for this page; SIM is only an initial fallback. MoM / ΔMoM are shown only when raw monthly index levels are available; Gold-sourced rows show YoY / ΔYoY without monthly interpolation. Click any country to drill into Gold annual CPI history.
       </div>
     </div>
   );

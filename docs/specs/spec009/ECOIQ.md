@@ -38,10 +38,14 @@ Verification is strict by default. For local testing only, `ECOIQ_VERIFICATION_M
 
 Set `AGENT_QUEUE_DB_URL` before using the job API. It is intentionally separate from `MACRO_DB_URL`; if it is missing, `POST /api/agent/jobs` returns `AGENT_QUEUE_NOT_CONFIGURED` rather than silently storing jobs in the macro database. The initial endpoints are:
 
-- `POST /api/agent/jobs` — create a queued job
+- `GET /api/agent/catalog?module=ECOIQ` — module configuration, offered workflows, profiles, worker status (sets the requester cookie)
+- `POST /api/agent/jobs` — create a queued job; requires an `Idempotency-Key` header and echoes `X-Correlation-ID`
+- `GET /api/agent/jobs?module=ECOIQ&thread=<uuid>` — the requester's jobs for a thread
+- `GET /api/agent/jobs/:id/audit` — lifecycle events and versions (no question text)
+- `GET /api/agent/health` — queue depth, oldest queued age, outcomes, worker heartbeats
 - `GET /api/agent/jobs/:id` — read a job owned by the requester
 - `POST /api/agent/jobs/:id/cancel` — cancel a queued/running job
-- `POST /api/agent/jobs/:id/retry` — requeue a job
+- `POST /api/agent/jobs/:id/retry` — create a new job (`retry_of`) from a failed or expired one
 - `POST /api/agent/jobs/:id/execute` — attended worker execution; resolves the requested LLM profile, verifies the result, and records terminal status
 
 The browser uses the queue path when configured. Without `AGENT_QUEUE_DB_URL`, it falls back to the deterministic ECOIQ route and labels the run accordingly. This keeps local development useful while preventing an unconfigured queue from silently losing jobs.
@@ -61,3 +65,7 @@ PostgreSQL claims use a transaction with `FOR UPDATE SKIP LOCKED`, so multiple l
 ## Gate, identity, and pause
 
 Requester IDs are `HMAC(AGENT_SESSION_SECRET, sid)`; in production the gate (`AGENT_WORKFLOWS_PRODUCTION_ENABLED`, `AGENT_WORKFLOWS_TRUSTED_ACCESS_BOUNDARY`, `AGENT_TRUSTED_IDENTITY_HEADER`, `AGENT_SESSION_SECRET`) must pass and identity comes from the boundary header. The worker authenticates to `execute` with `Authorization: Bearer $AGENT_WORKER_TOKEN`. Pause or resume everything without a redeploy with `node scripts/agent-control.mjs pause|resume|status`; `AGENT_WORKFLOWS_DISABLED=1` is the deploy-level switch.
+
+## Queue schema migration
+
+The first run against a database that holds the earlier single-table queue renames `agent_job` and `agent_control` to `*_legacy_v0` and creates the `agent-queue/1` schema; nothing is dropped, and jobs in the old table are not carried over. Set `AGENT_TEST_POSTGRES_URL` to also run the queue-store suite on Postgres (it creates and drops its own schemas).

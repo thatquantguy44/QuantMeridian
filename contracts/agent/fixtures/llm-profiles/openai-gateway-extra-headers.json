@@ -1,0 +1,82 @@
+{
+  "name": "openai-gateway-extra-headers",
+  "registry": {
+    "schema_version": "llm-profiles/1",
+    "default_profile": "p",
+    "profiles": {
+      "p": {
+        "enabled": true,
+        "label": "Fixture profile",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "copilot",
+          "interpreter",
+          "narrator",
+          "drafter"
+        ],
+        "limits": {
+          "max_output_tokens": 1500,
+          "timeout_ms": 60000,
+          "max_retries": 2,
+          "per_job_token_cap": 20000,
+          "daily_token_budget": null
+        },
+        "api_style": "openai_chat_completions",
+        "base_url_env": "GW",
+        "model_env": "GWM",
+        "auth": {
+          "scheme": "bearer",
+          "credential_env": "GWK"
+        },
+        "header_envs": {
+          "X-Tenant": "TENANT",
+          "X-Route": "ROUTE"
+        }
+      },
+      "deterministic": {
+        "enabled": true,
+        "label": "No LLM",
+        "api_style": "none",
+        "data_classes": [
+          "public_market_data",
+          "module_context",
+          "desk_simulated"
+        ],
+        "uses": [
+          "interpreter",
+          "narrator"
+        ]
+      }
+    },
+    "default_profile_env": "LLM_PROFILE_DEFAULT"
+  },
+  "env": {
+    "GW": "https://llm.test/v1",
+    "GWM": "alias",
+    "GWK": "{x24}",
+    "TENANT": "t-1",
+    "ROUTE": "r-1"
+  },
+  "input": {
+    "use": "interpreter",
+    "data_classes": [
+      "public_market_data"
+    ],
+    "requested": null,
+    "optional": false
+  },
+  "expected": {
+    "ok": true,
+    "endpoint_url": "https://llm.test/v1/chat/completions",
+    "auth_header": "authorization",
+    "extra_header_names": [
+      "x-route",
+      "x-tenant"
+    ],
+    "model": "alias"
+  }
+}

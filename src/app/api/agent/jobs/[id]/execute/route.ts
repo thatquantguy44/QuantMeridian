@@ -15,10 +15,11 @@ export async function POST(request: Request, ctx: { params: Record<string, strin
   const headers = guard?.ok ? guard.headers : undefined;
   try {
     const store = new AgentQueueStore();
-    if (await store.isPaused()) return json({ error_code: "AGENT_PAUSED" }, { status: 503, headers });
+    if (await store.isPaused()) return json({ error_code: "AGENT_DISABLED" }, { status: 503, headers });
     const job = fromWorker ? await store.getForWorker(ctx.params.id) : await store.get(ctx.params.id, (guard as { requesterId: string }).requesterId);
     if (!job) return json({ error_code: "JOB_NOT_FOUND" }, { status: 404, headers });
     if (job.status !== "queued" && job.status !== "running") return json({ error_code: "JOB_NOT_QUEUED" }, { status: 409, headers });
+    if (job.status === "queued" && !(await store.markRunning(job.job_id, fromWorker ? "worker" : "api"))) return json({ error_code: "JOB_NOT_QUEUED" }, { status: 409, headers });
     const result = await executeEcoIqJob(job.job_id, job.requester_id, job.message ?? "Why did the Treasury curve move?", job.workflow as "economics.explain" | "economics.transmission" | "economics.scenario", job.profile);
     return json({ result }, { headers });
   } catch (error) { return json({ error_code: "AGENT_EXECUTION_ERROR", message: (error as Error).message }, { status: 503 }); }
