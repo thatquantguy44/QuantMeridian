@@ -87,8 +87,13 @@ class EcoIqWorker:
             "INSERT INTO agent_job_event (id, job_id, at, from_status, to_status, actor, code) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
-                str(uuid.uuid4()), job_id, _now(), "running", to_status,
-                f"worker:{self.worker_id}", code,
+                str(uuid.uuid4()),
+                job_id,
+                _now(),
+                "running",
+                to_status,
+                f"worker:{self.worker_id}",
+                code,
             ),
         )
 
