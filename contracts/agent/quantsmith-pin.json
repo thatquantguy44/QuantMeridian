@@ -1,6 +1,6 @@
 {
   "schema_version": "quantsmith-pin/1",
-  "package": { "name": "quantsmith", "version": "0.1.0", "code_digest": "sha256:670ed7aed63f68ce4d975f95e81af076c1b714483d25d39aa9d7ba95e7df1930" },
+  "package": { "name": "quantsmith", "version": "0.1.0", "code_digest": "sha256:21eab2392ec8e519077fc4b35b9b1ea72be06d8b56b123223bde291f7658ca12" },
   "assets": {
     "digest": "sha256:9f5648b89ed32f54bdfb7143f0a0fdb8f73e4713e855cd932dd2b88c669596f9",
     "paths": [
@@ -14,8 +14,8 @@
     ]
   },
   "reviewed": {
-    "on": "2026-10-07",
-    "source_commit": "c234119bbd123289bc0a872d9546686ab8cc894c",
+    "on": "2026-10-10",
+    "source_commit": "56abbb5981002fb5300baedb798863e706969de0",
     "note": "Informational. QuantSmith is supplied locally and never fetched."
   }
 }
