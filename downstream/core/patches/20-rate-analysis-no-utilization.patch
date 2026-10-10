@@ -1,0 +1,114 @@
+diff --git a/src/app/economics/rate-analysis/page.tsx b/src/app/economics/rate-analysis/page.tsx
+index 012b262..f916234 100644
+--- a/src/app/economics/rate-analysis/page.tsx
++++ b/src/app/economics/rate-analysis/page.tsx
+@@ -2,7 +2,7 @@
+ import { useMemo } from "react";
+ import { Link } from "react-router-dom";
+ import clsx from "clsx";
+-import { Activity, Gauge, Spline, Banknote, BarChart3 } from "lucide-react";
++import { Activity, Spline, Banknote, BarChart3 } from "lucide-react";
+ import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
+ import { Panel, Stat, Tag } from "@/components/ui/Panel";
+ import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
+@@ -38,11 +38,6 @@ import {
+   DEFAULT_TIERS,
+   type FundingRegime,
+ } from "@/data/fundingCost";
+-import {
+-  computeUtilizationSnapshot,
+-  type UtilGroupMetrics,
+-} from "@/data/utilizationAnalytics";
+-import { getInventory } from "@/data/securitiesLending";
+ 
+ // ── Regime tone maps ────────────────────────────────────────────────
+ 
+@@ -78,7 +73,6 @@ const MODULES: ModuleCard[] = [
+   { code: "YCURV", title: "Yield Curve Analytics", href: "/economics/yield-curve", icon: Spline, color: "#2ECC71" },
+   { code: "RVOL", title: "Rate Volatility", href: "/economics/rate-vol", icon: BarChart3, color: "#FF8C00" },
+   { code: "FCOST", title: "Funding Cost Monitor", href: "/economics/funding-cost", icon: Banknote, color: "#A78BFA" },
+-  { code: "UTIL", title: "Utilization Analytics", href: "/economics/utilization", icon: Gauge, color: "#22D3EE" },
+ ];
+ 
+ export default function RateAnalysisDashboard() {
+@@ -116,13 +110,6 @@ export default function RateAnalysisDashboard() {
+   const fundingSummary = useMemo(() => computeFundingCostSummary(map), [map]);
+   const fundingRegime = useMemo(() => classifyFundingRegime(costs), [costs]);
+ 
+-  // ── UTIL ──────────────────────────────────────────────────────────
+-  const inventory = useMemo(() => getInventory(), []);
+-  const utilSnapshot = useMemo(() => {
+-    const snap = computeUtilizationSnapshot(inventory, "all");
+-    return snap["ALL"] ?? { utilization: 0, totalOnLoan: 0, totalAvailable: 0, avgFeeBps: 0, nameCount: 0, htbCount: 0, specialCount: 0 };
+-  }, [inventory]);
+-
+   // ── Sparkline data ────────────────────────────────────────────────
+   const sofrHist = useMemo(() => (map["SOFR"] ?? []).slice(-60).map((o) => o.value), [map]);
+   const tenYHist = useMemo(() => (map["DGS10"] ?? []).slice(-60).map((o) => o.value), [map]);
+@@ -158,7 +145,6 @@ export default function RateAnalysisDashboard() {
+         <Stat label="Curve Regime" value={curveSummary.regime} tone={CURVE_REGIME_TONE[curveSummary.regime]} />
+         <Stat label="Vol Regime" value={volSummary.regime} tone={VOL_REGIME_TONE[volSummary.regime]} />
+         <Stat label="Funding" value={fundingRegime.regime} tone={FUND_REGIME_TONE[fundingRegime.regime]} />
+-        <Stat label="Utilization" value={`${utilSnapshot.utilization.toFixed(1)}%`} tone={utilSnapshot.utilization > 85 ? "amber" : "neutral"} />
+       </KpiStrip>
+ 
+       <div className="mt-1 grid grid-cols-12 gap-1 px-1 pb-4">
+@@ -226,7 +212,6 @@ export default function RateAnalysisDashboard() {
+               <RateCard label="HY OAS" value={bmrkSummary.hyOas} chgBps={null} hist={(map["BAMLH0A0HYM2"] ?? []).slice(-60).map((o) => o.value)} unit="bps" />
+               <RateCard label="30Y Mortgage" value={bmrkSummary.mtg30} chgBps={null} hist={(map["MORTGAGE30US"] ?? []).slice(-60).map((o) => o.value)} unit="%" />
+               <RateCard label="Secured (AA)" value={fundingSummary.aaAllIn} chgBps={null} hist={costs.find((c) => c.tier.id === "AA")?.history.slice(-60) ?? []} unit="%" />
+-              <RateCard label="Utilization" value={utilSnapshot.utilization} chgBps={null} hist={[]} unit="%" />
+             </div>
+           </Panel>
+         </div>
+@@ -234,7 +219,7 @@ export default function RateAnalysisDashboard() {
+         {/* ── Module Cards ─────────────────────────────────────────── */}
+         {MODULES.map((mod) => (
+           <div key={mod.code} className="col-span-12 sm:col-span-6 xl:col-span-4 2xl:col-span-12/5">
+-            <ModuleCardPanel mod={mod} map={map} bmrkSummary={bmrkSummary} curveSummary={curveSummary} volSummary={volSummary} fundingSummary={fundingSummary} fundingRegime={fundingRegime} utilSnapshot={utilSnapshot} />
++            <ModuleCardPanel mod={mod} map={map} bmrkSummary={bmrkSummary} curveSummary={curveSummary} volSummary={volSummary} fundingSummary={fundingSummary} fundingRegime={fundingRegime} />
+           </div>
+         ))}
+ 
+@@ -323,7 +308,7 @@ function RateCard({ label, value, chgBps, hist, unit, inverted }: {
+   );
+ }
+ 
+-function ModuleCardPanel({ mod, map, bmrkSummary, curveSummary, volSummary, fundingSummary, fundingRegime, utilSnapshot }: {
++function ModuleCardPanel({ mod, map, bmrkSummary, curveSummary, volSummary, fundingSummary, fundingRegime }: {
+   mod: ModuleCard;
+   map: SeriesMap;
+   bmrkSummary: ReturnType<typeof computeSummary>;
+@@ -331,10 +316,9 @@ function ModuleCardPanel({ mod, map, bmrkSummary, curveSummary, volSummary, fund
+   volSummary: ReturnType<typeof computeVolSummary>;
+   fundingSummary: ReturnType<typeof computeFundingCostSummary>;
+   fundingRegime: { regime: FundingRegime; score: number };
+-  utilSnapshot: UtilGroupMetrics;
+ }) {
+   const Icon = mod.icon;
+-  const metrics = getModuleMetrics(mod.code, bmrkSummary, curveSummary, volSummary, fundingSummary, fundingRegime, utilSnapshot);
++  const metrics = getModuleMetrics(mod.code, bmrkSummary, curveSummary, volSummary, fundingSummary, fundingRegime);
+ 
+   return (
+     <Link to={mod.href} className="block no-underline">
+@@ -367,7 +351,6 @@ function getModuleMetrics(
+   vol: ReturnType<typeof computeVolSummary>,
+   funding: ReturnType<typeof computeFundingCostSummary>,
+   fundingRegime: { regime: FundingRegime; score: number },
+-  util: UtilGroupMetrics,
+ ): { label: string; value: string; tone?: "up" | "down" | "amber" | "neutral" }[] {
+   switch (code) {
+     case "BMRK": return [
+@@ -394,12 +377,6 @@ function getModuleMetrics(
+       { label: "HY All-In", value: funding.hyAllIn != null ? `${funding.hyAllIn.toFixed(2)}%` : "—" },
+       { label: "IG-HY Δ", value: funding.spreadCompression != null ? `${fmtSigned(funding.spreadCompression, 0)}` : "—" },
+     ];
+-    case "UTIL": return [
+-      { label: "Overall", value: `${util.utilization.toFixed(1)}%` },
+-      { label: "Avg Fee", value: `${util.avgFeeBps.toFixed(0)}bps` },
+-      { label: "HTB Count", value: String(util.htbCount), tone: util.htbCount > 20 ? "amber" : "neutral" },
+-      { label: "Names", value: String(util.nameCount) },
+-    ];
+     default: return [];
+   }
+ }

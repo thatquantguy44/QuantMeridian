@@ -1,0 +1,176 @@
+diff --git a/src/app/sentiment/page.tsx b/src/app/sentiment/page.tsx
+index e43c7ad..0247d3f 100644
+--- a/src/app/sentiment/page.tsx
++++ b/src/app/sentiment/page.tsx
+@@ -19,14 +19,12 @@ import {
+   getContrarianSignals,
+   getAnalogStudy,
+   getSurveySocialDivergence,
+-  getTickerSentiment,
+   type SentRegime,
+   type SentSource,
+   type SentLiveInputs,
+-  type Crowding,
+ } from "@/data/sentiment";
+ 
+-type View = "DASH" | "AAII" | "SOCIAL" | "POSITION" | "SIGNALS" | "DIVERGE" | "TICKER";
++type View = "DASH" | "AAII" | "SOCIAL" | "POSITION" | "SIGNALS" | "DIVERGE";
+ const VIEWS: { key: View; label: string }[] = [
+   { key: "DASH", label: "Fear / Greed" },
+   { key: "AAII", label: "AAII Survey" },
+@@ -34,14 +32,9 @@ const VIEWS: { key: View; label: string }[] = [
+   { key: "POSITION", label: "Positioning" },
+   { key: "SIGNALS", label: "Contrarian" },
+   { key: "DIVERGE", label: "Divergence" },
+-  { key: "TICKER", label: "By Ticker" },
+ ];
+ 
+ const DIR_TONE = { BULLISH: "up", BEARISH: "down", NEUTRAL: "neutral" } as const;
+-const CROWD_TONE: Record<Crowding, "up" | "down" | "amber" | "neutral" | "blue" | "violet"> = {
+-  "Squeeze Risk": "down", "Crowded Long": "amber", "Crowded Short": "blue", Balanced: "neutral",
+-};
+-
+ function regimeColor(score: number): string {
+   return score < 20 ? "#FF3B3B" : score < 40 ? "#FF6B3B" : score < 60 ? "#FF8C00" : score < 80 ? "#7FCA5B" : "#2ECC71";
+ }
+@@ -138,7 +131,6 @@ export default function SentimentModule() {
+   const behav = useMemo(() => getBehavior(), []);
+   const analog = useMemo(() => getAnalogStudy(), []);
+   const diverge = useMemo(() => getSurveySocialDivergence(), []);
+-  const tickers = useMemo(() => getTickerSentiment(16, social), [social]);
+   const btn = "rounded-sm border px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide transition-colors";
+   const recent = aaii.slice(-10).reverse();
+   const aaiiSource = "SIM";
+@@ -450,42 +442,6 @@ export default function SentimentModule() {
+             <div className="border-t border-term-border px-3 py-1 text-3xs text-term-text-mute">When real-time social mood decouples from the weekly survey, one cohort typically converges to the other — an early-warning of a chase or a capitulation.</div>
+           </Panel>
+         )}
+-        {/* ── SENT-7 Ticker Sentiment Drill (× SQZ) ── */}
+-        {view === "TICKER" && (
+-          <Panel title="Ticker Sentiment × Borrow (SQZ cross-link)" code="SENT-7" accent right={<span className="text-3xs text-term-text-mute">crowding = social mood × short interest</span>}>
+-            <div className="max-h-[68vh] overflow-auto">
+-              <table className="w-full border-collapse tnum">
+-                <thead className="sticky top-0 bg-term-panel-2">
+-                  <tr>
+-                    {["Ticker", "Sector", "Social", "Mentions", "Vel", "SI %", "Util", "Fee", "P/C", "Heat", "Crowding"].map((c, i) => (
+-                      <th key={c} className={clsx("border-b border-term-border px-2 py-1 text-3xs font-semibold uppercase tracking-wider text-term-text-mute", i === 0 || i === 1 || i === 10 ? "text-left" : "text-right")}>{c}</th>
+-                    ))}
+-                  </tr>
+-                </thead>
+-                <tbody>
+-                  {tickers.map((t) => (
+-                    <tr key={t.ticker} className="border-b border-term-border-soft hover:bg-term-panel-2" title={t.note}>
+-                      <td className="px-2 py-1 text-left text-2xs font-semibold text-term-amber">{t.ticker}</td>
+-                      <td className="px-2 py-1 text-left text-3xs text-term-text-mute">{t.sector}</td>
+-                      <td className={clsx("px-2 py-1 text-right text-2xs font-semibold", pnlClass(t.socialSentiment))}>{fmtSigned(t.socialSentiment, 2)}</td>
+-                      <td className="px-2 py-1 text-right text-2xs text-term-text-dim">{t.mentions.toLocaleString()}</td>
+-                      <td className={clsx("px-2 py-1 text-right text-3xs", pnlClass(t.velocity))}>{fmtSigned(t.velocity, 0)}%</td>
+-                      <td className="px-2 py-1 text-right text-2xs text-term-text">{t.shortInterestPct}</td>
+-                      <td className="px-2 py-1 text-right text-2xs text-term-text-dim">{t.utilization}%</td>
+-                      <td className="px-2 py-1 text-right text-2xs text-term-text-dim">{t.feeBps}</td>
+-                      <td className="px-2 py-1 text-right text-3xs text-term-text-mute">{t.putCall}</td>
+-                      <td className="px-2 py-1 text-right text-2xs text-term-text">{t.heat}</td>
+-                      <td className="px-2 py-1 text-left"><Tag tone={CROWD_TONE[t.crowding]}>{t.crowding}</Tag></td>
+-                    </tr>
+-                  ))}
+-                </tbody>
+-              </table>
+-            </div>
+-            <div className="border-t border-term-border px-3 py-1.5 text-3xs text-term-text-mute">
+-              Combines SENT social mood with SQZ borrow microstructure — a crowded long that is also heavily shorted (<span className="text-term-down">Squeeze Risk</span>) is loaded on both sides.
+-            </div>
+-          </Panel>
+-        )}
+       </div>
+ 
+       <div className="border-t border-term-border bg-term-panel px-3 py-1.5 text-3xs text-term-text-mute">
+diff --git a/src/data/sentiment.ts b/src/data/sentiment.ts
+index 43158a3..6f31d28 100644
+--- a/src/data/sentiment.ts
++++ b/src/data/sentiment.ts
+@@ -8,7 +8,6 @@
+  */
+ import { Rng } from "@/lib/rng";
+ import { getSocialIntel, type SocialIntel } from "./news";
+-import { getSqueezeBoard } from "./squeeze";
+ 
+ const clamp = (v: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v));
+ 
+@@ -418,77 +417,4 @@ export function getSurveySocialDivergence(): DivergenceState {
+   return { series, gapNow: last.gap, status, note, tone };
+ }
+ 
+-// ── SENT-7 · Ticker Sentiment Drill (cross-linked to SQZ) ────────────────────
+-
+-export type Crowding = "Squeeze Risk" | "Crowded Long" | "Crowded Short" | "Balanced";
+-
+-export interface TickerSentiment {
+-  ticker: string;
+-  sector: string;
+-  classification: string;
+-  socialSentiment: number; // -1..1
+-  mentions: number;
+-  velocity: number; // %
+-  shortInterestPct: number;
+-  utilization: number;
+-  feeBps: number;
+-  putCall: number;
+-  skew: number;
+-  heat: number;
+-  crowding: Crowding;
+-  note: string;
+-}
+-
+-/**
+- * Joins the SQZ borrow board (short interest, utilization, fee, options) with
+- * social mood per name to flag crowding — crowded longs that are also heavily
+- * shorted are squeeze/unwind risk. Anchored on the squeeze board so the SQZ
+- * cross-link data is always present; social is matched in or synthesized.
+- */
+-export function getTickerSentiment(limit = 16, socialInput?: SocialIntel): TickerSentiment[] {
+-  const board = getSqueezeBoard();
+-  const social = socialInput ?? getSocialIntel();
+-  const socialByTicker = new Map(social.tickers.map((t) => [t.label, t]));
+-
+-  return board.slice(0, limit).map((r) => {
+-    const s = socialByTicker.get(r.ticker);
+-    const rng = new Rng(`sent-tk-${r.ticker}`);
+-    const socialSentiment = s ? s.sentiment : Number(rng.normal(0.05, 0.4).toFixed(2));
+-    const mentions = s ? s.mentions : rng.int(120, 4200);
+-    const velocity = s ? s.velocity : Number(rng.normal(15, 45).toFixed(0));
+-
+-    let crowding: Crowding;
+-    if (r.shortInterestPct >= 15 && socialSentiment > 0.12) crowding = "Squeeze Risk";
+-    else if (socialSentiment > 0.2 && velocity > 30) crowding = "Crowded Long";
+-    else if (r.shortInterestPct >= 18 || (r.utilization >= 88 && socialSentiment < 0)) crowding = "Crowded Short";
+-    else crowding = "Balanced";
+-
+-    const note =
+-      crowding === "Squeeze Risk"
+-        ? "Bulls piling in while heavily shorted — both sides loaded; squeeze/unwind risk."
+-        : crowding === "Crowded Long"
+-        ? "Strong positive social mood with rising attention — crowded long, chase risk."
+-        : crowding === "Crowded Short"
+-        ? "Heavy short interest / utilization with weak mood — crowded short."
+-        : "No strong crowding signal.";
+-
+-    return {
+-      ticker: r.ticker,
+-      sector: r.sector,
+-      classification: r.classification,
+-      socialSentiment,
+-      mentions,
+-      velocity,
+-      shortInterestPct: r.shortInterestPct,
+-      utilization: r.utilization,
+-      feeBps: r.feeBps,
+-      putCall: r.putCall,
+-      skew: r.skew,
+-      heat: r.heat,
+-      crowding,
+-      note,
+-    };
+-  });
+-}
+-
+ export { getSocialIntel };
