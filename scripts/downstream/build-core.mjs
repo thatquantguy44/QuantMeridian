@@ -15,6 +15,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { scanForSecrets } from "./secret-scan.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name) => { const i = args.indexOf(name); return i === -1 ? null : args[i + 1]; };
@@ -53,6 +54,12 @@ for (const file of walk(outDir)) {
   if (excludes.some((re) => re.test(file))) { fs.rmSync(path.join(outDir, file)); report.excluded_files++; }
 }
 
+// Remove directories emptied by the exclusions (git does not track them, but they confuse diffs of the tree).
+(function pruneEmpty(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) if (entry.isDirectory()) pruneEmpty(path.join(dir, entry.name));
+  if (dir !== outDir && fs.readdirSync(dir).length === 0) fs.rmdirSync(dir);
+})(outDir);
+
 // 3. Transforms: small, declarative edits for registry-shaped files (routes, nav entries, JSON settings).
 const transforms = (await import(pathToFileURL(path.join(coreDir, "transforms.mjs")).href)).default;
 const ctx = { manifest, outDir, excludedModules: new Set(manifest.excluded_modules) };
@@ -79,6 +86,17 @@ for (const name of fs.existsSync(patchDir) ? fs.readdirSync(patchDir).filter((f)
   }
 }
 
+// Scrub: replace machine-specific strings (home directories) in text files.
+const scrubRules = (manifest.scrub ?? []).map((r) => ({ re: new RegExp(r.pattern, "g"), to: r.replacement }));
+if (scrubRules.length) {
+  for (const rel of walk(outDir)) {
+    if (!/\.(ts|tsx|js|mjs|json|py|sh|md|yml|yaml|toml|txt|example)$/i.test(rel)) continue;
+    const file = path.join(outDir, rel); const before = fs.readFileSync(file, "utf8");
+    const after = scrubRules.reduce((text, r) => text.replace(r.re, r.to), before);
+    if (after !== before) fs.writeFileSync(file, after);
+  }
+}
+
 // 5. Overlay: files that only exist downstream (README, CI workflow, replacements).
 const filesDir = path.join(coreDir, "files");
 if (fs.existsSync(filesDir)) {
@@ -101,6 +119,9 @@ for (const dir of scan.paths) {
     lines.forEach((line, i) => { for (const re of patterns) if (re.test(line)) report.needs_review.push(`${full}:${i + 1}: ${line.trim().slice(0, 120)}`); });
   }
 }
+
+// 7. Secret scan: hard failure, because the downstream is public.
+for (const finding of scanForSecrets(outDir, manifest.secret_scan)) report.errors.push(`secret scan: ${finding}`);
 
 if (reportPath) fs.writeFileSync(reportPath, JSON.stringify(report, null, 2) + "\n");
 console.log(`core build @ ${report.source_commit.slice(0, 8)}: ${report.excluded_files} files excluded, ${report.transforms.filter((t) => t.changed).length} transforms, ${report.patches.filter((p) => p.applied).length}/${report.patches.length} patches, ${report.overlay_files} overlay files`);

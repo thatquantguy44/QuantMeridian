@@ -21,6 +21,14 @@
     "downstream/**",
     ".env",
     "screenshots/**",
+    "docs/handoff.md",
+    "docs/specs/spec009/**",
+    "docs/specs/spec007/**",
+    "docs/specs/spec005/**",
+    "src/tests/downstreamSecretScan.test.ts",
+    "scripts/downstream/**",
+    ".tmp-verify-preview*.mjs",
+    ".githooks/**",
     ".github/workflows/sync-core.yml",
     ".github/workflows/market-data-refresh.yml",
     "src/app/securities-lending/**",
@@ -136,5 +144,31 @@
     "/trading-assistant",
     "/economics/utilization",
     "/economics/sec-finance"
+  ],
+  "secret_scan": {
+    "_comment": "Hard-fail scan on the built tree (the downstream is public). allow_paths are test fixtures that deliberately contain fake key-shaped strings; allow_passwords are the throwaway local-development database passwords already used in docs and tests.",
+    "allow_paths": [
+      "contracts/agent/fixtures/settings/secret-shapes.json",
+      "src/app/api/agent/profiles/profiles.route.test.ts",
+      "src/lib/server/llm/client.test.ts",
+      "src/lib/agent/secretShape.test.ts",
+      "services/agent_worker/tests/**"
+    ],
+    "allow_passwords": [
+      "fred",
+      "pass",
+      "password",
+      "user",
+      "secret",
+      "changeme",
+      "pw"
+    ]
+  },
+  "scrub": [
+    {
+      "pattern": "/Users/[A-Za-z0-9._-]+/",
+      "replacement": "/Users/<you>/",
+      "comment": "local home paths in docs"
+    }
   ]
 }
