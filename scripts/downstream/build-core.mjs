@@ -54,6 +54,12 @@ for (const file of walk(outDir)) {
   if (excludes.some((re) => re.test(file))) { fs.rmSync(path.join(outDir, file)); report.excluded_files++; }
 }
 
+// Remove directories emptied by the exclusions (git does not track them, but they confuse diffs of the tree).
+(function pruneEmpty(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) if (entry.isDirectory()) pruneEmpty(path.join(dir, entry.name));
+  if (dir !== outDir && fs.readdirSync(dir).length === 0) fs.rmdirSync(dir);
+})(outDir);
+
 // 3. Transforms: small, declarative edits for registry-shaped files (routes, nav entries, JSON settings).
 const transforms = (await import(pathToFileURL(path.join(coreDir, "transforms.mjs")).href)).default;
 const ctx = { manifest, outDir, excludedModules: new Set(manifest.excluded_modules) };
