@@ -341,6 +341,24 @@ export class AgentQueueStore {
     });
   }
 
+  // --- usage -----------------------------------------------------------------------------------
+
+  /** Adds tokens to today's (UTC) total for a profile. Budget checks arrive with T-014. */
+  async recordUsage(profileId: string, inputTokens: number, outputTokens: number): Promise<void> {
+    await this.migrate();
+    const day = now().slice(0, 10);
+    await this.session((q) => q.run(
+      "INSERT INTO agent_usage_daily (profile_id, day, input_tokens, output_tokens) VALUES (?,?,?,?) ON CONFLICT (profile_id, day) DO UPDATE SET input_tokens = agent_usage_daily.input_tokens + excluded.input_tokens, output_tokens = agent_usage_daily.output_tokens + excluded.output_tokens",
+      [profileId, day, Math.max(0, Math.round(inputTokens)), Math.max(0, Math.round(outputTokens))],
+    ));
+  }
+
+  async usageToday(profileId: string): Promise<{ input_tokens: number; output_tokens: number }> {
+    await this.migrate();
+    const row = (await this.session((q) => q.all<any>("SELECT input_tokens, output_tokens FROM agent_usage_daily WHERE profile_id = ? AND day = ?", [profileId, now().slice(0, 10)])))[0];
+    return { input_tokens: Number(row?.input_tokens ?? 0), output_tokens: Number(row?.output_tokens ?? 0) };
+  }
+
   // --- health ----------------------------------------------------------------------------------
 
   async stats(): Promise<{ queued: number; running: number; oldest_queued_at: string | null; outcomes: Record<string, number>; workers: Array<{ worker_id: string; last_seen_at: string; ready: boolean; sourcing_mode: string; code_digest: string; assets_digest: string; capabilities: string[] }> }> {

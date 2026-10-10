@@ -29,6 +29,7 @@ import { useProviderHealth } from "@/lib/useProviderHealth";
 import { useLiveRuns } from "@/lib/useLiveRuns";
 import { fmtInt, fmtNum, fmtPct } from "@/lib/format";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
+import { LlmProfilesPanel } from "@/components/dataops/LlmProfilesPanel";
 
 const STATUS_TONE: Record<ProviderStatus, "up" | "blue" | "amber" | "down" | "neutral"> = {
   LIVE: "up",
@@ -267,6 +268,8 @@ export default function DataOpsPage() {
             setSelectedRunId(runs.find((run) => run.provider === r.provider)?.runId ?? selectedRunId);
           }} maxHeight="245px" initialSort={{ key: "coverage", dir: "desc" }} zebra />
         </Panel>
+
+        <LlmProfilesPanel />
 
         <Panel title={`${selectedProvider} Runs`} code="RUN" className="xl:col-span-7" right={<span className="flex items-center gap-2"><Tag tone={live ? "blue" : "neutral"}>{live ? "LIVE MANIFEST" : "FIXTURES"}</Tag><button className="term-btn" onClick={() => downloadJson(`dataops_${selectedProvider.toLowerCase()}_runs`, selectedProviderRuns)}>Download</button></span>}>
           <DataGrid columns={runCols} rows={selectedProviderRuns} rowKey={(r) => r.runId} selectedKey={selectedRun.runId} onRowClick={(r) => setSelectedRunId(r.runId)} maxHeight="330px" initialSort={{ key: "started", dir: "desc" }} zebra />

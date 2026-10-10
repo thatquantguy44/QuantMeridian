@@ -120,3 +120,11 @@ export function profileStates(use: LlmUse, dataClasses: readonly DataClass[], op
     return { id, label: profile.label, api_style: profile.api_style, enabled: profile.enabled, state: resolved.ok ? ("ready" as const) : resolved.code, detail: resolved.ok ? null : resolved.detail ?? null, model: resolved.ok ? resolved.model : null };
   });
 }
+
+/**
+ * ECOIQ.md documents selecting the local model by setting LOCAL_LLM_BASE_URL and LOCAL_LLM_MODEL, without
+ * editing the registry. Callers pass this as `assumeEnabled`.
+ */
+export function localOptIn(env: Env = process.env): readonly string[] {
+  return env.LOCAL_LLM_BASE_URL?.trim() && env.LOCAL_LLM_MODEL?.trim() ? ["local-openai"] : [];
+}

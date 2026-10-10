@@ -3,7 +3,7 @@
  * there; this keeps the small surface the attended executor and the job route use.
  */
 import { callLlm, type LlmRequest } from "@/lib/server/llm/client";
-import { resolveProfile, type ProfileErrorCode, type ResolvedCall } from "@/lib/server/llm/profiles";
+import { localOptIn, resolveProfile, type ProfileErrorCode, type ResolvedCall } from "@/lib/server/llm/profiles";
 
 type Env = Record<string, string | undefined>;
 
@@ -22,9 +22,7 @@ export type ResolvedProfile = {
 const ECOIQ_CLASSES = ["public_market_data", "module_context"] as const;
 
 export function resolveLlmProfile(requested?: string | null, env: Env = process.env): ResolvedProfile {
-  // ECOIQ.md documents selecting the local server by setting its two environment variables, without editing the registry.
-  const localOptIn = Boolean(env.LOCAL_LLM_BASE_URL && env.LOCAL_LLM_MODEL);
-  const resolved = resolveProfile({ requested: requested || undefined, use: "interpreter", dataClasses: ECOIQ_CLASSES }, { env, assumeEnabled: localOptIn ? ["local-openai"] : [] });
+  const resolved = resolveProfile({ requested: requested || undefined, use: "interpreter", dataClasses: ECOIQ_CLASSES }, { env, assumeEnabled: localOptIn(env) });
   if (!resolved.ok) return { id: resolved.profile_id, apiStyle: "none", model: null, baseUrl: null, available: false, reason: resolved.code, detail: resolved.detail };
   return { id: resolved.profile_id, apiStyle: resolved.api_style, model: resolved.model, baseUrl: resolved.base_url, available: true, call: resolved };
 }

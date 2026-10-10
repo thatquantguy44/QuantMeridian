@@ -133,6 +133,16 @@ describe.each(backends)("AgentQueueStore (%s)", (backend) => {
     expect(await s.getForWorker("missing")).toBeNull();
   });
 
+  it("accumulates daily token usage per profile", async () => {
+    const s = await store();
+    expect(await s.usageToday("anthropic-direct")).toEqual({ input_tokens: 0, output_tokens: 0 });
+    await s.recordUsage("anthropic-direct", 100, 20);
+    await s.recordUsage("anthropic-direct", 50.4, 5);
+    await s.recordUsage("local-openai", 7, 1);
+    expect(await s.usageToday("anthropic-direct")).toEqual({ input_tokens: 150, output_tokens: 25 });
+    expect(await s.usageToday("local-openai")).toEqual({ input_tokens: 7, output_tokens: 1 });
+  });
+
   it("reports queue stats and only ready, recent worker capabilities", async () => {
     const config = await makeConfig(backend); const s = new AgentQueueStore(config);
     must(await s.create("a", body, opts("key-00014")));
