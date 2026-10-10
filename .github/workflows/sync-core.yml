@@ -5,7 +5,8 @@ name: Sync QuantMeridian-Core
 # opens or updates one pull request, and merges it when the downstream's CI is green.
 #
 # Needs the CORE_SYNC_TOKEN secret: a fine-grained token with Contents and Pull requests (read and
-# write) on the downstream repository. Without it the workflow does nothing.
+# write) plus Workflows (read and write) on the downstream repository. Without it the workflow does
+# nothing.
 
 on:
   push:
