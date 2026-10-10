@@ -19,6 +19,21 @@ function dropDanglingImports(text, file, ctx) {
   });
 }
 
+/** Exact-text replacement that fails loudly when upstream has changed the target. */
+function replaceOnce(text, from, to, file) {
+  if (!text.includes(from)) throw new Error(`expected text not found in ${file}: ${from.slice(0, 60)}`);
+  return text.replace(from, to);
+}
+const codesOf = (ctx) => [...ctx.excludedModules];
+const routesOf = (ctx) => ctx.manifest.excluded_routes;
+/** Removes quoted excluded module codes from one-line array literals such as ["HOME", "SLAB", "PB"]. */
+const stripCodesInArrays = (text, ctx) => text.split("\n").map((line) => {
+  if (!/\[[^\]]*"[A-Z]+"/.test(line)) return line;
+  let out = line;
+  for (const code of codesOf(ctx)) out = out.replace(new RegExp(`"${code}",\\s*`, "g"), "").replace(new RegExp(`,\\s*"${code}"(?=\\s*\\])`, "g"), "");
+  return out;
+}).join("\n");
+
 export default [
   {
     file: "src/App.tsx",
@@ -30,7 +45,8 @@ export default [
     file: "settings/agent_workflows.json",
     apply: (text, ctx) => jsonEdit(text, (doc) => {
       for (const code of ctx.excludedModules) delete doc.modules[code];
-      delete doc.workflows["secfin.carry"];
+      // The contract schema requires the secfin.carry workflow entry; keep it as an inert, disabled definition.
+      if (doc.workflows["secfin.carry"]) doc.workflows["secfin.carry"].enabled = false;
       for (const mod of Object.values(doc.modules)) { mod.workflows = mod.workflows.filter((w) => w !== "secfin.carry"); delete mod.desk_datasets; }
     }),
   },
@@ -43,5 +59,22 @@ export default [
       for (const code of ctx.excludedModules) delete doc.context_field_allowlist[code];
       doc.known_domains = doc.known_domains.filter((d) => d !== "securities_financing_prime");
     }),
+  },
+  {
+    file: "src/lib/nav.test.ts",
+    apply: (text, ctx) => dropLines(text, (line) => codesOf(ctx).some((c) => new RegExp(`^\\s*${c}:\\s*\\[`).test(line)) || routesOf(ctx).some((r) => line.trim() === `"${r}",`)),
+  },
+  {
+    file: "test/smoke.spec.ts",
+    apply: (text, ctx) => dropLines(text, (line) => codesOf(ctx).some((c) => line.includes(`code: "${c}"`))).replace(/, "\/trading-desk"/g, ""),
+  },
+  {
+    file: "src/data/dataOps.ts",
+    apply: (text, ctx) => stripCodesInArrays(dropLines(text, (line) => codesOf(ctx).some((c) => line.includes(`{ module: "${c}"`)) || /^\s*\["LOCAL_BOOK", "desk_books_fixture"/.test(line)), ctx),
+  },
+  { file: "src/lib/server/marketManifest.ts", apply: (text, ctx) => stripCodesInArrays(text, ctx) },
+  {
+    file: "vite-plugins/dev-api.ts",
+    apply: (text) => replaceOnce(text, 'const trace = process.env.IBAL_DEV_API_TRACE === "1" && url.pathname.startsWith("/api/inventory-optimizer/");', 'const trace = process.env.DEV_API_TRACE === "1";', "vite-plugins/dev-api.ts"),
   },
 ];
