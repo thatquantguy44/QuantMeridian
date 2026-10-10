@@ -86,6 +86,17 @@ for (const name of fs.existsSync(patchDir) ? fs.readdirSync(patchDir).filter((f)
   }
 }
 
+// Scrub: replace machine-specific strings (home directories) in text files.
+const scrubRules = (manifest.scrub ?? []).map((r) => ({ re: new RegExp(r.pattern, "g"), to: r.replacement }));
+if (scrubRules.length) {
+  for (const rel of walk(outDir)) {
+    if (!/\.(ts|tsx|js|mjs|json|py|sh|md|yml|yaml|toml|txt|example)$/i.test(rel)) continue;
+    const file = path.join(outDir, rel); const before = fs.readFileSync(file, "utf8");
+    const after = scrubRules.reduce((text, r) => text.replace(r.re, r.to), before);
+    if (after !== before) fs.writeFileSync(file, after);
+  }
+}
+
 // 5. Overlay: files that only exist downstream (README, CI workflow, replacements).
 const filesDir = path.join(coreDir, "files");
 if (fs.existsSync(filesDir)) {
