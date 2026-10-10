@@ -45,3 +45,8 @@ The securities-finance desk modules (securities lending, prime finance, collater
 liquidity optimization, the inventory optimizer, the trading desk and assistant) and their data,
 APIs, and services are excluded. The agent contract schemas still mention a disabled `secfin.carry`
 workflow as inert vocabulary.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE). Third-party
+dependencies are licensed separately by their authors.

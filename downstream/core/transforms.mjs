@@ -85,4 +85,5 @@ export default [
     file: "test/TESTING_HANDOFF.md",
     apply: (text, ctx) => dropLines(text, (line) => routesOf(ctx).some((r) => line.includes(`\`${r}\``))).replace(", /trading-desk)", ")"),
   },
+  { file: "package.json", apply: (text) => replaceOnce(text, '  "private": true,\n', '  "private": true,\n  "license": "Apache-2.0",\n', "package.json") },
 ];

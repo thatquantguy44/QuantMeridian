@@ -106,7 +106,9 @@ if (fs.existsSync(filesDir)) {
   }
 }
 const manifestHash = createHash("sha256").update(fs.readFileSync(path.join(coreDir, "manifest.json"))).digest("hex").slice(0, 16);
-fs.writeFileSync(path.join(outDir, ".downstream-sync.json"), JSON.stringify({ source_repo: "thatquantguy44/QuantMeridian", source_commit: report.source_commit, manifest: manifestHash }, null, 2) + "\n");
+// No commit id here: an identical tree must build identically, so a push that touches only excluded files makes no sync PR.
+// The source commit is in the sync commit message and the build report.
+fs.writeFileSync(path.join(outDir, ".downstream-sync.json"), JSON.stringify({ source_repo: "thatquantguy44/QuantMeridian", manifest: manifestHash }, null, 2) + "\n");
 
 // 6. Leak scan: component identifiers that must not survive in the downstream.
 const scan = manifest.leak_scan; const patterns = scan.patterns.map((p) => new RegExp(p));
