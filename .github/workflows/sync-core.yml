@@ -1,0 +1,107 @@
+name: Sync QuantMeridian-Core
+
+# Derives the public QuantMeridian-Core repository (this repo minus its securities-finance components,
+# see downstream/core/README.md) and keeps it current: builds the subset, pushes it to a sync branch,
+# opens or updates one pull request, and merges it when the downstream's CI is green.
+#
+# Needs the CORE_SYNC_TOKEN secret: a fine-grained token with Contents and Pull requests (read and
+# write) on the downstream repository. Without it the workflow does nothing.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: sync-core
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  CORE_REPO: thatquantguy44/QuantMeridian-Core
+  GH_TOKEN: ${{ secrets.CORE_SYNC_TOKEN }}
+  SYNC_BRANCH: sync/upstream
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check configuration
+        id: cfg
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::CORE_SYNC_TOKEN is not set; skipping the QuantMeridian-Core sync."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.enabled == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          node-version: "20"
+
+      - name: Build the subset
+        if: steps.cfg.outputs.enabled == 'true'
+        run: node scripts/downstream/build-core.mjs --out "$RUNNER_TEMP/core" --ref "$GITHUB_SHA" --report "$RUNNER_TEMP/report.json"
+
+      - name: Regenerate the metric registry for the subset
+        if: steps.cfg.outputs.enabled == 'true'
+        working-directory: ${{ runner.temp }}/core
+        run: |
+          npm ci
+          npm run export:agent-metric-registry
+
+      - name: Check out the downstream repository
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          gh auth setup-git
+          gh repo clone "$CORE_REPO" "$RUNNER_TEMP/core-repo" -- --quiet
+
+      - name: Commit the sync branch
+        id: sync
+        if: steps.cfg.outputs.enabled == 'true'
+        run: bash scripts/downstream/sync-core.sh "$RUNNER_TEMP/core" "$RUNNER_TEMP/core-repo" "$GITHUB_SHA" "$SYNC_BRANCH"
+
+      - name: Open or update the pull request
+        id: pr
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          review=$(node -e 'const r=require(process.argv[1]);console.log(r.needs_review.length)' "$RUNNER_TEMP/report.json")
+          body="Synced from QuantMeridian ${GITHUB_SHA::7}. Generated: do not edit by hand."
+          if [ "$review" != "0" ]; then body="$body"$'\n\n'"**Needs review:** the build's leak scan found $review reference(s) to excluded components, so this will not auto-merge."; fi
+          existing=$(gh pr list --repo "$CORE_REPO" --head "$SYNC_BRANCH" --state open --json number -q '.[0].number')
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --repo "$CORE_REPO" --title "Sync from QuantMeridian ${GITHUB_SHA::7}" --body "$body"
+            number="$existing"
+          else
+            gh pr create --repo "$CORE_REPO" --base main --head "$SYNC_BRANCH" --title "Sync from QuantMeridian ${GITHUB_SHA::7}" --body "$body"
+            number=$(gh pr list --repo "$CORE_REPO" --head "$SYNC_BRANCH" --state open --json number -q '.[0].number')
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "review=$review" >> "$GITHUB_OUTPUT"
+
+      - name: Merge when the downstream's CI is green
+        if: steps.pr.outputs.number != '' && steps.pr.outputs.review == '0'
+        run: |
+          sleep 30  # let the downstream's CI start for the new commit
+          gh pr checks "${{ steps.pr.outputs.number }}" --repo "$CORE_REPO" --watch --interval 30 --fail-fast
+          gh pr merge "${{ steps.pr.outputs.number }}" --repo "$CORE_REPO" --squash --delete-branch
+
+      - name: Report a failed sync
+        if: failure() && steps.cfg.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="QuantMeridian-Core sync failed"
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number -q '.[0].number')
+          if [ -n "$existing" ]; then gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Failed again at ${GITHUB_SHA::7}: $url"
+          else gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The sync failed at ${GITHUB_SHA::7}: $url"$'\n\n'"Usually a patch in downstream/core/patches no longer applies, a transform target changed upstream, or the secret scan found something. See downstream/core/README.md."; fi

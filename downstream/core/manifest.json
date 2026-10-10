@@ -136,5 +136,24 @@
     "/trading-assistant",
     "/economics/utilization",
     "/economics/sec-finance"
-  ]
+  ],
+  "secret_scan": {
+    "_comment": "Hard-fail scan on the built tree (the downstream is public). allow_paths are test fixtures that deliberately contain fake key-shaped strings; allow_passwords are the throwaway local-development database passwords already used in docs and tests.",
+    "allow_paths": [
+      "contracts/agent/fixtures/settings/secret-shapes.json",
+      "src/app/api/agent/profiles/profiles.route.test.ts",
+      "src/lib/server/llm/client.test.ts",
+      "src/lib/agent/secretShape.test.ts",
+      "services/agent_worker/tests/**"
+    ],
+    "allow_passwords": [
+      "fred",
+      "pass",
+      "password",
+      "user",
+      "secret",
+      "changeme",
+      "pw"
+    ]
+  }
 }

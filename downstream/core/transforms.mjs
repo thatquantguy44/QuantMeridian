@@ -77,4 +77,12 @@ export default [
     file: "vite-plugins/dev-api.ts",
     apply: (text) => replaceOnce(text, 'const trace = process.env.IBAL_DEV_API_TRACE === "1" && url.pathname.startsWith("/api/inventory-optimizer/");', 'const trace = process.env.DEV_API_TRACE === "1";', "vite-plugins/dev-api.ts"),
   },
+  {
+    file: "src/data/econEnhancements.ts",
+    apply: (text, ctx) => replaceOnce(dropLines(text, (line) => codesOf(ctx).some((c) => line.includes(`{ module: "${c}"`))), 'module: "REINV" | "CASH" | "COLL" | "OPT";', "module: string;", "src/data/econEnhancements.ts"),
+  },
+  {
+    file: "test/TESTING_HANDOFF.md",
+    apply: (text, ctx) => dropLines(text, (line) => routesOf(ctx).some((r) => line.includes(`\`${r}\``))).replace(", /trading-desk)", ")"),
+  },
 ];

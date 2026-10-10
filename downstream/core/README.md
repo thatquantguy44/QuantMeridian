@@ -33,3 +33,23 @@ survived; fix it with a transform (registry-shaped lines) or a patch (anything e
 Build without the patch, edit the file in the output tree, then
 `git diff --no-index` it against the upstream copy (or `git init` the output, commit it, edit, and
 `git diff -- <file>`), and replace the patch file.
+
+## Sync
+
+`.github/workflows/sync-core.yml` runs on every push to `main`: build the subset, install and
+regenerate the metric registry in it, copy it into a checkout of `QuantMeridian-Core`
+(`scripts/downstream/sync-core.sh`), push `sync/upstream`, open or update one PR, and merge it once
+the downstream's CI is green. An identical build produces no commit, so pushes that touch only
+excluded files do nothing. The PR is not auto-merged when the leak scan reports a surviving reference
+to an excluded component, and a failed build (a patch that no longer applies, a transform target
+that changed, or a secret-scan finding) opens an issue in this repository.
+
+Setup: create a fine-grained personal access token with **Contents** and **Pull requests**
+(read and write) on `QuantMeridian-Core` only, and add it to this repository as the
+`CORE_SYNC_TOKEN` Actions secret. Without it the workflow skips itself.
+
+## Public-safety scan
+
+The downstream is public, so the build fails on provider keys, tokens, private keys, database URLs
+with non-placeholder passwords, and any env file other than `.env.example`
+(`scripts/downstream/secret-scan.mjs`, rules under `secret_scan` in the manifest).

@@ -15,6 +15,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { scanForSecrets } from "./secret-scan.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name) => { const i = args.indexOf(name); return i === -1 ? null : args[i + 1]; };
@@ -101,6 +102,9 @@ for (const dir of scan.paths) {
     lines.forEach((line, i) => { for (const re of patterns) if (re.test(line)) report.needs_review.push(`${full}:${i + 1}: ${line.trim().slice(0, 120)}`); });
   }
 }
+
+// 7. Secret scan: hard failure, because the downstream is public.
+for (const finding of scanForSecrets(outDir, manifest.secret_scan)) report.errors.push(`secret scan: ${finding}`);
 
 if (reportPath) fs.writeFileSync(reportPath, JSON.stringify(report, null, 2) + "\n");
 console.log(`core build @ ${report.source_commit.slice(0, 8)}: ${report.excluded_files} files excluded, ${report.transforms.filter((t) => t.changed).length} transforms, ${report.patches.filter((p) => p.applied).length}/${report.patches.length} patches, ${report.overlay_files} overlay files`);
