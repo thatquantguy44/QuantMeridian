@@ -251,10 +251,11 @@ def test_profile_uses_headers_and_secrets() -> None:
 
 
 def test_anthropic_direct_matches_todays_copilot_request() -> None:
-    copilot = (REPO_ROOT / "src/app/api/copilot/route.ts").read_text(encoding="utf-8")
+    # The Copilot route reads these from the profile now; src/app/api/copilot/route.test.ts pins
+    # the request it sends.
     profile = shipped_profiles()["profiles"]["anthropic-direct"]
-    assert f'model: "{profile["model"]}"' in copilot
-    assert f"max_tokens: {profile['limits']['max_output_tokens']}" in copilot
+    assert profile["model"] == "claude-opus-4-8"
+    assert profile["limits"]["max_output_tokens"] == 1500
 
 
 def test_shipped_files_agree_on_cross_references(ctx: WorkflowConfigContext) -> None:

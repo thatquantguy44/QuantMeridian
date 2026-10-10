@@ -1,0 +1,69 @@
+diff --git a/src/app/api/copilot/route.test.ts b/src/app/api/copilot/route.test.ts
+index a3df5fb..de2d007 100644
+--- a/src/app/api/copilot/route.test.ts
++++ b/src/app/api/copilot/route.test.ts
+@@ -27,9 +27,9 @@ describe("POST /api/copilot (AC-022)", () => {
+     expect(Object.keys(params).sort()).toEqual(["max_tokens", "messages", "model", "system"]);
+     expect(params.model).toBe("claude-opus-4-8");
+     expect(params.max_tokens).toBe(1500);
+-    expect(params.system).toMatch(/^You are the AI Copilot for a Bloomberg-style securities-finance terminal/);
++    expect(params.system).toMatch(/^You are the AI Copilot for a Bloomberg-style macro and markets terminal/);
+     expect(params.system).toMatch(/Respond with ONLY a single JSON object/);
+-    expect(params.messages).toEqual([{ role: "user", content: 'Desk data snapshot (JSON):\n{"desk":"snapshot","n":3}\n\nQuestion: Why did revenue fall?' }]);
++    expect(params.messages).toEqual([{ role: "user", content: 'Macro data snapshot (JSON):\n{"desk":"snapshot","n":3}\n\nQuestion: Why did revenue fall?' }]);
+     expect(sdk.ctor.mock.calls[0][0]).toMatchObject({ apiKey: "k".repeat(24), baseURL: "https://api.anthropic.com" });
+   });
+ 
+diff --git a/src/app/api/copilot/route.ts b/src/app/api/copilot/route.ts
+index d4d1eb4..355d545 100644
+--- a/src/app/api/copilot/route.ts
++++ b/src/app/api/copilot/route.ts
+@@ -9,7 +9,7 @@ import { AgentQueueStore, queueConfig } from "@/lib/server/agent/queueStore";
+ /**
+  * POST /api/copilot  { question: string }
+  *
+- * Natural-language answer over the securities-finance desk data. The model comes from the LLM
++ * Natural-language answer over the Gold macro data. The model comes from the LLM
+  * profile layer (spec009): by default `anthropic-direct`, which sends the same request this route
+  * always has (claude-opus-4-8, 1500 tokens). When the profile is unavailable or has no model — or on
+  * any error — returns source "LOCAL" so the client falls back to its deterministic keyword engine.
+@@ -17,9 +17,9 @@ import { AgentQueueStore, queueConfig } from "@/lib/server/agent/queueStore";
+  * `AI` responses name the `profile` and `model` that answered.
+  */
+ 
+-const SYSTEM = `You are the AI Copilot for a Bloomberg-style securities-finance terminal, covering Securities Lending, Prime Finance, Collateral Management, and Cash/Treasury.
++const SYSTEM = `You are the AI Copilot for a Bloomberg-style macro and markets terminal, covering the Treasury curve, rates, inflation, and economic indicators.
+ 
+-You will be given a JSON snapshot of the current desk data. Answer the user's question USING ONLY the figures in that snapshot — never invent numbers, tickers, clients, or rates. If the snapshot doesn't contain what's needed, say so plainly.
++You will be given a JSON snapshot of the latest Gold macro data. Answer the user's question USING ONLY the figures in that snapshot — never invent numbers, dates, releases, or rates. If the snapshot doesn't contain what's needed, say so plainly.
+ 
+ Style: terminal-desk register — direct, quantitative, no preamble or pleasantries. Lead with the answer. Cite the specific figures from the data. Keep the main text to 2-4 sentences; put supporting specifics in bullets.
+ 
+@@ -50,22 +50,22 @@ export async function POST(req: Request) {
+   }
+   if (!question) return json({ error: "question required" }, { status: 400 });
+ 
+-  // The Copilot snapshot is simulated desk data. An unavailable default profile degrades to LOCAL.
+-  const resolved = resolveProfile({ use: "copilot", dataClasses: ["desk_simulated"], optional: true });
++  // The Copilot snapshot is Gold macro data. An unavailable default profile degrades to LOCAL.
++  const resolved = resolveProfile({ use: "copilot", dataClasses: ["public_market_data"], optional: true });
+   if (!resolved.ok || resolved.api_style === "none") {
+     return json({ source: "LOCAL" });
+   }
+ 
+   try {
+-    const context = buildCopilotContext();
++    const context = await buildCopilotContext();
+     const response = await callLlm(resolved, {
+       workflow_id: "copilot",
+       run_id: crypto.randomUUID(),
+       task_type: "copilot",
+       prompt_id: "copilot.v1",
+       system: SYSTEM,
+-      user: `Desk data snapshot (JSON):\n${JSON.stringify(context)}\n\nQuestion: ${question}`,
+-      data_classes: ["desk_simulated"],
++      user: `Macro data snapshot (JSON):\n${JSON.stringify(context)}\n\nQuestion: ${question}`,
++      data_classes: ["public_market_data"],
+       correlation_id: crypto.randomUUID(),
+     });
+     if (response.status !== "completed" || !response.output_text) return json({ source: "LOCAL" });
