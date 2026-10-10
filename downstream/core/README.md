@@ -44,8 +44,9 @@ excluded files do nothing. The PR is not auto-merged when the leak scan reports 
 to an excluded component, and a failed build (a patch that no longer applies, a transform target
 that changed, or a secret-scan finding) opens an issue in this repository.
 
-Setup: create a fine-grained personal access token with **Contents** and **Pull requests**
-(read and write) on `QuantMeridian-Core` only, and add it to this repository as the
+Setup: create a fine-grained personal access token with **Contents**, **Pull requests**, and
+**Workflows** (read and write) on `QuantMeridian-Core` only (Workflows is needed because a sync can
+change the downstream's `.github/workflows/ci.yml`), and add it to this repository as the
 `CORE_SYNC_TOKEN` Actions secret. Without it the workflow skips itself.
 
 ## Public-safety scan
