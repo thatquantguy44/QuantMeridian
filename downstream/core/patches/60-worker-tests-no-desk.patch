@@ -1,0 +1,118 @@
+diff --git a/services/agent_worker/tests/test_registry.py b/services/agent_worker/tests/test_registry.py
+index 8b36894..9a1170e 100644
+--- a/services/agent_worker/tests/test_registry.py
++++ b/services/agent_worker/tests/test_registry.py
+@@ -2,7 +2,6 @@
+ 
+ from __future__ import annotations
+ 
+-import copy
+ import json
+ import re
+ from pathlib import Path
+@@ -104,42 +103,18 @@ def test_resolve_by_name_and_synonym(registry: Registry) -> None:
+     assert registry.resolve("  10Y  Treasury ") == "DGS10"
+     assert registry.resolve("sofr") == "SOFR"
+     assert registry.resolve("DGS2") == "DGS2"
+-    assert registry.resolve("lending revenue") == "sl_daily_revenue"
+     assert registry.resolve("definitely not a metric") is None
+ 
+ 
+ def test_data_class_listing_and_exclusions(registry: Registry) -> None:
+-    assert registry.names("desk_simulated") == [
+-        "sl_daily_revenue",
+-        "sl_inventory_value",
+-        "sl_on_loan_notional",
+-        "sl_utilization",
+-        "sl_weighted_fee_bps",
+-    ]
++    assert registry.names("desk_simulated") == []
+     assert "DGS10" in registry.names("public_market_data")
+     assert registry.excluded == {
+         "ISM-MFG": "sim_only",
+         "ISM-SVC": "sim_only",
+         "PCEPILFE_MOM": "sim_only",
+     }
+-    assert set(registry.desk_datasets) == {"sl_inventory", "sl_loans", "sl_borrow_demand"}
+-
+-
+-# --- desk measures ----------------------------------------------------------------------------
+-
+-
+-def test_desk_measures_for_plain_and_ratio_metrics(registry: Registry) -> None:
+-    loan = {"revenueDay": 12.5, "notional": 1_000_000.0, "rateBps": 40.0}
+-    assert desk_measures(registry.metric("sl_daily_revenue"), loan) == {"sl_daily_revenue": 12.5}
+-    assert desk_measures(registry.metric("sl_weighted_fee_bps"), loan) == {
+-        "sl_weighted_fee_bps__num": 40_000_000.0,
+-        "sl_weighted_fee_bps__den": 1_000_000.0,
+-    }
+-    inventory = {"available": 60.0, "onLoan": 30.0, "restricted": 10.0}
+-    assert desk_measures(registry.metric("sl_utilization"), inventory) == {
+-        "sl_utilization__num": 30.0,
+-        "sl_utilization__den": 100.0,
+-    }
++    assert set(registry.desk_datasets) == set()
+ 
+ 
+ # --- building the 0008 layer (fake module: runs in hosted CI) -------------------------------------
+@@ -167,22 +142,6 @@ def test_builds_a_definition_for_every_metric(registry: Registry) -> None:
+         "day",
+         (),
+     )
+-    rev = layer.defined["sl_daily_revenue"]
+-    assert (rev["source"], rev["agg"]) == ("sl_daily_revenue", "sum")
+-    assert set(rev["dimensions"]) == {"borrower", "collateral_type", "ticker"}
+-    util = layer.defined["sl_utilization"]
+-    assert (util["numerator"], util["denominator"]) == (
+-        "sl_utilization__num",
+-        "sl_utilization__den",
+-    )
+-    assert "source" not in util
+-
+-
+-def test_refuses_a_ratio_that_is_not_a_sum_of_sums(registry: Registry) -> None:
+-    bad = copy.deepcopy(registry)
+-    bad.metrics["sl_utilization"]["source"]["measure"]["numerator"]["fn"] = "mean"
+-    with pytest.raises(RegistryError, match="must be a sum"):
+-        build_semantic_layer(bad, FakeModule)
+ 
+ 
+ # --- the real 0008 layer (owner's machine) ----------------------------------------------------
+diff --git a/services/agent_worker/tests/test_settings.py b/services/agent_worker/tests/test_settings.py
+index 0d14a6d..0db1634 100644
+--- a/services/agent_worker/tests/test_settings.py
++++ b/services/agent_worker/tests/test_settings.py
+@@ -99,7 +99,7 @@ def test_policy_matches_the_node_module_policy_file() -> None:
+         doc["eligible_modules"]["gold"] + doc["eligible_modules"]["desk"]
+     )
+     assert not policy.eligible & policy.never_eligible
+-    assert policy.never_eligible == {"IBAL", "OPT", "DESK", "TASSIST", "AI"}
++    assert policy.never_eligible == {"AI"}
+ 
+ 
+ def test_eligible_modules_exist_and_were_audited() -> None:
+@@ -136,9 +136,6 @@ def test_modules_outside_the_reviewed_set_or_unknown(ctx: WorkflowConfigContext)
+ 
+ 
+ def test_context_fields_are_allowlisted_per_module(ctx: WorkflowConfigContext) -> None:
+-    slab = shipped_workflows()
+-    slab["modules"]["SLAB"]["context_fields"] = ["series"]
+-    assert "CONTEXT_FIELD_NOT_ALLOWED" in wf_codes(slab, ctx)
+     fund = shipped_workflows()
+     fund["modules"]["FUND"]["context_fields"] = ["series", "range", "transform"]
+     assert "CONTEXT_FIELD_NOT_ALLOWED" in wf_codes(fund, ctx)
+@@ -147,13 +144,7 @@ def test_context_fields_are_allowlisted_per_module(ctx: WorkflowConfigContext) -
+     assert "SCHEMA" in wf_codes(free, ctx)
+ 
+ 
+-def test_desk_datasets_and_domains(ctx: WorkflowConfigContext) -> None:
+-    unknown = shipped_workflows()
+-    unknown["modules"]["SLAB"]["desk_datasets"] = ["sl_inventory", "pb_clients"]
+-    assert "DESK_DATASET_UNKNOWN" in wf_codes(unknown, ctx)
+-    no_class = shipped_workflows()
+-    no_class["modules"]["SLAB"]["workflows"] = ["chart.build"]
+-    assert "DESK_DATA_CLASS_MISSING" in wf_codes(no_class, ctx)
++def test_domains(ctx: WorkflowConfigContext) -> None:
+     domain = shipped_workflows()
+     domain["modules"]["MGC"]["domains"] = ["economics_macro", "made_up_pack"]
+     assert "DOMAIN_UNKNOWN" in wf_codes(domain, ctx)

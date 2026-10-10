@@ -1,0 +1,110 @@
+diff --git a/src/lib/server/agent/config.test.ts b/src/lib/server/agent/config.test.ts
+index 1f31112..bd93997 100644
+--- a/src/lib/server/agent/config.test.ts
++++ b/src/lib/server/agent/config.test.ts
+@@ -32,17 +32,14 @@ describe("shipped settings/agent_workflows.json", () => {
+     expect(res.ok).toBe(true);
+   });
+ 
+-  it("enables MGC, FUND and SLAB; CURV and INFL stay off", () => {
++  it("enables MGC, FUND and ECOIQ; CURV and INFL stay off", () => {
+     const { modules, workflows } = shipped();
+-    expect(Object.entries(modules).filter(([, m]) => (m as { enabled: boolean }).enabled).map(([c]) => c).sort()).toEqual(["ECOIQ", "FUND", "MGC", "SLAB"]);
++    expect(Object.entries(modules).filter(([, m]) => (m as { enabled: boolean }).enabled).map(([c]) => c).sort()).toEqual(["ECOIQ", "FUND", "MGC"]);
+     expect(modules.CURV.enabled).toBe(false);
+     expect(modules.INFL.enabled).toBe(false);
+-    expect(Object.entries(workflows).filter(([, w]) => (w as { enabled: boolean }).enabled).map(([id]) => id).sort()).toEqual(["analysis.answer", "chart.build", "economics.explain", "economics.scenario", "economics.transmission", "secfin.carry"]);
++    expect(Object.entries(workflows).filter(([, w]) => (w as { enabled: boolean }).enabled).map(([id]) => id).sort()).toEqual(["analysis.answer", "chart.build", "economics.explain", "economics.scenario", "economics.transmission"]);
+   });
+ 
+-  it("starts SLAB with no context fields", () => {
+-    expect(shipped().modules.SLAB.context_fields).toEqual([]);
+-  });
+ });
+ 
+ describe("module eligibility (AC-029)", () => {
+@@ -94,8 +91,6 @@ describe("module eligibility (AC-029)", () => {
+ describe("context allowlist (REQ-005)", () => {
+   it("rejects a field the module has not been reviewed for", () => {
+     const doc = shipped();
+-    doc.modules.SLAB.context_fields = ["series"];
+-    expect(codes(doc)).toContain("CONTEXT_FIELD_NOT_ALLOWED");
+     const fund = shipped();
+     fund.modules.FUND.context_fields = ["series", "range", "transform"];
+     expect(codes(fund)).toContain("CONTEXT_FIELD_NOT_ALLOWED");
+@@ -109,18 +104,6 @@ describe("context allowlist (REQ-005)", () => {
+ });
+ 
+ describe("desk datasets and domains", () => {
+-  it("rejects an unregistered dataset", () => {
+-    const doc = shipped();
+-    doc.modules.SLAB.desk_datasets = ["sl_inventory", "pb_clients"];
+-    expect(codes(doc)).toContain("DESK_DATASET_UNKNOWN");
+-  });
+-
+-  it("requires a workflow that allows desk_simulated when a module has desk datasets", () => {
+-    const doc = shipped();
+-    doc.modules.SLAB.workflows = ["chart.build"];
+-    expect(codes(doc)).toContain("DESK_DATA_CLASS_MISSING");
+-  });
+-
+   it("rejects an unknown domain pack", () => {
+     const doc = shipped();
+     doc.modules.MGC.domains = ["economics_macro", "made_up_pack"];
+diff --git a/src/lib/server/agent/metricRegistry.test.ts b/src/lib/server/agent/metricRegistry.test.ts
+index b18f992..7480df0 100644
+--- a/src/lib/server/agent/metricRegistry.test.ts
++++ b/src/lib/server/agent/metricRegistry.test.ts
+@@ -3,7 +3,6 @@ import path from "node:path";
+ import { describe, expect, it } from "vitest";
+ import { FRED_CATALOG, resolveFred } from "@/data/econSeries";
+ import { validateContract } from "@/lib/agent/validate";
+-import { DESK_DATASETS, type DeskDatasetDef } from "./deskDatasets";
+ import { buildMetricRegistry, canonicalJson, RegistryBuildError, registryVersion, serializeRegistry } from "./metricRegistry";
+ import { CATALOG_UNITS, levelLabel, REVIEWED_LIN_UNITS } from "./metricUnits";
+ 
+@@ -77,32 +76,6 @@ describe("generated registry (AC-009)", () => {
+     }
+   });
+ 
+-  it("registers the five initial SLAB desk metrics, all simulated", () => {
+-    const desk = built.metrics.filter((m) => m.source.kind === "desk_dataset");
+-    expect(desk.map((m) => m.name).sort()).toEqual(["sl_daily_revenue", "sl_inventory_value", "sl_on_loan_notional", "sl_utilization", "sl_weighted_fee_bps"]);
+-    for (const m of desk) {
+-      expect(m.data_class).toBe("desk_simulated");
+-      expect(m.snapshot).toBe(true);
+-      expect(m.domains).toEqual(["securities_financing_prime"]);
+-      expect(m.additivity_rationale, m.name).toBeTruthy();
+-    }
+-    for (const m of desk) expect(m.synonyms.length, `${m.name} synonyms`).toBeGreaterThan(1);
+-    const byName = Object.fromEntries(desk.map((m) => [m.name, m]));
+-    expect(byName.sl_daily_revenue.synonyms).toEqual(expect.arrayContaining(["lending revenue", "revenue", "daily revenue"]));
+-    expect(byName.sl_daily_revenue.additivity).toBe("additive");
+-    expect(byName.sl_on_loan_notional.additivity).toBe("semi_additive");
+-    expect(byName.sl_inventory_value.additivity).toBe("semi_additive");
+-    expect(byName.sl_weighted_fee_bps.additivity).toBe("ratio");
+-    expect(byName.sl_utilization.additivity).toBe("ratio");
+-  });
+-
+-  it("publishes the desk datasets the worker needs to read rows", () => {
+-    expect(built.desk_datasets.map((d) => d.id)).toEqual(["sl_inventory", "sl_loans", "sl_borrow_demand"]);
+-    for (const d of built.desk_datasets) {
+-      for (const field of Object.values(d.dimensions)) expect(d.fields[field], `${d.id}.${field}`).toBeDefined();
+-    }
+-  });
+-
+   it("tags funding and money-market series for the funding pack as well as rates", () => {
+     const get = (n: string) => built.metrics.find((m) => m.name === n)!;
+     for (const id of ["SOFR", "IORB", "OBFR", "BGCR", "RRPONTSYD", "DTB3", "WRESBAL"]) {
+@@ -179,11 +152,6 @@ describe("builder safeguards", () => {
+     expect(() => buildMetricRegistry({ curatedSynonyms: { NOPE: ["x"] } })).toThrow(/unknown metric/);
+   });
+ 
+-  it("refuses a desk dataset whose declared source is not simulated (REQ-029)", () => {
+-    const bad: DeskDatasetDef[] = [{ ...clone(DESK_DATASETS[0]), declaredSource: "REAL" }];
+-    expect(() => buildMetricRegistry({ datasets: bad })).toThrow(/DATA_CLASS_NOT_APPROVED/);
+-  });
+-
+   it("is deterministic", () => {
+     expect(serializeRegistry(buildMetricRegistry())).toBe(serializeRegistry(buildMetricRegistry()));
+   });

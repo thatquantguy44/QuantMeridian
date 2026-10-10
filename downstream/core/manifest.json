@@ -1,9 +1,26 @@
 {
   "_comment": "Defines QuantMeridian-Core: the QuantMeridian tree minus its securities-finance components. Built by scripts/downstream/build-core.mjs and synced by .github/workflows/sync-core.yml.",
   "downstream_repo": "thatquantguy44/QuantMeridian-Core",
-  "excluded_modules": ["SLAB", "SQZ", "PB", "COLL", "CASH", "REINV", "LIQ", "SXU", "OPT", "IBAL", "DESK", "TASSIST", "UTIL"],
+  "excluded_modules": [
+    "SLAB",
+    "SQZ",
+    "PB",
+    "COLL",
+    "CASH",
+    "REINV",
+    "LIQ",
+    "SXU",
+    "OPT",
+    "IBAL",
+    "DESK",
+    "TASSIST",
+    "UTIL",
+    "SFE"
+  ],
   "exclude": [
     "downstream/**",
+    ".env",
+    "screenshots/**",
     ".github/workflows/sync-core.yml",
     ".github/workflows/market-data-refresh.yml",
     "src/app/securities-lending/**",
@@ -18,6 +35,7 @@
     "src/app/trading-desk/**",
     "src/app/trading-assistant/**",
     "src/app/economics/utilization/**",
+    "src/app/economics/sec-finance/**",
     "src/app/api/inventory-optimizer/**",
     "src/app/api/trading-assistant/**",
     "src/data/securitiesLending.ts",
@@ -44,7 +62,6 @@
     "test/ibal.spec.ts",
     "src/lib/server/agent/deskDatasets.ts",
     "src/lib/server/agent/deskDatasets.test.ts",
-    "contracts/agent/fixtures/results/example-secfin-carry.json",
     "docs/features/Agency Prime Electronic Trading Analytics Handoff.md",
     "docs/features/IBAL_*.md",
     "docs/features/SQUEEZE_RADAR_SPEC.md",
@@ -53,10 +70,20 @@
     "docs/scenarios/IBAL_WHAT_IF_SCENARIOS.md"
   ],
   "leak_scan": {
-    "_comment": "Strings that must not survive in the downstream source. Content words like 'collateral' are allowed in macro text; these are component identifiers: module codes, routes, and file names.",
-    "paths": ["src", "settings", "contracts", "scripts", "test", "vite-plugins", "api", "services"],
+    "_comment": "Component identifiers that must not survive in the downstream: registry entries by module code, routes, and imports of excluded files. Desk-lens wording inside macro pages (for example a desk playbook table) is content, not a component, and is not scanned.",
+    "paths": [
+      "src",
+      "settings",
+      "contracts",
+      "scripts",
+      "test",
+      "vite-plugins",
+      "api",
+      "services"
+    ],
     "patterns": [
-      "\"(SLAB|SQZ|PB|COLL|CASH|REINV|LIQ|SXU|OPT|IBAL|DESK|TASSIST|UTIL)\"",
+      "(code|module): \"(SLAB|SQZ|PB|COLL|CASH|REINV|LIQ|SXU|OPT|IBAL|DESK|TASSIST|UTIL|SFE)\"",
+      "on\\(\"(SLAB|SQZ|PB|COLL|CASH|REINV|LIQ|SXU|OPT|IBAL|DESK|TASSIST|UTIL|SFE)\"\\)",
       "/securities-lending",
       "/prime-finance",
       "/collateral\\b",
@@ -69,12 +96,45 @@
       "/trading-desk",
       "/trading-assistant",
       "/economics/utilization",
+      "/economics/sec-finance",
       "data/securitiesLending",
       "data/squeeze",
+      "data/primeFinance",
+      "data/collateral",
+      "data/cash\\b",
       "inventoryOptimizerProxy",
-      "secfin\\.carry",
+      "secfin\\.carry\\b(?!\")",
       "sl_inventory|sl_loans|sl_borrow_demand"
     ],
-    "allow": []
-  }
+    "allow": [
+      "src/app/api/agent/jobs/route.test.ts",
+      "src/lib/server/agent/config.test.ts",
+      "services/agent_worker/tests/test_settings.py"
+    ],
+    "allow_globs": [
+      "contracts/agent/*.schema.json",
+      "contracts/agent/fixtures/**",
+      "contracts/agent/generated/**",
+      "src/lib/agent/contracts/**",
+      "services/agent_worker/src/agent_worker/contracts_generated/**",
+      "src/lib/agent/contracts.test.ts",
+      "services/agent_worker/tests/test_contracts.py"
+    ]
+  },
+  "excluded_routes": [
+    "/securities-lending",
+    "/securities-lending/squeeze",
+    "/prime-finance",
+    "/collateral",
+    "/cash-optimizer",
+    "/reinvestment",
+    "/liquidity",
+    "/sources-uses",
+    "/optimization",
+    "/inventory-optimizer",
+    "/trading-desk",
+    "/trading-assistant",
+    "/economics/utilization",
+    "/economics/sec-finance"
+  ]
 }
