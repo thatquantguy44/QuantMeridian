@@ -15,7 +15,7 @@ Focus" and "Next Work" below; those stay as context.
 **What lands in this repo** (four of the five workstreams; Workstream A is engine work in
 InventoryBallast):
 
-| Workstream | Child spec (to draft under `docs/specs/`) | Code |
+| Workstream | Child spec (drafts in PR #151) | Code |
 | --- | --- | --- |
 | B — IBAL showcase: engine re-pin (currently `74737e5`, 40 commits behind), diagnostic tabs, Scenario Studio (`0013` T-017), presenter mode | `spec013` | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
 | C — Money market execution optimizer (new `MMKT` module) | `spec011` | `services/money_market_api/` (port 8014), `src/app/money-market/` |
@@ -45,8 +45,7 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
 
 **Pick up here on the terminal side:**
 
-1. Draft `docs/specs/spec011`–`spec014` (`SPEC.md`, `PLAN.md`, `TASKS.md`), each citing `0018`'s
-   REQ IDs and including its white paper design draft. Get owner approval before code.
+1. Review the draft packs in PR #151 for `spec011`–`spec014`, resolve the listed owner decisions, and approve the child specs before code.
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
