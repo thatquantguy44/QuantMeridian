@@ -25,6 +25,7 @@ test("IBAL loads data, runs optimizer, and exposes results", async ({ page }) =>
 
   await page.goto(`${BASE}/inventory-optimizer`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "InventoryBallast" })).toBeVisible();
+  await expect(page.getByRole("status", { name: "Optimizer engine status" }).getByText("PIN VERIFIED")).toBeVisible({ timeout: 10_000 });
 
   const initialRun = page.getByRole("button", { name: /Load Data First/i });
   await expect(page.getByText("No dataset loaded")).toBeVisible();
@@ -63,20 +64,17 @@ test("IBAL loads data, runs optimizer, and exposes results", async ({ page }) =>
   await expect(page.getByText("Base Case Before / After")).toBeVisible();
   await expect(page.getByText("Top Route Movers")).toBeVisible();
   await expect(page.getByText("Demand Shortfall")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Export$/i })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /^Export Base Case$/i })).toBeEnabled();
 
   const scenarioButton = page.getByRole("button", { name: /^Run Scenarios$/i });
   await expect(scenarioButton).toBeEnabled();
   await scenarioButton.click();
   await expect(page.getByText("Completed 4 what-if scenarios.")).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByText("What If Comparison")).toBeVisible();
+  await expect(page.getByText("Scenario Comparison")).toBeVisible();
   await expect(page.getByText("Base Case").first()).toBeVisible();
   await expect(page.getByText("Scarce Supply").first()).toBeVisible();
   await expect(page.getByText("Specials Squeeze").first()).toBeVisible();
   await expect(page.getByText("Borrower Concentration").first()).toBeVisible();
-  await expect(page.getByText(/Scenario Detail - /)).toBeVisible();
-  await expect(page.getByText("Inventory Balances")).toBeVisible();
-  await expect(page.getByText("Route Allocations")).toBeVisible();
   await expect(page.getByRole("cell", { name: /SYN-RT-/ }).first()).toBeVisible();
   await expect(page.getByText("failed")).toHaveCount(0);
 
@@ -88,4 +86,50 @@ test("IBAL loads data, runs optimizer, and exposes results", async ({ page }) =>
     body: apiEvents.join("\n"),
     contentType: "text/plain",
   });
+});
+
+test("IBAL blocks solving and explains why when the engine does not match its pin", async ({ page }) => {
+  await page.route("**/api/inventory-optimizer/health", (route) =>
+    route.fulfill({
+      json: {
+        status: "unready",
+        ready: false,
+        engine_mismatches: ["fingerprint"],
+        error_category: "incompatible_engine",
+        backend: { name: "highs", version: "1.15.1", ready: true },
+        formulations: ["lp", "mip", "qp"],
+      },
+    })
+  );
+  await page.route("**/api/inventory-optimizer/capabilities", async (route) => {
+    const response = await route.fetch();
+    route.fulfill({ response, json: { ...(await response.json()), engine_compatible: false } });
+  });
+
+  await page.goto(`${BASE}/inventory-optimizer`, { waitUntil: "domcontentloaded" });
+  const strip = page.getByRole("status", { name: "Optimizer engine status" });
+  await expect(strip.getByText("NOT READY")).toBeVisible({ timeout: 10_000 });
+  await expect(strip.getByText("Installed engine does not match the pin (source fingerprint).")).toBeVisible();
+
+  await page.getByRole("button", { name: /^Synthetic$/i }).click();
+  await expect(page.getByText("Dataset loaded successfully")).toBeVisible({ timeout: 30_000 });
+  const runButton = page.getByRole("button", { name: /^Engine Not Ready$/i });
+  await expect(runButton).toBeDisabled();
+  await expect(runButton).toHaveAttribute("title", "Installed engine does not match the pin (source fingerprint).");
+  await expect(page.getByRole("button", { name: /^Run Scenarios$/i })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /Run Engine Scenario/i })).toBeDisabled();
+});
+
+test("IBAL rejects a file type the service does not accept before uploading it", async ({ page }) => {
+  let uploads = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/api/inventory-optimizer/datasets/upload")) uploads += 1;
+  });
+  await page.goto(`${BASE}/inventory-optimizer`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("status", { name: "Optimizer engine status" }).getByText("PIN VERIFIED")).toBeVisible({ timeout: 10_000 });
+
+  await page.locator('input[type="file"]').setInputFiles({ name: "book.csv", mimeType: "text/csv", buffer: Buffer.from("a,b\n1,2\n") });
+
+  await expect(page.getByText('Unsupported file type ".csv". Upload XLSX or JSON.')).toBeVisible();
+  expect(uploads).toBe(0);
 });

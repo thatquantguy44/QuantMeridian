@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 from . import engine_source
+from .field_registry import MAX_UPLOAD_BYTES, ROW_LIMITS
 
 # A built wheel carries the manifest inside the package (see pyproject.toml force-include); an
 # editable install or source run reads it from the service root.
@@ -199,38 +200,19 @@ def capability_payload() -> dict[str, Any]:
         "solver_backends": identity["solver_backends"],
         "problem_families": expected["problem_families"],
         "formulations": identity["formulations"],
-        "input_features": {
-            "entity_scoped_limits": True,
-            "all_or_none_routes": True,
-            "minimum_active_quantity": True,
-            "lot_sizes": True,
-            "maximum_active_routes": True,
-            "allocation_stability_penalty": True,
-            "fee_tier_authoring": False,
-            "expected_economics": False,
-            "dynamic_buffers": False,
-            "multi_period": False,
-            "scenarios": True,
-        },
-        "output_sections": [
-            "allocations",
-            "balances",
-            "economics",
-            "demand",
-            "pricing",
-            "constraints",
-            "solver",
-            "verification",
-            "warnings",
-            "scenario_stress",
-        ],
+        "input_features": dict(expected["input_features"]),
+        "output_sections": list(expected["output_sections"]),
         "upload_formats": expected["upload_formats"],
         "limits": {
-            "upload_bytes": 10 * 1024 * 1024,
-            "inventory_rows": 500,
-            "route_rows": 10_000,
-            "demand_rows": 5_000,
-            "optional_rows": 5_000,
+            "upload_bytes": MAX_UPLOAD_BYTES,
+            "inventory_rows": ROW_LIMITS["inventory"],
+            "route_rows": ROW_LIMITS["routes"],
+            "demand_rows": ROW_LIMITS["demand"],
+            "optional_rows": min(
+                ROW_LIMITS["counterparty_limits"],
+                ROW_LIMITS["utilization_policies"],
+                ROW_LIMITS["entity_relationships"],
+            ),
             "solve_timeout_seconds": 60,
             "concurrent_solves": 2,
             "scenario_stress_batch": 10,

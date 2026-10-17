@@ -8,5 +8,31 @@
   "engine_fingerprint": "4312cd76ea171e4d88ac8510d86b208823b6b0f11bdc536bb1d965138c17d332",
   "problem_families": ["securities_lending_inventory"],
   "formulations": ["lp", "mip", "qp"],
-  "upload_formats": ["xlsx", "json"]
+  "upload_formats": ["xlsx", "json"],
+  "input_features": {
+    "entity_scoped_limits": true,
+    "all_or_none_routes": true,
+    "minimum_active_quantity": true,
+    "lot_sizes": true,
+    "maximum_active_routes": true,
+    "allocation_stability_penalty": true,
+    "fee_tier_authoring": false,
+    "expected_economics": false,
+    "dynamic_buffers": false,
+    "multi_period": false,
+    "known_future_events": false,
+    "scenarios": true
+  },
+  "output_sections": [
+    "allocations",
+    "balances",
+    "economics",
+    "demand",
+    "pricing",
+    "constraints",
+    "solver",
+    "verification",
+    "warnings",
+    "scenario_stress"
+  ]
 }

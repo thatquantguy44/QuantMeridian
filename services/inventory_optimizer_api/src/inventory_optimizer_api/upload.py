@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import zipfile
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -12,11 +12,11 @@ from inventory_optimizer.domain.requests import OptimizationRequest
 from openpyxl import load_workbook
 from pydantic import ValidationError
 
+from .capabilities import manifest
 from .contracts import DatasetEnvelope, LocatedIssue, SourceDisclosure
 from .datasets import envelope_from_request
-from .field_registry import ROW_LIMITS, SHEETS, FieldSpec
+from .field_registry import MAX_UPLOAD_BYTES, ROW_LIMITS, SHEETS, FieldSpec
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 ALLOWED_SHEETS = {"README", "data_dictionary", *SHEETS}
 FORBIDDEN_ARCHIVE_PARTS = ("vbaproject.bin", "externallinks/", "embeddings/", "oleobject", "connections.xml")
 
@@ -54,17 +54,50 @@ def _pydantic_issues(exc: ValidationError, prefix: str = "$") -> tuple[LocatedIs
     return tuple(issues)
 
 
+# Each manifest input feature that a request can carry, with how to detect it and the issue to
+# raise while the pinned engine's manifest marks it disabled. The manifest, not this table,
+# decides what is enabled; a parity test keeps every disabled feature in this table.
+_GATED_INPUT_FEATURES: dict[str, tuple[Callable[[OptimizationRequest], bool], str, str, str]] = {
+    "multi_period": (
+        lambda request: bool(request.planning_periods),
+        "CAPABILITY_MULTI_PERIOD_DISABLED",
+        "Multi-period input is not enabled.",
+        "$.planning_periods",
+    ),
+    "known_future_events": (
+        lambda request: bool(request.known_future_events),
+        "CAPABILITY_EVENTS_DISABLED",
+        "Known future events are not enabled.",
+        "$.known_future_events",
+    ),
+    "expected_economics": (
+        lambda request: bool(request.expected_economics),
+        "CAPABILITY_EXPECTED_ECONOMICS_DISABLED",
+        "Expected economics is not enabled.",
+        "$.expected_economics",
+    ),
+    "dynamic_buffers": (
+        lambda request: bool(request.dynamic_buffers),
+        "CAPABILITY_DYNAMIC_BUFFERS_DISABLED",
+        "Dynamic buffers are not enabled.",
+        "$.dynamic_buffers",
+    ),
+    "fee_tier_authoring": (
+        lambda request: any(row.candidate_fee_rates for row in request.demand),
+        "CAPABILITY_FEE_TIERS_DISABLED",
+        "Fee-tier authoring is not enabled.",
+        "$.demand",
+    ),
+}
+
+
 def _unsupported_feature_issues(request: OptimizationRequest) -> tuple[LocatedIssue, ...]:
-    issues: list[LocatedIssue] = []
-    if request.planning_periods:
-        issues.append(LocatedIssue(code="CAPABILITY_MULTI_PERIOD_DISABLED", message="Multi-period input is not enabled.", location="$.planning_periods"))
-    if request.known_future_events:
-        issues.append(LocatedIssue(code="CAPABILITY_EVENTS_DISABLED", message="Known future events are not enabled.", location="$.known_future_events"))
-    if request.expected_economics:
-        issues.append(LocatedIssue(code="CAPABILITY_EXPECTED_ECONOMICS_DISABLED", message="Expected economics is not enabled.", location="$.expected_economics"))
-    if any(row.candidate_fee_rates for row in request.demand):
-        issues.append(LocatedIssue(code="CAPABILITY_FEE_TIERS_DISABLED", message="Fee-tier authoring is not enabled.", location="$.demand"))
-    return tuple(issues)
+    enabled = manifest()["input_features"]
+    return tuple(
+        LocatedIssue(code=code, message=message, location=location)
+        for feature, (present, code, message, location) in _GATED_INPUT_FEATURES.items()
+        if not enabled.get(feature, False) and present(request)
+    )
 
 
 def _build_envelope(request: OptimizationRequest, *, data: bytes, filename: str) -> DatasetEnvelope:

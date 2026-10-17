@@ -370,9 +370,13 @@ export interface RunResponse {
 export interface IbalCapabilities {
   engine_compatible: boolean;
   engine_commit: string;
+  engine_fingerprint: string;
   engine_package_version: string;
-  backend: { name: string; version: string | null; ready: boolean };
+  engine_source: string;
+  backend: { name: string | null; version: string | null; ready: boolean };
+  formulations: string[];
   input_features: Record<string, boolean>;
+  output_sections: string[];
   upload_formats: string[];
   limits: Record<string, number>;
 }
@@ -380,8 +384,13 @@ export interface IbalCapabilities {
 export interface IbalHealth {
   status?: string;
   ready?: boolean;
-  engine_package_version?: string;
-  backend?: { name: string; version: string | null; ready: boolean };
+  engine_package_version?: string | null;
+  engine_commit?: string | null;
+  engine_source?: string;
+  engine_mismatches?: string[];
+  formulations?: string[];
+  error_category?: string | null;
+  backend?: { name: string | null; version: string | null; ready: boolean };
   error?: string;
   code?: string;
   config?: Record<string, unknown>;

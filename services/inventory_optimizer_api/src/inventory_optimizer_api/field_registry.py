@@ -160,6 +160,8 @@ SHEETS: dict[str, tuple[FieldSpec, ...]] = {
     "entity_relationships": ENTITY_FIELDS,
 }
 
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
 ROW_LIMITS = {
     "inventory": 500,
     "routes": 10_000,
