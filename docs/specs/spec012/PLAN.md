@@ -1,7 +1,7 @@
 # Plan: Configurable Sources and Uses Optimizer
 
 - **Spec:** spec012-configurable-sources-uses (`SPEC.md`)
-- **Status:** Draft — pending owner review
+- **Status:** Setup-only phase approved; full optimizer design remains pending
 - **Last updated:** 2026-10-17
 
 ## Approach
@@ -24,6 +24,18 @@ The LP has flow variables per compatible source/use pair. Capacity and haircut-a
 
 Golden cases cover each compatibility field, explicit override, hard/soft use, each tier, binding capacities, and every MIP rule. Contract tests cover CSV/JSON round-trip and configuration hashing. Verifier tampering must fail closed. UI tests check matrix editing, export parity, infeasible states, data provenance, and keyboard/accessibility behavior.
 
+## Pinned Agent Skills
+
+SXU implementation follows the upstream skills `incremental-implementation`,
+`test-driven-development`, `doubt-driven-development`, `code-review-and-quality`, and
+`frontend-ui-engineering`, with `using-agent-skills` as the workflow router. The byte-for-byte
+snapshot and immutable source commit are recorded in `contracts/agent/agent-skills.pin.json`.
+Run `npm run check:agent-skills-pin` to verify its SHA-256 and Git blob pins; CI runs the same
+check without network access. Skill changes require reviewing the upstream commit and intentionally
+updating the manifest.
+
 ## Sequence
 
-Owner resolves open questions and approves this spec, plan, task list, and white-paper design. Then scaffold service and contracts, implement compatibility and the LP, add optional MIP rules, build the editor and result views, and finish with OPT run history and as-built evidence. No code starts before approval.
+The owner has approved a bounded setup-only phase: versioned browser configuration, source/use editing, explicit compatibility setup, and validated import/export. This phase does not enable solving or expose recommendations. The remaining model decisions and child-document approval still gate service/model behavior. After those decisions are recorded, scaffold the service contracts, implement the compatibility engine and LP, add optional MIP rules, connect result views and OPT run history, and finish with independent validation and as-built evidence. Follow the pinned Agent Skills throughout.
+
+See [HANDOFF.md](HANDOFF.md) for the current branch checkpoint, verified commands, implementation boundary, open decisions, and ordered next steps.

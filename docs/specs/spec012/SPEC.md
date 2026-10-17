@@ -2,9 +2,9 @@
 
 - **ID:** spec012-configurable-sources-uses
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-021–029, REQ-041
-- **Status:** Draft — pending owner review; not approved for implementation
+- **Status:** Draft — bounded setup-only phase approved; full optimizer pending decisions and review
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** — (pending owner review)
+- **Approver:** Owner (setup-only phase scope; full optimizer approval remains pending)
 - **Last updated:** 2026-10-17
 
 > WHAT and WHY only. Implementation details belong in `PLAN.md` and `TASKS.md`.
@@ -34,6 +34,14 @@ A source may cover a use only when explicit compatibility rules allow it. Curren
 - Using market prices not supplied with provenance by the configuration.
 - Claiming MIP shadow prices are exact LP duals.
 - The optional security-level bridge to IBAL prime (0018 REQ-026) in the first release.
+
+## Approved implementation boundary
+
+The owner has authorized a setup-only phase: users may manage named configurations, source/use
+records, explicit compatibility states, and CSV/JSON import/export. This approval does not authorize
+solving, recommendations, a production service/model contract, result views, or OPT run-history
+integration. Those remain gated on the open decisions below and approval of the complete spec and
+its child design documents.
 
 ## Requirements
 

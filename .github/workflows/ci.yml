@@ -29,6 +29,9 @@ jobs:
       - name: QuantSmith pin record (spec009)
         run: bash scripts/check-quantsmith-pin.sh
 
+      - name: Agent Skills pin (spec012)
+        run: npm run check:agent-skills-pin
+
       - name: Metric registry is up to date (spec009)
         run: npm run check:agent-metric-registry
 

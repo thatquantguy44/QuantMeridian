@@ -1,0 +1,97 @@
+{
+  "schema_version": "agent-skills-pin/2",
+  "source": {
+    "repository": "thatquantguy44/agent-skills",
+    "url": "https://github.com/thatquantguy44/agent-skills",
+    "commit": "f63ec56a3cc936408d792956ae583c3c96a825bd",
+    "reviewed_on": "2026-10-17"
+  },
+  "skills": [
+    "using-agent-skills",
+    "incremental-implementation",
+    "test-driven-development",
+    "doubt-driven-development",
+    "code-review-and-quality",
+    "frontend-ui-engineering"
+  ],
+  "files": [
+    {
+      "source_path": "skills/using-agent-skills/SKILL.md",
+      "local_path": ".agents/skills/using-agent-skills/SKILL.md",
+      "git_blob_sha": "b250b297c41369ac380eb322f6561c78dd177586",
+      "sha256": "sha256:a7c63bf4a368b4e333cbbe4b174f390de76194d57370bb79a89f7e87ce1cf9a8"
+    },
+    {
+      "source_path": "skills/incremental-implementation/SKILL.md",
+      "local_path": ".agents/skills/incremental-implementation/SKILL.md",
+      "git_blob_sha": "6df12f9a878c80305c42bcdbe8a43a10d2e0c933",
+      "sha256": "sha256:3a3581e7084a0dc85af420afcc91211a159d3dc46f3d81075a4d53c566b70b80"
+    },
+    {
+      "source_path": "skills/test-driven-development/SKILL.md",
+      "local_path": ".agents/skills/test-driven-development/SKILL.md",
+      "git_blob_sha": "0cfd2f33d78961a23365b34bd92e08026dd140bc",
+      "sha256": "sha256:440fb3c9b76f4f1b0b564dfbaec19d370beab0167a3e2ab048ce59c5a865ecef"
+    },
+    {
+      "source_path": "skills/doubt-driven-development/SKILL.md",
+      "local_path": ".agents/skills/doubt-driven-development/SKILL.md",
+      "git_blob_sha": "ea46342c5dcfe445004a6fa5bc43e71f3f25e78d",
+      "sha256": "sha256:0a058297aa6bdf90b0ff45c3537af4cb0005f4af6b0d202fc07b7b5984db50ea"
+    },
+    {
+      "source_path": "skills/code-review-and-quality/SKILL.md",
+      "local_path": ".agents/skills/code-review-and-quality/SKILL.md",
+      "git_blob_sha": "7dfa56362fa65fff450ee5aa02393b85b9c26d85",
+      "sha256": "sha256:8f3cabca581bbf7cb5f0add3f7454e7a4523f9d4353a6a4a217e6fa515309612"
+    },
+    {
+      "source_path": "skills/frontend-ui-engineering/SKILL.md",
+      "local_path": ".agents/skills/frontend-ui-engineering/SKILL.md",
+      "git_blob_sha": "837df875900d4d431c6d51a3251bac0d4bd5dfed",
+      "sha256": "sha256:2b74ac4862be3902ec918dceac9366a6fe83b9e003601c0deaf6be09c1766aca"
+    },
+    {
+      "source_path": "references/definition-of-done.md",
+      "local_path": ".agents/references/definition-of-done.md",
+      "git_blob_sha": "35e39f9e15f6dd0ff4725a6e5cbce7f2aa69064a",
+      "sha256": "sha256:d1c75d2ae65d2c7a9cd01f93fa8de63e00e75f2fe5d08be224d576157054dcee"
+    },
+    {
+      "source_path": "references/testing-patterns.md",
+      "local_path": ".agents/references/testing-patterns.md",
+      "git_blob_sha": "bc96e271ad241ca567f06d21c6ecc001455b80f1",
+      "sha256": "sha256:f0bf05acd0edcadc27297ad5b74f104c8103ccfedba1a05cd6d6ae4af8364c56"
+    },
+    {
+      "source_path": "references/orchestration-patterns.md",
+      "local_path": ".agents/references/orchestration-patterns.md",
+      "git_blob_sha": "09cddd31d52a95be1d9bca814547d184b9945e44",
+      "sha256": "sha256:61e543d86f19f86b83074f8c1c769455c7085a2c72dd47b1da21a8c63785be4a"
+    },
+    {
+      "source_path": "references/security-checklist.md",
+      "local_path": ".agents/references/security-checklist.md",
+      "git_blob_sha": "0f656479b05812383abfd8d11ab72a6d7dd47e14",
+      "sha256": "sha256:a8bbff3b1ac9122985e98fbe9a8fa09cd8ad53b190bac7f8f0f63687900f7d7a"
+    },
+    {
+      "source_path": "references/performance-checklist.md",
+      "local_path": ".agents/references/performance-checklist.md",
+      "git_blob_sha": "ba9744fe60dbe4f04f3f907029638d923158d7a2",
+      "sha256": "sha256:40f564d1e62341e277c01ba42c42d95264b9ef3b8e5a23249dc6e121a7e70067"
+    },
+    {
+      "source_path": "references/accessibility-checklist.md",
+      "local_path": ".agents/references/accessibility-checklist.md",
+      "git_blob_sha": "c8c61e5f3d5a010a0d0ecb918bfaffe6c76fca78",
+      "sha256": "sha256:61c759d94d52296231f5f310b92b401f56c44e4430dc3cc95ebac5d7b1d5ffac"
+    },
+    {
+      "source_path": "LICENSE",
+      "local_path": ".agents/LICENSE",
+      "git_blob_sha": "d67778ada6b9cda6227e9130da182c13e73c8b2e",
+      "sha256": "sha256:6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7"
+    }
+  ]
+}
