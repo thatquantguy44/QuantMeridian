@@ -179,7 +179,7 @@ export default function OptimizationCenter() {
       >
         <div className="p-2">
           <p className="mb-2 text-xs text-term-text-dim">
-            ${connections?.approval ?? "Checking approved model bindings…"}
+            {connections?.approval ?? "Checking approved model bindings…"}
           </p>
           {connectionsError && (
             <div role="alert" className="mb-2 border border-term-down/40 bg-term-down/5 px-2 py-1.5 text-xs text-term-down">
@@ -187,7 +187,7 @@ export default function OptimizationCenter() {
             </div>
           )}
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            ${(connections?.connections ?? []).map((connection) => (
+            {(connections?.connections ?? []).map((connection) => (
               <div key={connection.family} className="border border-term-border bg-term-panel px-3 py-2">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-bold text-term-text">{connection.family} · {connection.label}</span>
