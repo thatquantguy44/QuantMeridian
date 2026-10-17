@@ -1,5 +1,6 @@
+"use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
@@ -18,6 +19,30 @@ import {
   type SolverStatus,
 } from "@/data/optimization";
 import { fmtAbbr, fmtUsdAbbr, fmtBps, fmtPct, fmtInt } from "@/lib/format";
+
+type ConnectionStatus = "READY" | "UNCONFIGURED" | "UNAVAILABLE" | "INCOMPATIBLE";
+
+interface OptimizationConnection {
+  family: "MMKT" | "COLL";
+  label: string;
+  binding_status: ConnectionStatus;
+  service_health: ConnectionStatus;
+  detail: string;
+  model_status: string | null;
+  api_schema_version: string | null;
+}
+
+interface ConnectionsResponse {
+  approval: string;
+  connections: OptimizationConnection[];
+}
+
+function connectionTone(status: ConnectionStatus): "up" | "down" | "amber" | "blue" {
+  if (status === "READY") return "up";
+  if (status === "UNAVAILABLE") return "down";
+  if (status === "INCOMPATIBLE") return "blue";
+  return "amber";
+}
 
 const TYPE_TABS: { key: OptType | "ALL"; label: string }[] = [
   { key: "ALL", label: "All" },
@@ -42,6 +67,31 @@ export default function OptimizationCenter() {
   const beforeAfter = getBeforeAfter();
 
   const [tab, setTab] = useState<OptType | "ALL">("ALL");
+
+  const [connections, setConnections] = useState<ConnectionsResponse | null>(null);
+  const [connectionsLoading, setConnectionsLoading] = useState(true);
+  const [connectionsError, setConnectionsError] = useState<string | null>(null);
+
+  const refreshConnections = useCallback(async () => {
+    setConnectionsLoading(true);
+    setConnectionsError(null);
+    try {
+      const response = await fetch("/api/optimization/connections", { cache: "no-store" });
+      const body = (await response.json()) as ConnectionsResponse;
+      if (!response.ok || !Array.isArray(body.connections)) {
+        throw new Error("Connection status unavailable.");
+      }
+      setConnections(body);
+    } catch {
+      setConnectionsError("Connection status could not be loaded. Retry to check service health.");
+    } finally {
+      setConnectionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshConnections();
+  }, [refreshConnections]);
 
   const firstOptimal = allRuns.find((r) => r.status === "OPTIMAL") ?? allRuns[0];
   const [selectedId, setSelectedId] = useState<string>(firstOptimal.id);
@@ -107,6 +157,57 @@ export default function OptimizationCenter() {
         desc="Solver Runs · Duals · Impact Analysis"
         right={<span className="flex items-center gap-1"><ProvenanceBadge source="SIM" /><Tag tone="amber">{activeRuns} RUNNING</Tag></span>}
       />
+
+      <div className="mx-2 mt-2 border border-term-amber/40 bg-term-amber/5 px-3 py-2 text-xs text-term-text-dim">
+        <span className="mr-2 font-bold text-term-amber">SIMULATION DATA</span>
+        The legacy run, savings, dual, and trade panels below are illustrative demo data. They are not live optimizer results or recommendations.
+      </div>
+
+      <Panel
+        title="Model Connections"
+        code="BINDINGS"
+        right={
+          <button
+            type="button"
+            onClick={() => void refreshConnections()}
+            disabled={connectionsLoading}
+            className="border border-term-border px-2 py-1 text-3xs font-semibold uppercase text-term-text-dim hover:bg-term-panel-2 disabled:opacity-50"
+          >
+            {connectionsLoading ? "Checking…" : "Refresh status"}
+          </button>
+        }
+      >
+        <div className="p-2">
+          <p className="mb-2 text-xs text-term-text-dim">
+            ${connections?.approval ?? "Checking approved model bindings…"}
+          </p>
+          {connectionsError && (
+            <div role="alert" className="mb-2 border border-term-down/40 bg-term-down/5 px-2 py-1.5 text-xs text-term-down">
+              ${connectionsError}
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            ${(connections?.connections ?? []).map((connection) => (
+              <div key={connection.family} className="border border-term-border bg-term-panel px-3 py-2">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-term-text">{connection.family} · {connection.label}</span>
+                  <div className="flex gap-1">
+                    <Tag tone={connectionTone(connection.binding_status)}>BINDING {connection.binding_status}</Tag>
+                    <Tag tone={connectionTone(connection.service_health)}>SERVICE {connection.service_health}</Tag>
+                  </div>
+                </div>
+                <p className="text-xs text-term-text-dim">{connection.detail}</p>
+                {connection.model_status && (
+                  <p className="mt-1 text-3xs text-term-text-mute">Service model status: {connection.model_status}</p>
+                )}
+              </div>
+            ))}
+            {connectionsLoading && !connections && (
+              <div className="border border-term-border bg-term-panel px-3 py-3 text-xs text-term-text-mute">Checking MMKT and collateral service health…</div>
+            )}
+          </div>
+        </div>
+      </Panel>
 
       <KpiStrip>
         <Stat label="Active Runs" value={fmtInt(activeRuns)} sub={`${allRuns.length} total today`} />
