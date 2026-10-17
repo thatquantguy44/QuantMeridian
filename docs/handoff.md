@@ -59,7 +59,9 @@ specified in that repo's `specs/spec009` and **Phase 0 is open as
 [EcoMedallion PR #81](https://github.com/thatquantguy44/EcoMedallion/pull/81)** (branch
 `claude/spec009-mmkt-rate-feed`): an instrument map, a basis-normalizing snapshot engine, a live probe,
 and one inactive manifest entry. **Nothing there is live-verified** — the environment it was built in
-cannot reach FRED. Do not treat the feed as real until XR-1 is done. Tracked here so it is not lost:
+cannot reach FRED. Do not treat the feed as real until XR-1 is done. Tracked here, and in
+[QuantMeridian issue #149](https://github.com/thatquantguy44/QuantMeridian/issues/149) so the list does
+not depend on this branch being merged:
 
 | ID | Follow-up | Owner / where | Blocks | Status |
 | --- | --- | --- | --- | --- |
