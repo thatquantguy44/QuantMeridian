@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "quantmeridian-optimization-core"
+version = "0.1.0"
+description = "Shared sparse linear optimization primitives for QuantMeridian services."
+requires-python = ">=3.12"
+dependencies = ["numpy>=2.0", "scipy>=1.13"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/optimization_core"]
