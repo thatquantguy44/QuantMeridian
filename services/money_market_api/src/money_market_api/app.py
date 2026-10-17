@@ -22,7 +22,8 @@ from .contracts import (
     OptimizeRequest,
     RunResult,
 )
-from .optimizer import ModelInputError, ModelSolveError, solve_request
+from .optimizer import ModelInputError, ModelSolveError
+from .scenarios import solve_scenario_request
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("money_market_api")
@@ -133,7 +134,7 @@ async def create_run(
             )
 
     try:
-        result = solve_request(payload)
+        result = solve_scenario_request(payload)
     except ModelInputError as exc:
         return JSONResponse(
             status_code=422,
@@ -181,6 +182,7 @@ async def create_run(
         "status": "optimal_verified",
         "model_family": result["model_family"],
         "rate_source": payload.rate_snapshot.source,
+        "cash_forecast_case": result["cash_forecast_case"],
         "rate_as_of_date": payload.rate_snapshot.as_of_date,
         "sim_set_id": payload.rate_snapshot.sim_set_id,
     }
