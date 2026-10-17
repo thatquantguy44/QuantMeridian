@@ -165,6 +165,8 @@ class ExposureLimit(StrictModel):
 
 class PolicyInputs(StrictModel):
     policy_id: str = Field(min_length=1, max_length=128)
+    # Backward-compatible default preserves the existing p50 base case.
+    cash_forecast_case: Literal["p10", "p50", "p90"] = "p50"
     # Null means that currencies are solved independently.
     objective_currency: str | None = Field(pattern=r"^[A-Z]{3}$")
     daily_liquidity_floors: list[LiquidityFloor] = Field(max_length=366)
@@ -279,6 +281,7 @@ class RunMetadata(StrictModel):
     status: Literal["optimal_verified"]
     model_family: Literal["continuous_lp_relaxation"]
     rate_source: Literal["gold", "sim"]
+    cash_forecast_case: Literal["p10", "p50", "p90"]
     rate_as_of_date: date
     sim_set_id: str | None
 

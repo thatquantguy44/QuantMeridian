@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date
 from typing import Any
 
 from .contracts import OptimizeRequest
@@ -50,11 +49,12 @@ def solve_scenario_request(payload: OptimizeRequest) -> dict[str, Any]:
     """Solve the selected p10/p50/p90 cash scenario and label the result."""
     result = solve_request(_scenario_request(payload))
     case = payload.policy.cash_forecast_case
+    case_label = {"p10": "downside", "p50": "base", "p90": "upside"}[case]
     result["cash_forecast_case"] = case
     result["assumptions"] = [
         (
             f"Estimated residual cash uses the submitted {case} forecast quantile "
-            f"({{'p10': 'downside', 'p50': 'base', 'p90': 'upside'}[case]} case); "
+            f"({case_label} case); "
             "account opening cash is rebased consistently across the horizon."
         ),
         *[item for item in result["assumptions"] if not item.startswith("Estimated residual cash uses")],
