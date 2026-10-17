@@ -116,6 +116,38 @@ class RunResponse(StrictModel):
     result: dict[str, Any]
 
 
+class ScenarioCatalogItem(StrictModel):
+    scenario_type: str
+    version: str
+    description: str
+    applicable_families: tuple[str, ...]
+    parameters_schema: dict[str, Any]
+
+
+class ScenarioCatalogResponse(StrictModel):
+    api_schema_version: Literal["1.0.0"] = "1.0.0"
+    scenarios: tuple[ScenarioCatalogItem, ...]
+
+
+class ScenarioStressRequest(StrictModel):
+    dataset: DatasetEnvelope
+    run_config: RunConfig = Field(default_factory=RunConfig)
+    baseline_result: dict[str, Any]
+    scenario_type: str = Field(min_length=1, max_length=80)
+    parameters: dict[str, Any]
+
+
+class ScenarioStressResponse(StrictModel):
+    api_schema_version: Literal["1.0.0"] = "1.0.0"
+    source: SourceDisclosure
+    request_hash: str
+    baseline_run_id: str
+    baseline_config_hash: str
+    scenario_type: str
+    generated_scenarios: tuple[dict[str, Any], ...]
+    stress_report: dict[str, Any]
+
+
 class ExportRequest(StrictModel):
     dataset: DatasetEnvelope
     result: dict[str, Any]

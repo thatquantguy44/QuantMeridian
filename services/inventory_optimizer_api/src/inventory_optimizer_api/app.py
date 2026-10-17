@@ -23,11 +23,14 @@ from .contracts import (  # noqa: E402
     ExportRequest,
     LocatedIssue,
     RunRequest,
+    ScenarioStressRequest,
     SyntheticConfig,
 )
 from .engine_service import (  # noqa: E402
     DatasetValidationError,
     export_bundle,
+    run_scenario_stress,
+    scenario_catalog,
     solve,
     validation_report,
 )
@@ -190,6 +193,24 @@ async def validate_dataset(
     return report.model_dump(mode="json")
 
 
+@app.get("/v1/scenarios/catalog")
+async def get_scenario_catalog(
+    correlation_id: Annotated[str, Depends(require_service_auth)],
+) -> dict[str, Any]:
+    try:
+        catalog = scenario_catalog()
+    except RuntimeError:
+        return _error(
+            503,
+            "ENGINE_INCOMPATIBLE",
+            "unavailable",
+            "Pinned optimizer engine is not ready.",
+            correlation_id=correlation_id,
+        )
+    emit("scenario_catalog_read", correlation_id=correlation_id)
+    return catalog.model_dump(mode="json")
+
+
 @app.post("/v1/runs", response_model=None)
 async def create_run(
     run: RunRequest,
@@ -197,7 +218,13 @@ async def create_run(
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> dict[str, Any] | JSONResponse:
     if not idempotency_key or len(idempotency_key) > 128:
-        return _error(400, "IDEMPOTENCY_KEY_REQUIRED", "validation", "A bounded Idempotency-Key is required.", correlation_id=correlation_id)
+        return _error(
+            400,
+            "IDEMPOTENCY_KEY_REQUIRED",
+            "validation",
+            "A bounded Idempotency-Key is required.",
+            correlation_id=correlation_id,
+        )
     try:
         async with SOLVE_SLOTS:
             async with asyncio.timeout(run.run_config.solver_time_limit_seconds + 5.0):
@@ -218,6 +245,68 @@ async def create_run(
         return _error(503, "ENGINE_INCOMPATIBLE", "unavailable", "Pinned optimizer engine is not ready.", correlation_id=correlation_id)
     except TimeoutError:
         return _error(504, "SOLVE_TIMEOUT", "timeout", "Solve exceeded the service deadline.", correlation_id=correlation_id)
+
+
+@app.post("/v1/scenarios/stress-test", response_model=None)
+async def create_scenario_stress_test(
+    run: ScenarioStressRequest,
+    correlation_id: Annotated[str, Depends(require_service_auth)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> dict[str, Any] | JSONResponse:
+    if not idempotency_key or len(idempotency_key) > 128:
+        return _error(
+            400,
+            "IDEMPOTENCY_KEY_REQUIRED",
+            "validation",
+            "A bounded Idempotency-Key is required.",
+            correlation_id=correlation_id,
+        )
+    try:
+        async with SOLVE_SLOTS:
+            async with asyncio.timeout(305.0):
+                with timed(
+                    "scenario_stress",
+                    correlation_id=correlation_id,
+                    source_mode=run.dataset.source.mode,
+                ):
+                    response = await asyncio.to_thread(
+                        run_scenario_stress,
+                        run,
+                        correlation_id=correlation_id,
+                        idempotency_key=idempotency_key,
+                    )
+        return response.model_dump(mode="json")
+    except (DatasetValidationError, RunConfigurationError) as exc:
+        emit(
+            "scenario_stress_rejected",
+            correlation_id=correlation_id,
+            issue_codes=[item.code for item in exc.issues],
+            issue_count=len(exc.issues),
+        )
+        return _error(
+            422,
+            "SCENARIO_RUN_REJECTED",
+            "validation",
+            "Scenario run validation failed.",
+            correlation_id=correlation_id,
+            issues=exc.issues,
+        )
+    except RuntimeError:
+        return _error(
+            503,
+            "ENGINE_INCOMPATIBLE",
+            "unavailable",
+            "Pinned optimizer engine is not ready.",
+            correlation_id=correlation_id,
+        )
+    except TimeoutError:
+        return _error(
+            504,
+            "SCENARIO_TIMEOUT",
+            "timeout",
+            "Scenario stress run exceeded the service deadline.",
+            correlation_id=correlation_id,
+        )
 
 
 @app.post("/v1/exports/result-tables", response_model=None)

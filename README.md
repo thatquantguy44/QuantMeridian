@@ -426,7 +426,7 @@ Use this section as the running handoff log whenever a feature moves from planni
 #### 2026-09-16 — InventoryBallast integration checkpoint (`IBAL`)
 
 - Added **InventoryBallast (`IBAL`)** as a separate Optimization-group module at `/inventory-optimizer`; the existing simulated **Optimization Center (`OPT`)** remains unchanged.
-- Added `services/inventory_optimizer_api`, a pinned FastAPI companion service for InventoryBallast commit `74737e53bf9821089c6aa2aeca5dffc4e67c81b7`, including synthetic generation, XLSX/JSON templates and upload parsing, validation, solve, and engine-owned result bundle export.
+- Added `services/inventory_optimizer_api`, a pinned FastAPI companion service for InventoryBallast, including synthetic generation, XLSX/JSON templates and upload parsing, validation, solve, and engine-owned result bundle export. Its current immutable engine pin is recorded in the capability manifest.
 - Added server-only `/api/inventory-optimizer/*` proxy routes so the browser never receives the service URL or bearer token; production defaults remain off pending explicit owner approval and trusted access/authentication.
 - Checkpoint verification: Python service tests passed (`5 passed`, one upstream Starlette deprecation warning) and a direct synthetic starter smoke solved to `optimal` with a non-empty export bundle. Remaining before final close-out: PR #119 Vercel/CI, broader parity/error/security tests, full workbench state/result tabs, Data Ops health, ops docs, and browser E2E/screenshots.
 - Source-of-truth product/spec handoff lives in InventoryBallast: `specs/0013-market-terminal-integration/`.
@@ -437,6 +437,12 @@ Use this section as the running handoff log whenever a feature moves from planni
 - Made dataset readiness explicit in the workbench and renamed the ready solve action to **Base Case Run**.
 - Added preset what-if scenarios plus scenario-level comparison and scenario-specific route/inventory detail.
 - Added focused Playwright coverage for the live IBAL browser path; see `docs/features/IBAL_WHAT_IF_HANDOFF.md` for the exact runbook and current caveats.
+
+#### 2026-10-17 — InventoryBallast scenario engine integration started (`IBAL`)
+
+- Re-pinned the adapter to merged InventoryBallast `main` commit `e84801b65a4d1c23b19cb34b0de1e217f6b345f9` and updated the strict package fingerprint.
+- Added an authenticated engine scenario catalog and stress-test endpoint that use the current validated dataset and a matching independently verified baseline. Results include engine-generated scenario lineage, ranked stress outcomes, signed entity driver deltas, and reconciliation residuals.
+- Added the Scenario Studio panel, parameter-schema reference, baseline/config identity display, attribution table, and CSV export. The existing synthetic-profile what-if sweep remains available separately.
 
 #### 2026-07-17 — Gold DB migration: DB-first economics & macro (all 22 economic modules)
 
