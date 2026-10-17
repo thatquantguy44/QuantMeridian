@@ -2,7 +2,7 @@
 
 **Updated:** 2026-10-17 (top-priority section and EcoMedallion follow-up added; the rest of this file
 was last updated 2026-09-16 and is retained as context)
-**Branch:** `claude/0018-live-poc-showcase`
+**Default branch:** `main` (0018 was merged in PR #148; subsequent follow-up docs were merged in PR #150)
 
 ## ▶ TOP PRIORITY — live proof-of-concept showcase (InventoryBallast spec `0018`, set 2026-10-17)
 
@@ -10,8 +10,7 @@ was last updated 2026-09-16 and is retained as context)
 Focus" and "Next Work" below; those stay as context.
 
 **Source of truth:** `thatquantguy44/InventoryBallast`, `specs/0018-live-poc-showcase/`
-(`spec.md`, `plan.md`, `tasks.md`), on branch `claude/0018-live-poc-showcase` until merged. That
-spec is the work queue; this section only says where to start on the terminal side.
+(`spec.md`, `plan.md`, `tasks.md`) on `main`. That spec is the work queue; this section only says where to start on the terminal side.
 
 **What lands in this repo** (four of the five workstreams; Workstream A is engine work in
 InventoryBallast):
