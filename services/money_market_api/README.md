@@ -1,30 +1,41 @@
 # QuantMeridian Money Market API
 
-This package scaffolds the private model-service boundary for MMKT on port `8014`. The
+This package provides the private model-service boundary for MMKT on port `8014`. The
 terminal remains responsible for Gold DB reads, SIM selection, rate snapshot construction, and
 the rate snapshot hash. This service has no database or market-data client.
 
-The versioned request contract validates the full rate snapshot, preserves each row's status and
-normalized `mm_yield_pct`, and requires an explicit `sim_set_id` when the caller selects `SIM`.
-It also requires dated cash forecast points, candidate instruments linked to snapshot rows, a
-declared horizon, and explicit policy fields (including explicit nulls for undecided limits and
-currency aggregation). No policy defaults are inferred. Non-OK rows remain visible as evidence;
-the current scaffold does not price or filter instruments because no optimizer model is implemented.
+`POST /v1/runs` now builds a sparse continuous LP with the shared
+`services/optimization_core` package, solves through SciPy HiGHS, and independently verifies
+variable bounds, every model row, and the reconstructed objective before returning allocations.
+Only `status=ok` rate rows with normalized `mm_yield_pct` can be priced. Infeasible runs return
+no allocation. Run metadata includes the request and rate-snapshot hashes, source, as-of date,
+and explicit SIM set ID where applicable. Run history is not yet persisted.
 
-`GET /health` is unauthenticated and reports that the service is not ready for solves. The
-capability endpoint and run endpoint require a bearer token in `MONEY_MARKET_API_TOKEN`, a UUID
-`X-Correlation-ID`, and the run endpoint also requires `Idempotency-Key`. In production, protected
-routes fail closed unless `MMKT_ENV=production` and `MMKT_PRODUCTION_ENABLED=true` are both set.
+The result is a **continuous LP relaxation**, not an execution-ready blotter. It does not enforce
+minimum tickets, lot sizes, ticket-count limits, or cutoffs; `execution_ready` is always false.
+WAM/WAL use candidate days-to-maturity as a disclosed proxy because v1.0.0 has no reset or
+amortization schedule. Rating floors use a simplified common long-term notch map; candidates with
+unrecognized ratings are excluded when a floor applies. Remaining forecast residuals use p50;
+supplied rates are held constant across the horizon; cash earns zero yield; holding return uses
+simple ACT/365 on normalized annual yield; explicit costs are charged once per purchase; and
+currencies are optimized independently. Unsupported or inconsistent account cash-continuity
+inputs fail closed. These conventions are returned with every solve.
 
-`POST /v1/runs` validates the typed request and emits a run-attempt metadata record, then returns
-`501 MODEL_NOT_IMPLEMENTED`. The metadata is not durable run history and an idempotency key is not
-yet enforced against storage. `solver_adapter.py` provides the model-neutral bridge to
-`optimization_core` and its independent verifier; the MMKT model is not wired to it yet. This
-boundary deliberately does not claim a solve or recommendation.
+By default, `GET /health` and `/v1/capabilities` report `UNCONFIGURED`, solving is disabled,
+and `POST /v1/runs` returns `501 MODEL_NOT_CONFIGURED`. An operator can explicitly select the
+local prototype with `MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1`; health and capabilities then
+identify the binding, and the run endpoint enables the LP. This is a deployment choice, not a
+browser-controlled setting. The capability endpoint and run endpoint also require a bearer token
+in `MONEY_MARKET_API_TOKEN`, a UUID `X-Correlation-ID`, and runs require `Idempotency-Key`.
+Production proxy access is separately gated by terminal configuration.
+
+The shared optimization core is installed with the API. The idempotency key is logged as a hash
+but not enforced against durable storage. No order is placed and the service does not make a trade
+recommendation.
 
 ## Local boundary
 
-Install this package in a Python 3.12 environment and run:
+Install both packages in a Python 3.12 environment and run:
 
 ```bash
 pip install ./services/optimization_core ./services/money_market_api

@@ -1,9 +1,9 @@
-"""Versioned, strict request and metadata contracts for the MMKT service."""
+"""Versioned, strict request and result contracts for the MMKT service."""
 
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import (
@@ -71,6 +71,8 @@ class HorizonInput(StrictModel):
     def ordered_periods_within_horizon(self) -> HorizonInput:
         if self.end_date < self.start_date:
             raise ValueError("horizon end_date must be on or after start_date")
+        if self.period_dates[0] != self.start_date or self.period_dates[-1] != self.end_date:
+            raise ValueError("period_dates must include both horizon endpoints")
         if self.period_dates != sorted(set(self.period_dates)):
             raise ValueError("period_dates must be unique and increasing")
         if any(day < self.start_date or day > self.end_date for day in self.period_dates):
@@ -163,7 +165,7 @@ class ExposureLimit(StrictModel):
 
 class PolicyInputs(StrictModel):
     policy_id: str = Field(min_length=1, max_length=128)
-    # Null explicitly means the objective is not combined across currencies by this request.
+    # Null means that currencies are solved independently.
     objective_currency: str | None = Field(pattern=r"^[A-Z]{3}$")
     daily_liquidity_floors: list[LiquidityFloor] = Field(max_length=366)
     weekly_liquidity_floors: list[LiquidityFloor] = Field(max_length=60)
@@ -205,7 +207,67 @@ class OptimizeRequest(StrictModel):
         }
         if not floor_dates.issubset(periods):
             raise ValueError("liquidity floor dates must use declared horizon periods")
+        cash_keys = [
+            (point.legal_entity_id, point.account_id, point.currency, point.period_date)
+            for point in self.cash_forecast
+        ]
+        if len(set(cash_keys)) != len(cash_keys):
+            raise ValueError("cash forecast account/date points must be unique")
+        floor_keys = [
+            (floor.legal_entity_id, floor.currency, floor.period_date)
+            for floor in self.policy.daily_liquidity_floors
+            + self.policy.weekly_liquidity_floors
+        ]
+        if len(set(floor_keys)) != len(floor_keys):
+            raise ValueError("liquidity floor entity/currency/date values must be unique")
+        exposure_keys = [
+            (limit.dimension, limit.key, limit.currency)
+            for limit in self.policy.exposure_limits
+        ]
+        if len(set(exposure_keys)) != len(exposure_keys):
+            raise ValueError("exposure limit dimension/key/currency values must be unique")
         return self
+
+
+class AllocationLine(StrictModel):
+    candidate_id: str
+    rate_instrument_id: str
+    legal_entity_id: str
+    account_id: str
+    currency: str
+    purchase_date: date
+    settlement_date: date
+    maturity_date: date
+    amount: FiniteFloat
+    mm_yield_pct: FiniteFloat
+    explicit_cost_bps: FiniteFloat
+    modeled_net_return_pct: FiniteFloat
+
+
+class CashBalance(StrictModel):
+    legal_entity_id: str
+    account_id: str
+    currency: str
+    period_date: date
+    cash: FiniteFloat
+
+
+class VerificationResult(StrictModel):
+    passed: Literal[True] = True
+    max_variable_bound_violation: FiniteFloat
+    max_row_violation: FiniteFloat
+    objective_delta: FiniteFloat
+
+
+class CurrencyResult(StrictModel):
+    currency: str
+    objective_value: FiniteFloat
+    backend: str
+    backend_version: str
+    iterations: int | None
+    allocations: list[AllocationLine]
+    cash_balances: list[CashBalance]
+    verification: VerificationResult
 
 
 class RunMetadata(StrictModel):
@@ -214,23 +276,29 @@ class RunMetadata(StrictModel):
     received_at: AwareDatetime
     request_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     rate_snapshot_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    status: Literal["model_not_implemented"]
+    status: Literal["optimal_verified"]
+    model_family: Literal["continuous_lp_relaxation"]
+    rate_source: Literal["gold", "sim"]
+    rate_as_of_date: date
+    sim_set_id: str | None
 
 
-class RunUnavailable(StrictModel):
+class RunResult(StrictModel):
     api_schema_version: Literal["1.0.0"] = "1.0.0"
-    code: Literal["MODEL_NOT_IMPLEMENTED"] = "MODEL_NOT_IMPLEMENTED"
-    category: Literal["unavailable"] = "unavailable"
-    message: str = "The MMKT service boundary is available; the optimizer model is not implemented."
+    code: Literal["SOLVE_COMPLETE"] = "SOLVE_COMPLETE"
     correlation_id: UUID
     run: RunMetadata
+    currency_results: list[CurrencyResult]
+    excluded_currencies: list[str]
+    execution_ready: Literal[False] = False
+    assumptions: list[str]
 
 
 class HealthResponse(StrictModel):
-    status: Literal["unready"] = "unready"
-    ready: Literal[False] = False
+    status: Literal["ready", "unconfigured"]
+    ready: bool
     api_schema_version: Literal["1.0.0"] = "1.0.0"
-    model_status: Literal["not_implemented"] = "not_implemented"
+    model_status: Literal["continuous_lp_relaxation", "not_configured"]
     auth_configured: bool
     database_access: Literal[False] = False
     market_data_access: Literal[False] = False
@@ -241,7 +309,9 @@ class CapabilityManifest(StrictModel):
     service: Literal["money_market_api"] = "money_market_api"
     port: Literal[8014] = 8014
     request_validation: Literal[True] = True
-    solver_enabled: Literal[False] = False
+    solver_enabled: bool
     database_access: Literal[False] = False
     market_data_access: Literal[False] = False
     model_families: tuple[str, ...] = ()
+    readiness: Literal["READY", "UNCONFIGURED"]
+    binding_id: str | None

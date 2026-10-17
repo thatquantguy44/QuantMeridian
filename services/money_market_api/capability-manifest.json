@@ -6,5 +6,7 @@
   "solver_enabled": false,
   "database_access": false,
   "market_data_access": false,
-  "model_families": []
+  "model_families": [],
+  "readiness": "UNCONFIGURED",
+  "binding_id": null
 }
