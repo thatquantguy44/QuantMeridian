@@ -92,7 +92,6 @@ export async function GET() {
 
   return json(
     {
-      source: "DB",
       ok: true,
       approval: "No Spec015 model bindings are registered in the optimization registry yet.",
       connections: [
