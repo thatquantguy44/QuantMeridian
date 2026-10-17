@@ -15,7 +15,7 @@ The result is a **continuous LP relaxation**, not an execution-ready blotter. It
 minimum tickets, lot sizes, ticket-count limits, or cutoffs; `execution_ready` is always false.
 WAM/WAL use candidate days-to-maturity as a disclosed proxy because v1.0.0 has no reset or
 amortization schedule. Rating floors use a simplified common long-term notch map; candidates with
-unrecognized ratings are excluded when a floor applies. Remaining forecast residuals use p50;
+unrecognized ratings are excluded when a floor applies. Cash forecast residuals use the selected `policy.cash_forecast_case` quantile (`p10` downside, `p50` base, or `p90` upside); each run records the selected case, and callers can submit one run per case for comparison. Account opening cash is rebased across periods using the selected flows. The p10/p50/p90 labels are supplied forecast quantiles, not calibrated probabilities;
 supplied rates are held constant across the horizon; cash earns zero yield; holding return uses
 simple ACT/365 on normalized annual yield; explicit costs are charged once per purchase; and
 currencies are optimized independently. Unsupported or inconsistent account cash-continuity
