@@ -1,8 +1,52 @@
 # Market Terminal Handoff
 
-**Updated:** 2026-09-16
-**Branch:** `feature/ibal-inventory-optimizer`
-**Latest pushed branch commit:** `017094d` — `Add InventoryBallast integration scaffold`
+**Updated:** 2026-10-17 (top-priority section added; the rest of this file was last updated
+2026-09-16 and is retained as context)
+**Branch:** `claude/0018-live-poc-showcase`
+
+## ▶ TOP PRIORITY — live proof-of-concept showcase (InventoryBallast spec `0018`, set 2026-10-17)
+
+**This is the highest-priority work for Market Terminal. Start here.** It outranks "Current
+Focus" and "Next Work" below; those stay as context.
+
+**Source of truth:** `thatquantguy44/InventoryBallast`, `specs/0018-live-poc-showcase/`
+(`spec.md`, `plan.md`, `tasks.md`), on branch `claude/0018-live-poc-showcase` until merged. That
+spec is the work queue; this section only says where to start on the terminal side.
+
+**What lands in this repo** (four of the five workstreams; Workstream A is engine work in
+InventoryBallast):
+
+| Workstream | Child spec (to draft under `docs/specs/`) | Code |
+| --- | --- | --- |
+| B — IBAL showcase: engine re-pin (currently `74737e5`, 40 commits behind), diagnostic tabs, Scenario Studio (`0013` T-017), presenter mode | `spec013` | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
+| C — Money market execution optimizer (new `MMKT` module) | `spec011` | `services/money_market_api/` (port 8014), `src/app/money-market/` |
+| D — Configurable sources and uses on LP/MIP (replaces the random-number mock) | `spec012` | `services/sources_uses_api/` (port 8015), `src/app/sources-uses/` |
+| E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` | `services/liquidity_api/` (port 8016), `src/app/liquidity/` |
+| Shared — model library: sparse builder, HiGHS adapter, verifier, elastic relaxation | — | `services/optimization_core/` (a library, not a service) |
+| White papers, one per model (mechanics, theory, application) | — | `docs/whitepapers/` |
+
+The OPT page's fabricated "Gurobi"/"OR-Tools" runs are replaced by real run history from all
+four services (REQ-029). Every number shown must come from a verified solve or a labeled input.
+
+**Owner decisions (2026-10-17)** — do not re-open:
+
+1. A separate Python service per module, sharing `services/optimization_core`. Services never
+   call each other; the terminal's server routes compose them.
+2. The demo runs locally. CI/Vercel repair stays deferred, as before.
+3. All of InventoryBallast `0017` (prime) before the demo.
+4. All five workstreams.
+
+Still open: MMKT rate data (Gold DB with as-of labels recommended), the ML stack (scikit-learn
+recommended), and whether the liquidity cockpit replaces `/liquidity` with `/cash-optimizer` as
+its lever view (recommended).
+
+**Pick up here on the terminal side:**
+
+1. Draft `docs/specs/spec011`–`spec014` (`SPEC.md`, `PLAN.md`, `TASKS.md`), each citing `0018`'s
+   REQ IDs and including its white paper design draft. Get owner approval before code.
+2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
+3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
+   (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
 
 ## Current Focus
 
@@ -313,6 +357,9 @@ and additional volatility experiments after the first reserve/VIX study is
 validated.
 
 ## Next Work
+
+> **Superseded in priority by the ▶ TOP PRIORITY section at the top of this file** (InventoryBallast
+> spec `0018`). The items below remain valid but come after it.
 
 1. Create the NEWS upstream-pipeline persistence handoff from
    `docs/specs/spec002_news_live_intelligence/SPEC.md` Phase 3. This is the next
