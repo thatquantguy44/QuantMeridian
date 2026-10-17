@@ -3,8 +3,8 @@
   "service": "money_market_api",
   "port": 8014,
   "request_validation": true,
-  "solver_enabled": false,
+  "solver_enabled": true,
   "database_access": false,
   "market_data_access": false,
-  "model_families": []
+  "model_families": ["continuous_lp_relaxation"]
 }
