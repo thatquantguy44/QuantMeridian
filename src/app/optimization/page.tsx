@@ -183,7 +183,7 @@ export default function OptimizationCenter() {
           </p>
           {connectionsError && (
             <div role="alert" className="mb-2 border border-term-down/40 bg-term-down/5 px-2 py-1.5 text-xs text-term-down">
-              ${connectionsError}
+              {connectionsError}
             </div>
           )}
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
