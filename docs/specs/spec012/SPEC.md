@@ -39,9 +39,9 @@ A source may cover a use only when explicit compatibility rules allow it. Curren
 
 | ID | Requirement | Parent | Priority |
 |---|---|---|---|
-| SU-001 | Users can create/edit/delete sources and uses with type, amount, cost/bid, currency, legal entity, asset class, tenor, priority, min/max, lot, and tags; named configurations round-trip through CSV/JSON. | REQ-021 | must |
+| SU-001 | Users can create/edit/delete sources and uses with type, amount, cost/bid, currency, legal entity, asset class, tenor, priority, min/max, lot, and tags. Each source has a configurable haircut rate; named configurations round-trip through CSV/JSON. | REQ-021 | must |
 | SU-002 | Source-to-use compatibility is derived from editable rules and displayed as a matrix; overrides are explicit and visible. | REQ-022 | must |
-| SU-003 | LP matches capacity subject to haircut-adjusted coverage. Hard uses are fully covered or infeasible; soft use shortfall is explicit and priced. | REQ-023 | must |
+| SU-003 | LP matches capacity subject to source-level haircut-adjusted coverage: nominal flow consumes source capacity and contributes coverage after that source's configured haircut. Hard uses are fully covered or infeasible; soft use shortfall is explicit and priced. | REQ-023 | must |
 | SU-004 | Priority tiers are solved lexicographically before cost optimization, so lower priority economics cannot displace a higher-tier obligation. | REQ-023 | must |
 | SU-005 | Per-run MIP options include minimum ticket/all-or-none, fixed activation cost, max sources per use, lot size, and exclusive pairings; the executed formulation is disclosed. | REQ-024 | must |
 | SU-006 | The module reports binding rows, source/use shadow prices, infeasibility explanation, matched-flow Sankey, and internalization versus external funding. MIP duals are correctly qualified. | REQ-025 | must |
@@ -59,11 +59,12 @@ A source may cover a use only when explicit compatibility rules allow it. Curren
 - **AC-006:** Infeasibility explanation and duals map to stable source/use IDs; MIP duals identify fixed-integer LP semantics.
 - **AC-007:** Sankey totals, table totals, and verified solution totals agree; internalization denominator is defined in the approved design.
 - **AC-008:** No random-number matches remain; OPT history contains the verified configuration/run hashes.
+- **AC-009:** For each source, nominal flow consumes capacity and haircut-adjusted flow contributes to use coverage; changing a configured source haircut changes the canonical run hash.
 
 ## Decisions and open questions
 
 1. Confirm whether currency mismatches and legal-entity mismatches are always hard incompatibilities or may be allowed by an explicit override.
-2. Define haircut-adjusted coverage units and any rounding convention for fractional capacity.
+2. **Resolved (2026-10-17):** Haircut is attached to each source and is configurable in the source/use configuration, not hard-coded. For a nominal flow `x_ij` from source `i`, source capacity is consumed by `x_ij` and use coverage is credited as `x_ij × (1 − h_i)`, where `h_i` is that source's configured haircut rate. The same source haircut applies to all compatible uses. Pair-specific haircuts are out of scope for the initial release. **Still open:** rounding convention for fractional capacity and coverage.
 3. Confirm internalization-rate numerator/denominator and how to classify “internal” sources.
 4. Confirm whether a configuration can contain multiple currencies in one solve; otherwise enforce one currency per run.
 
