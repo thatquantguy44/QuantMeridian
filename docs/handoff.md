@@ -1,7 +1,7 @@
 # Market Terminal Handoff
 
-**Updated:** 2026-10-17 (top-priority section added; the rest of this file was last updated
-2026-09-16 and is retained as context)
+**Updated:** 2026-10-17 (top-priority section and EcoMedallion follow-up added; the rest of this file
+was last updated 2026-09-16 and is retained as context)
 **Branch:** `claude/0018-live-poc-showcase`
 
 ## ▶ TOP PRIORITY — live proof-of-concept showcase (InventoryBallast spec `0018`, set 2026-10-17)
@@ -36,9 +36,13 @@ four services (REQ-029). Every number shown must come from a verified solve or a
 3. All of InventoryBallast `0017` (prime) before the demo.
 4. All five workstreams.
 
-Still open: MMKT rate data (Gold DB with as-of labels recommended), the ML stack (scikit-learn
-recommended), and whether the liquidity cockpit replaces `/liquidity` with `/cash-optimizer` as
-its lever view (recommended).
+5. **MMKT rate data comes from the owner's MacroMedallion pipeline** (decided 2026-10-17; repo
+   `thatquantguy44/EcoMedallion`, Postgres `macro_medallion` via `MACRO_DB_URL`), with an explicit,
+   user-selected `SIM` set and **no silent fallback**. See "Cross-repo follow-up: EcoMedallion" below —
+   that work is **not finished and nothing in it is live-verified**.
+
+Still open: the ML stack (scikit-learn recommended), and whether the liquidity cockpit replaces
+`/liquidity` with `/cash-optimizer` as its lever view (recommended).
 
 **Pick up here on the terminal side:**
 
@@ -47,6 +51,33 @@ its lever view (recommended).
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
+
+## Cross-repo follow-up: EcoMedallion (MMKT rate feed) — tracked 2026-10-17
+
+MMKT's real rates come from `thatquantguy44/EcoMedallion` (the MacroMedallion pipeline). Its side is
+specified in that repo's `specs/spec009` and **Phase 0 is open as
+[EcoMedallion PR #81](https://github.com/thatquantguy44/EcoMedallion/pull/81)** (branch
+`claude/spec009-mmkt-rate-feed`): an instrument map, a basis-normalizing snapshot engine, a live probe,
+and one inactive manifest entry. **Nothing there is live-verified** — the environment it was built in
+cannot reach FRED. Do not treat the feed as real until XR-1 is done. Tracked here so it is not lost:
+
+| ID | Follow-up | Owner / where | Blocks | Status |
+| --- | --- | --- | --- | --- |
+| XR-1 | **Run the probe live** with network access: `python scripts/probe_mmkt_series.py --fred-key "$FRED_API_KEY" --out probe.json` (EcoMedallion `spec009` AC-006). Fix any quoting-basis label it flags; activate `DCPN3M` if it resolves; save the report as the first real fixture. | Owner, in EcoMedallion | Everything below that reads real rates | **todo** |
+| XR-2 | Review and merge EcoMedallion PR #81. | Owner | XR-3 | **todo** |
+| XR-3 | EcoMedallion Phase 1: wire `gold.mmkt_rate_snapshot` into SQLite, Postgres and Databricks (about eight places; the Spark path needs CI or a real cluster). Until then QuantMeridian **cannot read the table**. | EcoMedallion | `spec011` real-rate mode (`0018` T-010) | **todo** |
+| XR-4 | EcoMedallion Phase 2–3: Treasury bill auction results; SEC Form N-MFP and OFR source clients for money-fund yield, WAM, WAL, daily/weekly liquid assets, and repo by tenor. Each source must clear EcoMedallion `spec006` §4.1 and be recorded in `config/data_licensing.yml`. | EcoMedallion | Realistic MMKT fund parameters (`0018` REQ-017); until then they are user policy inputs labeled "illustrative" | **todo** |
+| XR-5 | **QuantMeridian side:** an `/api/econ/...` route reading `gold.mmkt_rate_snapshot` through the existing `useGoldView` DB \| LOADING \| ERR pattern; build the **rate snapshot** (every row, with its `status`) plus a hash; pass it into the `services/money_market_api` solve request so the service has no database dependency and stays deterministic; record the hash on each run. A row with `status != ok` renders as `ERR` and is not priced off. The `SIM` set is selectable only by an explicit user choice. | QuantMeridian, with `spec011` (`0018` T-010) | MMKT demo | **todo** |
+| XR-6 | `spec011` must cite EcoMedallion `spec009` and its column contract (`instrument_id`, `quoted_rate_pct`, `quoted_basis`, `mm_yield_pct`, `observation_date`, `staleness_days`, `status`, `status_detail`). | QuantMeridian | `spec011` approval | **todo** |
+
+Two facts the terminal side must not lose:
+
+* **Rates are on different quoting bases** (discount for `DTB*` and CP, bond-equivalent for `DGS*`,
+  simple ACT/360 for SOFR/repo/RRP). The snapshot carries both the quoted and a normalized
+  `mm_yield_pct`; MMKT must compare **`mm_yield_pct`**, never `quoted_rate_pct`.
+* **If XR-1 to XR-3 slip,** MMKT is built on the labeled `SIM` set alone and the demo says so (REQ-030);
+  it must not borrow an unlabeled number. The InventoryBallast side is recorded in
+  `specs/0018-live-poc-showcase/spec.md`, "Decided 2".
 
 ## Current Focus
 
