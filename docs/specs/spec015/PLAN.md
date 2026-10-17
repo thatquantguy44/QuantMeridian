@@ -1,7 +1,7 @@
 # Plan: Pluggable Money Market and Collateral Optimization Center
 
 - **Spec:** spec015-pluggable-optimization-center (`SPEC.md`)
-- **Status:** Draft
+- **Status:** Draft — implementation in progress; model binding approval pending
 - **Last updated:** 2026-10-17
 
 ## Architecture
@@ -32,6 +32,10 @@ Durable optimization registry + queue/scheduler/worker
 The model services are isolated deployments and retain their own `/health`, `/v1/capabilities`, `/v1/validate`, and `/v1/runs` boundaries. Extend `services/money_market_api` rather than creating a second MMKT service. Add `services/collateral_optimizer_api` on a configurable URL (8017 is the proposed local port; confirm no collision at implementation). The browser never contacts a Python service directly. The registry and worker own history, scheduling, comparisons, and audits; a model service never needs to read QuantMeridian's database or other services. Model source data is composed by QuantMeridian and passed as an explicit snapshot.
 
 The current `optimization_core` can verify continuous LPs, not MIPs. Use its verifier where it is mathematically sufficient; for other model forms, the adapter must provide an approved independent verifier or the result remains `UNVERIFIED`. Do not silently describe service self-checks as independent verification.
+
+## Current implementation checkpoint
+
+The first Spec015 code slice runs on the `spec015/optimization-center-foundation` branch. It adds a same-origin connection health route and an Optimization Center connection panel. Service health is shown separately from Spec015 binding status, which remains `UNCONFIGURED` until an approved model binding is registered. Legacy generated run, savings, dual, and trade panels remain available only with a prominent SIMULATION DATA notice. This does not approve the local MMKT prototype as a Spec015 model binding.
 
 ## Repository connection contract
 
