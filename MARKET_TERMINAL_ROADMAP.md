@@ -2,6 +2,24 @@
 
 Date: 2026-06-18
 
+## ▶ Current top priority (2026-10-17)
+
+The roadmap below dates from 2026-06-18. **The highest-priority build is now InventoryBallast
+spec `0018-live-poc-showcase`**: a live proof of concept across IBAL, a new money market execution
+optimizer, a configurable sources and uses LP/MIP optimizer, and a liquidity forecasting, shortfall
+and anomaly oversight cockpit, each on its own Python service with a white paper. It delivers
+several modules this roadmap proposed:
+
+| This roadmap | Delivered by `0018` as |
+| --- | --- |
+| §6 `LIQ` — Liquidity & Funding Stress Cockpit | Workstream E (`spec014`, `services/liquidity_api`) |
+| §8 `XOPT` — Real Local Optimization Runner | Workstreams C and D on `services/optimization_core`; OPT shows real run history |
+| §5 `REINV` — Cash Collateral Reinvestment Desk | Partly: the optional engine reinvestment term fed by the MMKT yield (`0018` REQ-010) |
+| "Phase 4: Real Optimization" | Workstreams B–D |
+
+Where to start: `docs/handoff.md`, "▶ TOP PRIORITY". The source of truth is the InventoryBallast
+spec, not this file.
+
 ## Executive Summary
 
 The current `market_terminal` build is already pointed in the right institutional direction: a dense, keyboard-driven securities finance terminal with modules for markets, securities lending, prime finance, collateral, cash, sources and uses, optimization, trading, alerts, AI, and a full Economics & Macro section. The strongest design choice is the explicit linkage between macro conditions and securities finance economics. This is the right spine for collateral management, optimization, securities lending, and funding analytics because those businesses are driven by rates, credit, liquidity, balance sheet usage, and asset availability.
