@@ -20,6 +20,7 @@
     "lint": "tsc --noEmit",
     "check:gold-policy": "bash scripts/check-gold-db-policy.sh",
     "check:quantsmith-pin": "bash scripts/check-quantsmith-pin.sh",
+    "check:agent-skills-pin": "node scripts/check-agent-skills-pin.mjs",
     "export:agent-metric-registry": "vite build --ssr scripts/export-agent-metric-registry.ts --outDir dist-tools && node dist-tools/export-agent-metric-registry.js",
     "check:agent-metric-registry": "vite build --ssr scripts/export-agent-metric-registry.ts --outDir dist-tools && node dist-tools/export-agent-metric-registry.js --check",
     "generate:agent-contracts": "node scripts/generate-agent-contracts.mjs",
