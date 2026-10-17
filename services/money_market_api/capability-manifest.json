@@ -1,0 +1,10 @@
+{
+  "api_schema_version": "1.0.0",
+  "service": "money_market_api",
+  "port": 8014,
+  "request_validation": true,
+  "solver_enabled": false,
+  "database_access": false,
+  "market_data_access": false,
+  "model_families": []
+}

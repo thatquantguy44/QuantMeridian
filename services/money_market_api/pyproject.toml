@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "money-market-api"
+version = "0.1.0"
+description = "Bounded model-service API for QuantMeridian MMKT."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.116,<1",
+  "pydantic>=2.11,<3",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/money_market_api"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"capability-manifest.json" = "money_market_api/capability-manifest.json"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
