@@ -21,9 +21,13 @@ simple ACT/365 on normalized annual yield; explicit costs are charged once per p
 currencies are optimized independently. Unsupported or inconsistent account cash-continuity
 inputs fail closed. These conventions are returned with every solve.
 
-`GET /health` reports LP readiness. The capability endpoint and run endpoint require a bearer
-token in `MONEY_MARKET_API_TOKEN`, a UUID `X-Correlation-ID`, and the run endpoint also requires
-`Idempotency-Key`. Production proxy access is separately gated by the terminal configuration.
+By default, `GET /health` and `/v1/capabilities` report `UNCONFIGURED`, solving is disabled,
+and `POST /v1/runs` returns `501 MODEL_NOT_CONFIGURED`. An operator can explicitly select the
+local prototype with `MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1`; health and capabilities then
+identify the binding, and the run endpoint enables the LP. This is a deployment choice, not a
+browser-controlled setting. The capability endpoint and run endpoint also require a bearer token
+in `MONEY_MARKET_API_TOKEN`, a UUID `X-Correlation-ID`, and runs require `Idempotency-Key`.
+Production proxy access is separately gated by terminal configuration.
 
 The shared optimization core is installed with the API. The idempotency key is logged as a hash
 but not enforced against durable storage. No order is placed and the service does not make a trade

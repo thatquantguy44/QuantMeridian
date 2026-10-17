@@ -295,10 +295,10 @@ class RunResult(StrictModel):
 
 
 class HealthResponse(StrictModel):
-    status: Literal["ready"] = "ready"
-    ready: Literal[True] = True
+    status: Literal["ready", "unconfigured"]
+    ready: bool
     api_schema_version: Literal["1.0.0"] = "1.0.0"
-    model_status: Literal["continuous_lp_relaxation"] = "continuous_lp_relaxation"
+    model_status: Literal["continuous_lp_relaxation", "not_configured"]
     auth_configured: bool
     database_access: Literal[False] = False
     market_data_access: Literal[False] = False
@@ -309,7 +309,9 @@ class CapabilityManifest(StrictModel):
     service: Literal["money_market_api"] = "money_market_api"
     port: Literal[8014] = 8014
     request_validation: Literal[True] = True
-    solver_enabled: Literal[True] = True
+    solver_enabled: bool
     database_access: Literal[False] = False
     market_data_access: Literal[False] = False
-    model_families: tuple[Literal["continuous_lp_relaxation"], ...]
+    model_families: tuple[str, ...] = ()
+    readiness: Literal["READY", "UNCONFIGURED"]
+    binding_id: str | None

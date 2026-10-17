@@ -35,6 +35,10 @@ app = FastAPI(
 )
 
 
+def _local_model_binding_enabled() -> bool:
+    return os.getenv("MONEY_MARKET_MODEL_BINDING", "").strip() == "local-mmkt-lp-v1"
+
+
 def _canonical_hash(payload: dict[str, Any]) -> str:
     canonical = json.dumps(
         payload,
@@ -70,12 +74,23 @@ async def validation_error_handler(_: Request, exc: RequestValidationError) -> J
 
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    return HealthResponse(auth_configured=bool(os.getenv("MONEY_MARKET_API_TOKEN")))
+    enabled = _local_model_binding_enabled()
+    return HealthResponse(
+        status="ready" if enabled else "unconfigured",
+        ready=enabled,
+        model_status="continuous_lp_relaxation" if enabled else "not_configured",
+        auth_configured=bool(os.getenv("MONEY_MARKET_API_TOKEN")),
+    )
 
 
 @app.get("/v1/capabilities", response_model=CapabilityManifest)
 async def capabilities(_: Annotated[UUID, Depends(require_service_auth)]) -> CapabilityManifest:
     raw = json.loads(files("money_market_api").joinpath("capability-manifest.json").read_text())
+    enabled = _local_model_binding_enabled()
+    raw["solver_enabled"] = enabled
+    raw["model_families"] = ["continuous_lp_relaxation"] if enabled else []
+    raw["readiness"] = "READY" if enabled else "UNCONFIGURED"
+    raw["binding_id"] = "local-mmkt-lp-v1" if enabled else None
     return CapabilityManifest.model_validate(raw)
 
 
@@ -85,6 +100,16 @@ async def create_run(
     correlation_id: Annotated[UUID, Depends(require_service_auth)],
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
 ) -> RunResult | JSONResponse:
+    if not _local_model_binding_enabled():
+        return JSONResponse(
+            status_code=501,
+            content={
+                "api_schema_version": "1.0.0",
+                "code": "MODEL_NOT_CONFIGURED",
+                "category": "unavailable",
+                "message": "MMKT has no approved model binding configured.",
+            },
+        )
     request_hash = _canonical_hash(payload.model_dump(mode="json"))
     run_id = uuid4()
     received_at = datetime.now(UTC)
