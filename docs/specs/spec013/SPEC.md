@@ -2,9 +2,9 @@
 
 - **ID:** spec013-ibal-showcase
 - **Parent:** InventoryBallast specs/0018-live-poc-showcase/spec.md, REQ-011–015, REQ-029–030, REQ-041
-- **Status:** Draft — pending owner review; not approved for implementation
+- **Status:** Approved — owner decisions recorded 2026-10-17; implementation authorized
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** — (pending owner review)
+- **Approver:** Joshua Lutkemuller, CFA (2026-10-17)
 - **Last updated:** 2026-10-17
 
 > WHAT and WHY only. Integration architecture belongs in PLAN.md and ordered work in TASKS.md.
@@ -56,11 +56,28 @@ The existing service integration pins an older engine revision and exposes only 
 - **AC-006:** Presenter mode completes at required viewports and reports service failure honestly.
 - **AC-007:** Production stays disabled and no governance gate is modified.
 
-## Decisions required before implementation
+## Decisions (owner, 2026-10-17)
 
-1. Confirm the pin-review process and accepted release identity (commit and package fingerprint).
-2. Confirm which diagnostics are shown by default versus in expandable panels.
-3. Confirm presenter “repair” semantics: user-edited request versus a named corrective scenario.
+1. **Pin review and release identity.** An accepted engine release is identified by three
+   values: the full commit SHA, the package version, and `engine_fingerprint` (the service's
+   existing readiness check compares the loaded engine against both the fingerprint and the
+   commit). The pin may only name a commit already merged to InventoryBallast `main`; branch
+   pins are not accepted. A pin bump is its own QuantMeridian PR that changes only
+   `engine_package_version`, `engine_commit`, `engine_fingerprint` and any contract-parity fixes,
+   passes the service test suite, and links the engine PR it adopts. Rollback is a revert of that
+   PR; nothing else changes.
+2. **Default versus expandable diagnostics.**
+   - Always visible: solve status, verification status, objective, termination reason, engine
+     pin, and request/run hash (the IBAL-007 trust signals; never collapsed).
+   - Shown by default when present: the top binding constraints with their shadow prices.
+   - Expandable panels: full sensitivity ranges, attribution, flow, agency/prime disclosures,
+     and raw output.
+   - Infeasibility explanation opens automatically only when the solve is infeasible.
+3. **Presenter "repair" semantics.** The guided base → shock → diagnose → repair → compare
+   sequence applies a named corrective scenario from the pinned engine's scenario library, so
+   the demo is deterministic, repeatable, and its result is verified in advance. After the guided
+   sequence the presenter may still edit the request by hand; that run is labeled
+   "user-edited" and compared the same way.
 
 ## Related documents
 
