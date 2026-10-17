@@ -2,7 +2,7 @@
 
 This companion service is the only QuantMeridian boundary allowed to construct, validate, solve,
 or export InventoryBallast data. It pins InventoryBallast commit
-`74737e53bf9821089c6aa2aeca5dffc4e67c81b7` and fails readiness if the engine's identity does not
+`e84801b65a4d1c23b19cb34b0de1e217f6b345f9` and fails readiness if the engine's identity does not
 match `capability-manifest.json` or no supported solver backend is installed.
 
 Market Terminal does not require `highspy` by default. The service can solve LP/MIP runs through
@@ -84,9 +84,24 @@ Build a wheel from a checkout with `python -m build --wheel /path/to/InventoryBa
 Port `8013` matches `src/lib/server/inventoryOptimizerProxy.ts`'s default
 `INVENTORY_OPTIMIZER_API_URL` -- change both together if you use a different port.
 `GET /health` is public and contains readiness metadata only. Every `/v1/*` endpoint requires a
-server-held bearer token and `X-Correlation-ID`; run creation also requires `Idempotency-Key`.
+server-held bearer token and `X-Correlation-ID`; run creation and scenario stress runs also require
+`Idempotency-Key`.
 Uploaded rows, normalized requests, and result values are held only for the request lifetime and
 are never logged or persisted.
+
+## Scenario API
+
+`GET /v1/scenarios/catalog` returns the pinned InventoryBallast scenario registry, applicable
+problem families, version, and each parameter model's JSON Schema. `POST
+/v1/scenarios/stress-test` accepts a prepared dataset, run configuration, the matching verified
+baseline result, one registry scenario type, and explicit parameters. The service validates the
+dataset and baseline hashes/configuration, delegates generation and stress execution to the
+engine, and returns generated scenario lineage, ranked outcomes, entity driver deltas, and driver
+reconciliation residuals. A batch is limited to ten generated scenarios and a five-minute
+aggregate solver budget. Borrower-default recovery is never inferred: omitted recovery means zero.
+
+The endpoint does not persist scenarios or results. Clients must retain the returned request,
+baseline, and generated scenario identities with any exported analysis.
 
 To wire this into Market Terminal's own dev server: set the same
 `INVENTORY_OPTIMIZER_API_TOKEN` value in the repo root's `.env` (see `.env.example`), then

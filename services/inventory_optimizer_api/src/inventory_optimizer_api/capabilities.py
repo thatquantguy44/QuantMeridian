@@ -210,7 +210,7 @@ def capability_payload() -> dict[str, Any]:
             "expected_economics": False,
             "dynamic_buffers": False,
             "multi_period": False,
-            "scenarios": False,
+            "scenarios": True,
         },
         "output_sections": [
             "allocations",
@@ -222,6 +222,7 @@ def capability_payload() -> dict[str, Any]:
             "solver",
             "verification",
             "warnings",
+            "scenario_stress",
         ],
         "upload_formats": expected["upload_formats"],
         "limits": {
@@ -232,6 +233,8 @@ def capability_payload() -> dict[str, Any]:
             "optional_rows": 5_000,
             "solve_timeout_seconds": 60,
             "concurrent_solves": 2,
+            "scenario_stress_batch": 10,
+            "scenario_stress_timeout_seconds": 300,
         },
     }
 

@@ -132,6 +132,15 @@ ENTITY_FIELDS = (
     field("ultimate_parent_id", "string", True, "identifier", "Resolved ultimate parent.", "SYN-PARENT-001"),
     field("relationship_type", "string", True, "label", "Relationship classification.", "borrower_to_parent"),
     field("ownership_confidence", "number", True, "fraction", "Resolution confidence from 0 to 1.", 0.99),
+    field(
+        "approval_reference",
+        "string",
+        False,
+        "reference",
+        "Internal credit/legal approval required before hard parent aggregation; "
+        "confidence alone does not authorize it.",
+        "SYNTHETIC-ONLY-ENTITY-MAP-001",
+    ),
     field("observed_at", "datetime", True, "ISO-8601 UTC", "Time the relationship became known.", "2026-09-14T12:00:00Z"),
     field("effective_from", "datetime", True, "ISO-8601 UTC", "Economic effective start.", "2026-09-14T12:00:00Z"),
     field("effective_to", "datetime", False, "ISO-8601 UTC", "Optional economic effective end.", None),

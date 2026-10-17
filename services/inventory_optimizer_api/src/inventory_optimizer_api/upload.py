@@ -278,7 +278,18 @@ def parse_xlsx_upload(data: bytes, filename: str) -> DatasetEnvelope:
         if sheet_name == "entity_relationships":
             rows = [
                 {
-                    "value": {key: row.pop(key) for key in ("entity_id", "legal_entity_id", "ultimate_parent_id", "relationship_type", "ownership_confidence") if key in row},
+                    "value": {
+                        key: row.pop(key)
+                        for key in (
+                            "entity_id",
+                            "legal_entity_id",
+                            "ultimate_parent_id",
+                            "relationship_type",
+                            "ownership_confidence",
+                            "approval_reference",
+                        )
+                        if key in row
+                    },
                     **row,
                 }
                 for row in rows

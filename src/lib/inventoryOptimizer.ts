@@ -304,6 +304,62 @@ export interface IbalResult {
   warnings?: string[];
 }
 
+export interface IbalScenarioCatalogItem {
+  scenario_type: string;
+  version: string;
+  description: string;
+  applicable_families: string[];
+  parameters_schema: Record<string, unknown>;
+}
+
+export interface IbalScenarioDriverDelta {
+  dimension: "security" | "borrower" | "parent" | "inventory_pool" | "route";
+  entity_id: string;
+  presence: "matched" | "unmatched" | "new";
+  baseline_quantity_shares: number;
+  scenario_quantity_shares: number;
+  delta_shares: number;
+}
+
+export interface IbalDriverDeltaReconciliation {
+  dimension: IbalScenarioDriverDelta["dimension"];
+  total_delta_shares: number;
+  attributed_delta_shares: number;
+  residual_shares: number;
+}
+
+export interface IbalStressOutcome {
+  scenario_id: string;
+  scenario_name: string;
+  status: string;
+  verification_passed: boolean;
+  objective_delta_usd: number | null;
+  baseline_objective_usd: number | null;
+  scenario_objective_usd: number | null;
+  rank: number | null;
+  driver_deltas: IbalScenarioDriverDelta[];
+  driver_reconciliations: IbalDriverDeltaReconciliation[];
+}
+
+export interface IbalScenarioStressResponse {
+  api_schema_version: string;
+  source: DatasetEnvelope["source"];
+  request_hash: string;
+  baseline_run_id: string;
+  baseline_config_hash: string;
+  scenario_type: string;
+  generated_scenarios: Record<string, unknown>[];
+  stress_report: {
+    scenario_count: number;
+    feasible_count: number;
+    infeasible_count: number;
+    verification_failed_count: number;
+    worst_case_scenario_id: string | null;
+    worst_case_objective_delta_usd: number | null;
+    outcomes: IbalStressOutcome[];
+  };
+}
+
 export interface RunResponse {
   api_schema_version: string;
   source: DatasetEnvelope["source"];
@@ -430,6 +486,28 @@ export async function runIbal(dataset: DatasetEnvelope, run_config: RunConfig): 
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ dataset, run_config }),
+    })
+  );
+}
+
+export async function getIbalScenarioCatalog(): Promise<{ scenarios: IbalScenarioCatalogItem[] }> {
+  return parseJson<{ scenarios: IbalScenarioCatalogItem[] }>(
+    await fetch("/api/inventory-optimizer/scenarios/catalog", { cache: "no-store" })
+  );
+}
+
+export async function runIbalScenarioStress(
+  dataset: DatasetEnvelope,
+  run_config: RunConfig,
+  baseline_result: IbalResult,
+  scenario_type: string,
+  parameters: Record<string, unknown>
+): Promise<IbalScenarioStressResponse> {
+  return parseJson<IbalScenarioStressResponse>(
+    await fetch("/api/inventory-optimizer/scenarios/stress-test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ dataset, run_config, baseline_result, scenario_type, parameters }),
     })
   );
 }

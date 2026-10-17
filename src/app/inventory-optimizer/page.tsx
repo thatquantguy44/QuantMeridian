@@ -16,7 +16,9 @@ import {
   exportIbalBundle,
   generateSyntheticDataset,
   getIbalHealth,
+  getIbalScenarioCatalog,
   runIbal,
+  runIbalScenarioStress,
   uploadIbalDataset,
   type DatasetEnvelope,
   type IbalAllocation,
@@ -30,6 +32,8 @@ import {
   type IbalInventoryRow,
   type IbalResult,
   type IbalRouteRow,
+  type IbalScenarioCatalogItem,
+  type IbalScenarioStressResponse,
   type IbalUtilizationPolicyRow,
   type LocatedIssue,
   type RunConfig,
@@ -255,6 +259,77 @@ const WHAT_IF_SCENARIOS: WhatIfScenario[] = [
   { id: "capacity", label: "More Balance Sheet", desc: "Looser utilization cap and smaller reserve buffer.", synthetic: { utilization_cap: 0.98, reserve_fraction: 0.02 }, seedOffset: 53 },
 ];
 
+function scenarioParametersDraft(scenarioType: string, dataset: DatasetEnvelope | null): Record<string, unknown> {
+  const request = (dataset?.request ?? {}) as Record<string, unknown>;
+  const routes = (Array.isArray(request.routes) ? request.routes : []) as IbalRouteRow[];
+  const inventory = (Array.isArray(request.inventory) ? request.inventory : []) as IbalInventoryRow[];
+  const demand = (Array.isArray(request.demand) ? request.demand : []) as IbalDemandRow[];
+  const limits = (Array.isArray(request.counterparty_limits) ? request.counterparty_limits : []) as IbalCounterpartyLimitRow[];
+  const quotes = (Array.isArray(request.external_borrow_quotes) ? request.external_borrow_quotes : []) as { quote_id: string; expires_at: string; observed_at?: string; effective_from?: string }[];
+  const budgets = (Array.isArray(request.balance_sheet_budgets) ? request.balance_sheet_budgets : []) as { budget_id: string }[];
+  const date = String(request.effective_date ?? dataset?.summary.effective_date ?? "2026-09-14");
+  const tradeDate = String(request.as_of ?? "2026-09-14T12:00:00Z").slice(0, 10);
+  const base = {
+    scenario_id: `qm-${scenarioType}-${dataset?.request_hash.slice(0, 8) ?? "draft"}`,
+    name: scenarioType.replaceAll("_", " "),
+    source: "QuantMeridian Scenario Studio",
+    source_version: "1.0.0",
+  };
+  const route = routes.find((row) => row.eligible) ?? routes[0];
+  const borrowerIds = [...new Set(routes.filter((row) => row.eligible && (row.maximum_quantity_shares > row.hard_minimum_quantity_shares || row.current_quantity_shares > row.hard_minimum_quantity_shares)).map((row) => row.borrower_id))];
+  const asOfDate = String(request.as_of ?? "2026-09-14T12:00:00Z").slice(0, 10);
+  const limit = limits.find((row) => row.effective_from <= asOfDate && (row.effective_to == null || asOfDate < row.effective_to));
+  const liveQuote = quotes.find((row) => Date.parse(row.expires_at) > Date.parse(String(request.as_of ?? "2026-09-14T12:00:00Z")));
+  const budget = budgets[0];
+  const eligibleInventory = inventory.find((row) => row.eligible && row.available_to_lend_shares > 0) ?? inventory.find((row) => row.eligible);
+  const quoteExpiryBeforeAsOf = (() => {
+    if (!liveQuote) return String(request.as_of ?? "2026-09-14T12:00:00Z");
+    const expiry = Date.parse(liveQuote.expires_at);
+    const asOf = Date.parse(String(request.as_of ?? liveQuote.expires_at));
+    const starts = [liveQuote.observed_at, liveQuote.effective_from].filter(Boolean).map((value) => Date.parse(String(value)));
+    const start = starts.length ? Math.max(...starts) : Number.NaN;
+    const end = Math.min(expiry, asOf);
+    return Number.isFinite(start) && end > start ? new Date(start + (end - start) / 2).toISOString() : liveQuote.expires_at;
+  })();
+  const reducibleRoute = routes.find((row) => row.eligible && row.maximum_quantity_shares > row.hard_minimum_quantity_shares);
+  switch (scenarioType) {
+    case "recall_wave":
+      return { ...base, targets: reducibleRoute ? [{ route_id: reducibleRoute.route_id, quantity_shares: Math.min(reducibleRoute.maximum_quantity_shares - reducibleRoute.hard_minimum_quantity_shares, Math.max(Number.EPSILON, reducibleRoute.current_quantity_shares - reducibleRoute.hard_minimum_quantity_shares || reducibleRoute.maximum_quantity_shares - reducibleRoute.hard_minimum_quantity_shares)) }] : [], trade_date: tradeDate, effective_date: date, settlement_date: date };
+    case "specials_squeeze":
+      return { ...base, route_ids: route ? [route.route_id] : [], spread_widening_bps: 25 };
+    case "quote_expiry":
+      return { ...base, quote_ids: liveQuote ? [liveQuote.quote_id] : [], expires_at: quoteExpiryBeforeAsOf };
+    case "borrower_limit_cut":
+      return { ...base, limit_ids: limit ? [limit.limit_id] : [], reduction_fraction: 0.25 };
+    case "borrower_default":
+      // Omitted recovery deliberately means zero capacity recovery in InventoryBallast.
+      return { ...base, borrower_ids: borrowerIds.slice(0, 1) };
+    case "balance_sheet_haircut":
+      return { ...base, budget_ids: budget ? [budget.budget_id] : [], haircut_fraction: 0.25 };
+    case "rate_shock_ladder":
+      return {
+        ...base,
+        factor: "lending_fee_spread",
+        template: "spread_widening",
+        direction: "increase",
+        targets: route ? [{ field: "route.fee_rate", target_id: route.route_id }] : [],
+        steps_bps: [10, 25],
+      };
+    case "supply_shock":
+      return {
+        ...base,
+        inventory_id: eligibleInventory?.inventory_id ?? "",
+        quantity_shares: eligibleInventory ? Math.max(Number.EPSILON, eligibleInventory.available_to_lend_shares * 0.1) : 1,
+        event_type: "sell",
+        trade_date: tradeDate,
+        effective_date: date,
+        settlement_date: date,
+      };
+    default:
+      return { ...base, route_ids: route ? [route.route_id] : [], demand_group_ids: demand.slice(0, 1).map((row) => row.demand_group_id) };
+  }
+}
+
 function pctFromDecimal(value: number) {
   return fmtPct(value * 100, 2);
 }
@@ -423,6 +498,12 @@ export default function InventoryOptimizerPage() {
   const [workflow, dispatchWorkflow] = useReducer(workflowReducer, sessionPrefs, initWorkflowState);
   const [customScenarios, setCustomScenarios] = useState<WhatIfScenario[]>(() => sessionPrefs.customScenarios ?? []);
   const [customShockLabel, setCustomShockLabel] = useState("");
+  const [engineScenarioCatalog, setEngineScenarioCatalog] = useState<IbalScenarioCatalogItem[]>([]);
+  const [engineScenarioType, setEngineScenarioType] = useState("borrower_default");
+  const [engineScenarioParameters, setEngineScenarioParameters] = useState("");
+  const [engineScenarioResponse, setEngineScenarioResponse] = useState<IbalScenarioStressResponse | null>(null);
+  const [engineScenarioError, setEngineScenarioError] = useState<string | null>(null);
+  const [engineScenarioBusy, setEngineScenarioBusy] = useState(false);
   const {
     dataset,
     result,
@@ -519,7 +600,18 @@ export default function InventoryOptimizerPage() {
 
   useEffect(() => {
     getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
+    getIbalScenarioCatalog().then((response) => setEngineScenarioCatalog(response.scenarios)).catch(() => setEngineScenarioCatalog([]));
   }, []);
+
+  useEffect(() => {
+    setEngineScenarioParameters(JSON.stringify(scenarioParametersDraft(engineScenarioType, dataset), null, 2));
+    setEngineScenarioResponse(null);
+    setEngineScenarioError(null);
+  }, [engineScenarioType, dataset]);
+
+  useEffect(() => {
+    setEngineScenarioResponse(null);
+  }, [dataset?.request_hash, result?.run_id, runConfig]);
 
   useEffect(() => {
     window.sessionStorage.setItem(
@@ -606,6 +698,18 @@ export default function InventoryOptimizerPage() {
   const runButtonLabel = !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
   const scenarioSet = useMemo(() => new Set(selectedScenarioIds), [selectedScenarioIds]);
   const allScenarios = useMemo(() => [...WHAT_IF_SCENARIOS, ...customScenarios], [customScenarios]);
+  const requestFamily = String((dataset?.request as Record<string, unknown> | undefined)?.problem_family ?? "");
+  const engineScenarioOptions = useMemo(
+    () => engineScenarioCatalog.filter((item) => !requestFamily || item.applicable_families.includes(requestFamily)),
+    [engineScenarioCatalog, requestFamily]
+  );
+  const selectedEngineScenario = engineScenarioOptions.find((item) => item.scenario_type === engineScenarioType) ?? null;
+
+  useEffect(() => {
+    if (engineScenarioOptions.length && !engineScenarioOptions.some((item) => item.scenario_type === engineScenarioType)) {
+      setEngineScenarioType(engineScenarioOptions[0].scenario_type);
+    }
+  }, [engineScenarioOptions, engineScenarioType]);
 
   // A custom shock is a full snapshot of whatever is currently dialed into the Dataset Intake
   // and Run Config forms -- reusing that form as the shock editor instead of building a second,
@@ -1025,6 +1129,67 @@ export default function InventoryOptimizerPage() {
     }
   }
 
+  async function runEngineScenarioStressTest() {
+    if (!dataset || !result) return;
+    setEngineScenarioBusy(true);
+    setEngineScenarioError(null);
+    setEngineScenarioResponse(null);
+    try {
+      const parameters = JSON.parse(engineScenarioParameters) as Record<string, unknown>;
+      if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) {
+        throw new Error("Scenario parameters must be a JSON object.");
+      }
+      const response = await runIbalScenarioStress(dataset, runConfig, result, engineScenarioType, parameters);
+      setEngineScenarioResponse(response);
+      setMessage(`Completed ${response.stress_report.scenario_count} InventoryBallast engine scenario${response.stress_report.scenario_count === 1 ? "" : "s"}.`);
+    } catch (error) {
+      setEngineScenarioError(error instanceof Error ? error.message : "Scenario stress run failed.");
+      if (error instanceof IbalRequestError && error.issues.length) setActionIssues(error.issues);
+    } finally {
+      setEngineScenarioBusy(false);
+    }
+  }
+
+  function exportEngineScenarioCsv() {
+    if (!engineScenarioResponse) return;
+    const header = ["Baseline Run ID", "Input Hash", "Config Hash", "Scenario ID", "Scenario", "Scenario Type", "Scenario Version", "Scenario Parameters", "Scenario JSON", "Rank", "Status", "Verified", "Objective Delta USD", "Dimension", "Entity ID", "Presence", "Baseline Shares", "Scenario Shares", "Delta Shares", "Reconciliation Residual Shares"];
+    const generatedById = new Map(engineScenarioResponse.generated_scenarios.map((scenario) => [String(scenario.scenario_id), scenario]));
+    const rows = engineScenarioResponse.stress_report.outcomes.flatMap((outcome) => {
+      const residuals = new Map(outcome.driver_reconciliations.map((item) => [item.dimension, item.residual_shares]));
+      const generated = generatedById.get(outcome.scenario_id);
+      const metadata = (generated?.metadata ?? {}) as Record<string, unknown>;
+      return outcome.driver_deltas.map((delta) => [
+        engineScenarioResponse.baseline_run_id,
+        engineScenarioResponse.request_hash,
+        engineScenarioResponse.baseline_config_hash,
+        outcome.scenario_id,
+        outcome.scenario_name,
+        metadata.scenario_type ?? engineScenarioResponse.scenario_type,
+        metadata.scenario_version ?? "",
+        metadata.parameters_json ?? "",
+        JSON.stringify(generated ?? {}),
+        outcome.rank ?? "",
+        outcome.status,
+        outcome.verification_passed,
+        outcome.objective_delta_usd ?? "",
+        delta.dimension,
+        delta.entity_id,
+        delta.presence,
+        delta.baseline_quantity_shares,
+        delta.scenario_quantity_shares,
+        delta.delta_shares,
+        residuals.get(delta.dimension) ?? "",
+      ]);
+    });
+    const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const anchor = document.createElement("a");
+    anchor.href = URL.createObjectURL(blob);
+    anchor.download = `ibal-engine-scenario-attribution-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(anchor.href);
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
@@ -1261,6 +1426,61 @@ export default function InventoryOptimizerPage() {
               </button>
             </div>
           </Panel>
+
+          <Panel
+            title="InventoryBallast Engine Scenario Studio"
+            code="ENGINE"
+            resizable={false}
+            right={<Tag tone={engineScenarioBusy ? "amber" : engineScenarioResponse ? "up" : "neutral"}>{engineScenarioBusy ? "RUNNING" : engineScenarioResponse ? `${engineScenarioResponse.stress_report.scenario_count} COMPLETE` : "ENGINE"}</Tag>}
+          >
+            <div className="grid gap-2 p-2 text-2xs">
+              <div className="border border-term-border bg-term-panel-2 px-2 py-1.5 text-term-text-mute">
+                Runs InventoryBallast registry scenarios against this dataset and its verified base run. Parameters are explicit; omitted borrower recovery remains zero.
+              </div>
+              <label className="grid gap-1 text-term-text-dim">
+                Scenario family
+                <select
+                  className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text"
+                  value={engineScenarioType}
+                  disabled={engineScenarioBusy || engineScenarioOptions.length === 0}
+                  onChange={(event) => setEngineScenarioType(event.target.value)}
+                >
+                  {engineScenarioOptions.map((item) => <option key={item.scenario_type} value={item.scenario_type}>{item.scenario_type.replaceAll("_", " ")} · v{item.version}</option>)}
+                </select>
+              </label>
+              {selectedEngineScenario && <div className="text-term-text-mute">{selectedEngineScenario.description}</div>}
+              <label className="grid gap-1 text-term-text-dim">
+                Validated scenario parameters (JSON)
+                <textarea
+                  className="min-h-40 border border-term-border bg-term-panel-2 px-2 py-1 font-mono text-3xs text-term-text"
+                  spellCheck={false}
+                  value={engineScenarioParameters}
+                  disabled={engineScenarioBusy}
+                  onChange={(event) => {
+                    setEngineScenarioParameters(event.target.value);
+                    setEngineScenarioResponse(null);
+                    setEngineScenarioError(null);
+                  }}
+                />
+              </label>
+              {selectedEngineScenario && (
+                <details className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text-mute">
+                  <summary className="cursor-pointer">Engine parameter schema</summary>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(selectedEngineScenario.parameters_schema, null, 2)}</pre>
+                </details>
+              )}
+              {!engineScenarioCatalog.length && <div className="text-term-amber">Scenario registry unavailable. Check that the pinned InventoryBallast engine is ready.</div>}
+              {engineScenarioError && <div className="border border-term-down/40 bg-term-down/10 px-2 py-1.5 text-term-down">{engineScenarioError}</div>}
+              <button
+                className="term-btn justify-center border-term-blue text-term-blue disabled:border-term-border disabled:text-term-text-mute"
+                disabled={!dataset || !dataset.validation.valid || !result || !selectedEngineScenario || engineScenarioBusy || busy}
+                title={!result ? "Run and verify a base case first." : "Run the selected registered scenario against the current baseline."}
+                onClick={runEngineScenarioStressTest}
+              >
+                <Play size={13} /> {engineScenarioBusy ? "Running Engine Scenario..." : "Run Engine Scenario"}
+              </button>
+            </div>
+          </Panel>
         </div>
 
         <div className="flex min-h-0 flex-col gap-2">
@@ -1280,6 +1500,56 @@ export default function InventoryOptimizerPage() {
               <Stat label="Source" value={dataset?.source.mode.toUpperCase() ?? "-"} sub={dataset?.source.filename ?? (dataset?.source.seed != null ? `seed ${dataset.source.seed}` : undefined)} />
             </div>
           </Panel>
+
+          {engineScenarioResponse && (
+            <Panel
+              title="Engine Stress Results · Driver Attribution"
+              code="SCENARIO"
+              right={
+                <span className="flex items-center gap-1">
+                  <Tag tone={engineScenarioResponse.stress_report.verification_failed_count ? "down" : "up"}>
+                    {engineScenarioResponse.stress_report.feasible_count}/{engineScenarioResponse.stress_report.scenario_count} FEASIBLE
+                  </Tag>
+                  <button className="term-btn" onClick={exportEngineScenarioCsv} title="Export engine outcomes, entity driver deltas and reconciliation residuals as CSV">
+                    <Download size={12} /> CSV
+                  </button>
+                </span>
+              }
+            >
+              <div className="px-2 pt-2 text-3xs text-term-text-mute">
+                Baseline {engineScenarioResponse.baseline_run_id} · input {engineScenarioResponse.request_hash.slice(0, 12)} · config {engineScenarioResponse.baseline_config_hash.slice(0, 12)}
+              </div>
+              <details className="mx-2 mt-2 border border-term-border bg-term-panel-2 px-2 py-1 text-3xs text-term-text-mute">
+                <summary className="cursor-pointer">Generated scenario provenance</summary>
+                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(engineScenarioResponse.generated_scenarios, null, 2)}</pre>
+              </details>
+              <div className="overflow-auto p-2">
+                <table className="w-full border-collapse text-2xs">
+                  <thead><tr className="border-b border-term-border text-left text-term-text-mute"><th className="p-1">Rank</th><th className="p-1">Scenario</th><th className="p-1">Status</th><th className="p-1">Verified</th><th className="p-1 text-right">Objective Δ</th></tr></thead>
+                  <tbody>{engineScenarioResponse.stress_report.outcomes.map((outcome) => (
+                    <tr key={outcome.scenario_id} className="border-b border-term-border/60 text-term-text">
+                      <td className="p-1">{outcome.rank ?? "—"}</td><td className="p-1">{outcome.scenario_name}</td><td className="p-1">{outcome.status}</td><td className="p-1">{outcome.verification_passed ? "YES" : "NO"}</td><td className="p-1 text-right">{outcome.objective_delta_usd == null ? "—" : fmtUsdAbbr(outcome.objective_delta_usd)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              <div className="max-h-72 overflow-auto px-2 pb-2">
+                <table className="w-full border-collapse text-2xs">
+                  <thead><tr className="border-b border-term-border text-left text-term-text-mute"><th className="p-1">Scenario</th><th className="p-1">Dimension</th><th className="p-1">Entity</th><th className="p-1">Presence</th><th className="p-1 text-right">Baseline</th><th className="p-1 text-right">Scenario</th><th className="p-1 text-right">Δ Shares</th></tr></thead>
+                  <tbody>{engineScenarioResponse.stress_report.outcomes.flatMap((outcome) => outcome.driver_deltas.map((delta, index) => (
+                    <tr key={`${outcome.scenario_id}-${delta.dimension}-${delta.entity_id}-${index}`} className="border-b border-term-border/50 text-term-text-dim">
+                      <td className="p-1">{outcome.scenario_id}</td><td className="p-1">{delta.dimension}</td><td className="p-1">{delta.entity_id}</td><td className="p-1">{delta.presence}</td><td className="p-1 text-right">{fmtAbbr(delta.baseline_quantity_shares)}</td><td className="p-1 text-right">{fmtAbbr(delta.scenario_quantity_shares)}</td><td className="p-1 text-right">{fmtAbbr(delta.delta_shares)}</td>
+                    </tr>
+                  )))}</tbody>
+                </table>
+              </div>
+              <div className="grid gap-1 border-t border-term-border px-2 py-2 text-3xs text-term-text-mute">
+                {engineScenarioResponse.stress_report.outcomes.flatMap((outcome) => outcome.driver_reconciliations.map((item) => (
+                  <div key={`${outcome.scenario_id}-${item.dimension}`}>{outcome.scenario_id} · {item.dimension}: attributed {fmtAbbr(item.attributed_delta_shares)} / total {fmtAbbr(item.total_delta_shares)} / residual {fmtAbbr(item.residual_shares)}</div>
+                )))}
+              </div>
+            </Panel>
+          )}
 
           {whatIfResults.length > 0 && (
             <Panel

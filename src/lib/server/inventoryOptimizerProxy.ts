@@ -233,7 +233,7 @@ export async function proxyInventoryOptimizer(request: Request, upstreamPath: st
 
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
-  if (upstreamPath === "/v1/runs") {
+  if (upstreamPath === "/v1/runs" || upstreamPath === "/v1/scenarios/stress-test") {
     headers.set("idempotency-key", request.headers.get("idempotency-key") ?? crypto.randomUUID());
   }
 

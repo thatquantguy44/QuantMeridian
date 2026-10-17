@@ -26,7 +26,7 @@ engine = [
   "inventory-optimizer==0.1.0",
 ]
 engine-github = [
-  "inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@74737e53bf9821089c6aa2aeca5dffc4e67c81b7",
+  "inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@e84801b65a4d1c23b19cb34b0de1e217f6b345f9",
 ]
 highs = [
   "highspy==1.15.1",

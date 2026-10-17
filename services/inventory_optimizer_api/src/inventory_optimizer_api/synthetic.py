@@ -72,6 +72,9 @@ def generate_request(config: SyntheticConfig) -> tuple[OptimizationRequest, dict
                     "ultimate_parent_id": parent_id,
                     "relationship_type": "borrower_to_parent",
                     "ownership_confidence": 0.99,
+                    # Synthetic hard aggregation is an illustrative scenario assumption, not
+                    # evidence of a real credit/legal approval. Keep its provenance explicit.
+                    "approval_reference": f"SYNTHETIC-ONLY-ENTITY-MAP-{index + 1:03d}",
                 },
                 "observed_at": as_of,
                 "effective_from": as_of,

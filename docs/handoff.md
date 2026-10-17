@@ -17,7 +17,7 @@ InventoryBallast):
 
 | Workstream | Child spec (drafts in PR #151) | Code |
 | --- | --- | --- |
-| B — IBAL showcase: engine re-pin (currently `74737e5`, 40 commits behind), diagnostic tabs, Scenario Studio (`0013` T-017), presenter mode | `spec013` | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
+| B — IBAL showcase: engine re-pin (merged InventoryBallast `main` `e84801b`), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
 | C — Money market execution optimizer (new `MMKT` module) | `spec011` | `services/money_market_api/` (port 8014), `src/app/money-market/` |
 | D — Configurable sources and uses on LP/MIP (replaces the random-number mock) | `spec012` | `services/sources_uses_api/` (port 8015), `src/app/sources-uses/` |
 | E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` | `services/liquidity_api/` (port 8016), `src/app/liquidity/` |
@@ -49,6 +49,12 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
+
+**Current IBAL integration status (2026-10-17):** InventoryBallast PR #34 is merged to `main`.
+QuantMeridian branch `codex/inventoryballast-scenario-integration` pins the merged engine, exposes
+its scenario catalog and stress runner, and surfaces driver deltas/reconciliations in Scenario
+Studio. The branch is not yet merged; continue the remaining `spec013` diagnostic-tab and presenter
+work after reviewing this integration.
 
 ## Cross-repo follow-up: EcoMedallion (MMKT rate feed) — tracked 2026-10-17
 
