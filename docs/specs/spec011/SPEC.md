@@ -2,10 +2,10 @@
 
 - **ID:** spec011-money-market-execution
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-016–020, REQ-027–030, REQ-041
-- **Status:** Draft — pending owner review; not approved for implementation
+- **Status:** Draft — pending owner review. Not approved as a whole, but owner-authorized slices are in progress (see `PLAN.md` and [HANDOFF.md](HANDOFF.md)).
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Service architecture and task sequencing belong in `PLAN.md` and `TASKS.md`.
 
