@@ -2,7 +2,7 @@
 
 - **Spec:** spec015-pluggable-optimization-center (`SPEC.md`, `PLAN.md`)
 - **Status:** Draft — implementation in progress; no model binding approved yet
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
