@@ -59,6 +59,7 @@ const ALL_NAV: NavItem[] = [
   { code: "PB", label: "Prime Finance", href: "/prime-finance", icon: Briefcase, desc: "Hedge fund financing & risk", group: "FINANCE" },
   { code: "COLL", label: "Collateral Mgmt", href: "/collateral", icon: Layers, desc: "Margin & collateral optimization", group: "OPTIMIZATION" },
   { code: "CASH", label: "Cash Optimizer", href: "/cash-optimizer", icon: Wallet, desc: "Treasury funding optimization", group: "OPTIMIZATION" },
+  { code: "MMFO", label: "Money Market Fund Optimizer", href: "/money-market-fund-optimizer", icon: Banknote, desc: "Fund allocation optimizer backed by a separately deployed model", group: "OPTIMIZATION" },
   { code: "REINV", label: "Cash Reinvestment", href: "/reinvestment", icon: Banknote, desc: "Cash collateral yield ladder", group: "OPTIMIZATION" },
   { code: "LIQ", label: "Liquidity Stress", href: "/liquidity", icon: Wallet, desc: "Funding stress and survival ladder", group: "OPTIMIZATION" },
   { code: "SXU", label: "Sources & Uses", href: "/sources-uses", icon: GitMerge, desc: "Matching & internalization engine", group: "OPTIMIZATION" },
