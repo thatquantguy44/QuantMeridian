@@ -15,6 +15,7 @@
     "PB":     { "enabled": true, "label": "Prime Finance" },
     "COLL":   { "enabled": true, "label": "Collateral Mgmt" },
     "CASH":   { "enabled": true, "label": "Cash Optimizer" },
+    "MMFO":   { "enabled": true, "label": "Money Market Fund Optimizer" },
     "REINV":  { "enabled": true, "label": "Cash Reinvestment" },
     "LIQ":    { "enabled": true, "label": "Liquidity Stress" },
     "SXU":    { "enabled": true, "label": "Sources & Uses" },
