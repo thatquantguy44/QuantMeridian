@@ -42,14 +42,15 @@ every open decision.
 
 ## Slice 2: synthetic PoC showcase (SU-SIM, PR #166)
 
-Open it with the **Synthetic PoC** header toggle or `/sources-uses#synthetic`.
+The page opens on it by default while **SIM** is on. Use `/sources-uses#workspace` to land on
+the workspace instead. Turning SIM off hides the PoC entirely.
 
 | Piece | File | Notes |
 |---|---|---|
 | LP solver | `src/lib/optimization/simplex.ts` | A dense two-phase simplex (Bland's rule) that recovers duals from the final basis. `certifyLp` independently checks primal and dual feasibility, complementary slackness and the duality gap. Sized for showcase models only. |
 | Model, dataset, scenarios, verifier | `src/data/sourcesUsesSynthetic.ts` | See the summary below. |
 | UI | `src/app/sources-uses/synthetic/` | `SyntheticShowcase.tsx` holds the layout and state. `TransportNetwork.tsx` draws the network with dummy nodes. `TransportTableau.tsx` is the MODI-style tableau. `PenaltyControls.tsx` holds the penalty panel, lane inspector and objective decomposition. `ShowcaseCharts.tsx` holds the remaining charts. |
-| Page wiring | `src/app/sources-uses/page.tsx` | The Workspace / Synthetic PoC toggle, and the "Copy to workspace" handler. |
+| Page wiring | `src/app/sources-uses/page.tsx` | The Workspace / Synthetic PoC tabs, the **SIM ON/OFF** switch (on by default, remembered under `quantmeridian.sxu.sim.v1`), the provenance badge (`SIM` with `simSelected`, or `PENDING` when off), and the "Copy to workspace" handler. |
 
 **Model summary:**
 - It is a balanced, penalised classic transportation problem.
@@ -114,9 +115,9 @@ need owner review.
 
 ## Verification evidence (2026-10-18, branch head)
 
-- **`npm test`:** 626 passed, 1 failed. The failure is `src/tests/badge-coverage.test.ts`, which
-  also fails on `main` because `money-market-fund-optimizer/page.tsx` and
-  `sources-uses/page.tsx` import no provenance badge. See next step 1.
+- **`npm test`:** all pass except `src/tests/badge-coverage.test.ts`. That test now fails only
+  for `money-market-fund-optimizer/page.tsx`, which also fails on `main` and belongs to spec015.
+  The SXU page passes since SU-013.
 - **SXU and solver suites:** `sourcesUses` 8, `sourcesUsesSynthetic` 34, `simplex` 6. All pass.
 - **`npm run typecheck`:** passed.
 - **`npm run build:client`:** passed. The existing large-chunk warning remains.
@@ -126,23 +127,22 @@ need owner review.
 
 ## Next steps (in order)
 
-1. **Badge test.** Make `sources-uses/page.tsx` show provenance so the badge test passes.
-   `ProvenanceBadge source="SIM"` renders `ERR` when global SIM mode is off. So either add an
-   always-on SIM variant, or add `sources-uses/page.tsx` to `BADGE_EXEMPT_PAGES` with a reason.
-   Decide with the owner.
-2. **Merge PR #166** after review. The earlier `build/spec012-sources-uses-optimizer` branch no
+1. **Merge PR #166** after review. The earlier `build/spec012-sources-uses-optimizer` branch no
    longer exists on the remote, so ignore any older reference to it.
-3. **Owner decisions.** Resolve open decisions 1–4 and approve the full `SPEC.md`, `PLAN.md`,
+2. **Owner decisions.** Resolve open decisions 1–4 and approve the full `SPEC.md`, `PLAN.md`,
    `TASKS.md` and child design docs (SU-001).
-4. **Service contracts.** Define versioned request/result contracts and canonical
+3. **Service contracts.** Define versioned request/result contracts and canonical
    configuration/run hashing (SU-002). Reuse the showcase's verifier checks as acceptance
    fixtures.
-5. **Production LP.** Build `services/sources_uses_api` on `services/optimization_core` (HiGHS)
+4. **Production LP.** Build `services/sources_uses_api` on `services/optimization_core` (HiGHS)
    with the compatibility engine, the lexicographic LP and an independent verifier (SU-003–005).
    The showcase's hand-computable cases in `sourcesUsesSynthetic.test.ts` make good golden
    cases.
-6. **Then:** MIP rules (SU-006), result views wired to the service (SU-007), OPT run history
+5. **Then:** MIP rules (SU-006), result views wired to the service (SU-007), OPT run history
    (SU-008), service hardening (SU-009), and the as-built model card (SU-010).
+6. **When the production model is wired,** decide whether SIM should still default to on (see
+   the "Module SIM switch" note in `SPEC.md` § SU-SIM). Update `readSimPreference` in
+   `src/app/sources-uses/page.tsx` to match.
 7. **Keep the demo guide current.** If showcase defaults or the dataset change, re-run the
    scenarios and update the expected numbers and the "Last verified" date in
    `docs/demo_books/sources-uses-synthetic-poc.md`.

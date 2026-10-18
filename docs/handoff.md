@@ -27,8 +27,9 @@ services, including OPT's MMKT probe.
 Separately, `main` now has the spec015 MMFO local PoC (PRs #163–#165). It is SIM-only and not
 independently verified. It is not the MMKT service.
 
-**Known red test:** `src/tests/badge-coverage.test.ts` fails on `main` and on PR #166 (the MMFO
-and SXU pages have no provenance badge). It is tracked as spec012 task SU-013.
+**Known red test:** `src/tests/badge-coverage.test.ts` fails on `main` because the MMFO page has
+no provenance badge (spec015). PR #166 fixes the SXU half: the SXU page now has a module SIM
+switch and badge (spec012 SU-013).
 
 **Source of truth:** `thatquantguy44/InventoryBallast`, `specs/0018-live-poc-showcase/`
 (`spec.md`, `plan.md`, `tasks.md`) on `main`. That spec is the work queue; this section only says where to start on the terminal side.

@@ -92,6 +92,11 @@ this mode:
 - The model is solved in the browser by a deterministic, dependency-free LP (two-phase simplex,
   Bland's rule). It never calls a service and never writes to OPT run history.
 - Results are presented as illustrative model behaviour, never as a funding recommendation.
+- **Module SIM switch (owner decision, 2026-10-18):** the page defaults to SIM on and opens on the
+  Synthetic PoC until it is wired to a production model. An on-screen **SIM ON/OFF** switch,
+  remembered per browser, turns it off. Off hides the PoC and all synthetic results, leaves the
+  user's own configurations, and labels the page `PENDING`. This switch is independent of the
+  terminal's global SIM mode.
 
 ### Showcase formulation: penalised classic transportation problem
 

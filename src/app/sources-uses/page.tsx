@@ -6,6 +6,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel, Tag } from "@/components/ui/Panel";
+import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { SyntheticShowcase } from "./synthetic/SyntheticShowcase";
 import { toWorkspaceConfiguration, type PenaltyConfig, type SimProblem } from "@/data/sourcesUsesSynthetic";
 import {
@@ -18,6 +19,18 @@ import {
 
 type WorkspaceTab = "sources" | "uses" | "compatibility";
 type PageMode = "workspace" | "synthetic";
+
+const SIM_PREFERENCE_KEY = "quantmeridian.sxu.sim.v1";
+
+function readSimPreference(): boolean {
+  try { return window.localStorage.getItem(SIM_PREFERENCE_KEY) !== "0"; } catch { return true; }
+}
+
+function initialMode(simOn: boolean): PageMode {
+  const hash = typeof window !== "undefined" ? window.location.hash : "";
+  if (hash === "#workspace" || !simOn) return "workspace";
+  return "synthetic";
+}
 type EditTarget = { kind: "source"; value: ConfigurableSource } | { kind: "use"; value: ConfigurableUse } | null;
 const tabs: { id: WorkspaceTab; label: string }[] = [
   { id: "sources", label: "Sources" }, { id: "uses", label: "Uses" }, { id: "compatibility", label: "Compatibility" },
@@ -33,7 +46,10 @@ export default function SourcesUses() {
   const [selectedPair, setSelectedPair] = useState<{ sourceId: string; useId: string } | null>(null);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<PageMode>(() => (typeof window !== "undefined" && window.location.hash === "#synthetic" ? "synthetic" : "workspace"));
+  // Module SIM switch: on by default until the page is wired to a production model. Off hides
+  // all synthetic data and leaves only the user's own configurations.
+  const [simOn, setSimOn] = useState<boolean>(readSimPreference);
+  const [mode, setMode] = useState<PageMode>(() => initialMode(simOn));
   const configuration = configurations.find((item) => item.id === activeId) ?? null;
   const issues = useMemo(() => configuration ? validateConfiguration(configuration) : [], [configuration]);
   const filteredSources = useMemo(() => configuration?.sources.filter((source) => matchesSearch(source, search)) ?? [], [configuration, search]);
@@ -77,7 +93,20 @@ export default function SourcesUses() {
 
   function switchMode(next: PageMode) {
     setMode(next);
-    try { window.history.replaceState(null, "", next === "synthetic" ? "#synthetic" : window.location.pathname + window.location.search); } catch { /* non-browser */ }
+    try { window.history.replaceState(null, "", `#${next}`); } catch { /* non-browser */ }
+  }
+
+  function toggleSim() {
+    const next = !simOn;
+    setSimOn(next);
+    try { window.localStorage.setItem(SIM_PREFERENCE_KEY, next ? "1" : "0"); } catch { /* storage unavailable */ }
+    if (!next) {
+      switchMode("workspace");
+      setNotice({ kind: "success", message: "SIM is off. Only your own configurations are shown; no synthetic data or results." });
+    } else {
+      switchMode("synthetic");
+      setNotice(null);
+    }
   }
 
   function copySyntheticToWorkspace(problem: SimProblem, scenarioTitle: string, config: PenaltyConfig) {
@@ -191,15 +220,28 @@ export default function SourcesUses() {
       <PageHeader code="SXU" title="Sources & Uses" desc={mode === "synthetic" ? "Synthetic optimizer proof of concept" : "Configuration workspace"} showStreaming={false}
         right={<div className="flex items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-term-border" role="tablist" aria-label="Sources & Uses mode">
-            {([["workspace", "Workspace"], ["synthetic", "Synthetic PoC"]] as const).map(([id, label]) => (
-              <button key={id} type="button" role="tab" aria-selected={mode === id} onClick={() => switchMode(id)}
-                className={`px-2.5 py-1 text-[11px] font-medium transition ${mode === id ? "bg-term-amber text-black" : "bg-term-panel-2 text-term-text-dim hover:text-term-text"}`}>{label}</button>
-            ))}
+            {([["workspace", "Workspace"], ["synthetic", "Synthetic PoC"]] as const).map(([id, label]) => {
+              const disabled = id === "synthetic" && !simOn;
+              return (
+                <button key={id} type="button" role="tab" aria-selected={mode === id} disabled={disabled} onClick={() => switchMode(id)}
+                  title={disabled ? "Turn SIM on to open the synthetic proof of concept" : undefined}
+                  className={`px-2.5 py-1 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${mode === id ? "bg-term-amber text-black" : "bg-term-panel-2 text-term-text-dim hover:text-term-text"}`}>{label}</button>
+              );
+            })}
           </div>
-          {mode === "synthetic" ? <Tag tone="blue">SIM</Tag> : <Tag tone="amber">SETUP ONLY</Tag>}
+          <button type="button" role="switch" aria-checked={simOn} onClick={toggleSim}
+            title={simOn ? "SIM is on: synthetic data and the PoC solver are available. Click to turn SIM off." : "SIM is off: only your own configurations are shown. Click to turn SIM on."}
+            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-semibold transition ${simOn ? "border-term-cyan/50 bg-term-cyan/10 text-term-cyan" : "border-term-border bg-term-panel-2 text-term-text-mute hover:text-term-text"}`}>
+            <span className={`relative inline-flex h-3 w-6 items-center rounded-full transition ${simOn ? "bg-term-cyan/60" : "bg-term-panel-3"}`} aria-hidden>
+              <span className={`absolute h-2.5 w-2.5 rounded-full bg-term-text transition-all ${simOn ? "left-[13px]" : "left-[1px]"}`} />
+            </span>
+            SIM {simOn ? "ON" : "OFF"}
+          </button>
+          {simOn ? <ProvenanceBadge source="SIM" simSelected /> : <ProvenanceBadge source="UNAVAILABLE" />}
+          {mode === "workspace" && <Tag tone="amber">SETUP ONLY</Tag>}
         </div>} />
 
-      {mode === "synthetic" && <>
+      {mode === "synthetic" && simOn && <>
         {notice && <div className="mx-4 mt-3 rounded-md border border-term-up/25 bg-term-up/5 px-3 py-2 text-xs text-term-up lg:mx-6" role="status">{notice.message}</div>}
         <SyntheticShowcase onCopyToWorkspace={copySyntheticToWorkspace} />
       </>}

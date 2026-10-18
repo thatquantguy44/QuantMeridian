@@ -23,7 +23,10 @@ Say this clearly at the start, every time:
 
 1. Run `npm ci` and `npm run dev`, then open `http://localhost:5173/sources-uses#synthetic`.
    No backend, database or API key is needed, and it works offline.
-2. Check that the header shows **Synthetic PoC** selected and the **SIM** tag.
+2. Check that the header switch reads **SIM ON**, **Synthetic PoC** is selected, and the badge
+   reads **SIM**. The page opens this way by default. If someone turned SIM off in this browser,
+   click the switch to turn it back on. The terminal-wide SIM setting in the top bar does not
+   affect this page.
 3. Check that the **Optimality** tile reads **Certified** and the verification panel shows **12/12**.
 4. Zoom the browser to about 90% on a 1440p or larger screen so the network and controls fit
    side by side.
