@@ -3,13 +3,20 @@
 - **ID:** spec015-pluggable-optimization-center
 - **Module code / route:** `OPT` / `/optimization`
 - **Status:** Draft — implementation subject to review of this spec and its integration contracts
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 > This file defines outcomes and acceptance criteria. Integration design and sequencing are in `PLAN.md` and `TASKS.md`.
 
+## Implementation status — 2026-10-18
+
+- The operating-shell foundation merged in PR #161: service health is separate from approved model binding state, and seeded Optimization Center results are labeled SIMULATION DATA.
+- PR #163 adds a separate Money Market Fund Optimizer workspace and a local synthetic LP proof of concept. It distributes cash over six illustrative fund options to maximize the supplied net 7-day yield subject to reserve, same-day liquidity, prime exposure, and per-fund concentration limits. The API returns constraint checks; the UI reports estimates and model limitations.
+- The POC is an explicit, temporary exception to the non-goal below. It is demo-only, uses synthetic inputs, has no independent verifier, and does not satisfy the approved external model binding, source lineage, or production recommendation requirements. Actual model mathematics will remain in its separate repository when identified and approved.
+- Tracking and detailed implementation sequencing remain in PLAN.md and TASKS.md.
+
 ## Summary
 
-Make QuantMeridian's Optimization Center the operating surface for two independent model services: money market optimization and collateral optimization. Each service can be connected to an approved existing model repository, whether supplied as a local checkout or a pinned Git repository, through a versioned adapter contract. Users can configure supported model inputs and policies, run each optimizer manually or on a schedule, inspect verified results and audit history, and compare baseline and changed configurations side by side. The UI must be useful before a model is connected, while clearly identifying setup, unavailable, simulated, failed, and verified states.
+Make QuantMeridian's Optimization Center the operating surface for independent money market and collateral model services. Each service can be connected to an approved existing model repository, whether supplied as a local checkout or a pinned Git repository, through a versioned adapter contract. Users can configure supported model inputs and policies, run each optimizer manually or on a schedule, inspect verified results and audit history, and compare baseline and changed configurations side by side. Provide a distinct Money Market Fund Optimizer workspace for fund allocation, separate from the CASH treasury funding view. Its current implementation is a synthetic proof of concept; the eventual fund model will be connected through its own approved repository binding. The UI must be useful before a model is connected, while clearly identifying setup, unavailable, simulated, failed, and verified states.
 
 ## Problem and current state
 
@@ -29,7 +36,7 @@ This spec adds the connection and operating layer for actual, separately owned m
 
 ## Non-goals
 
-- Creating the money market or collateral mathematical engines inside QuantMeridian, or replacing their own source repositories.
+- Creating the production money market or collateral mathematical engines inside QuantMeridian, or replacing their own source repositories. A temporary synthetic LP is permitted only as the explicitly SIM-labeled Money Market Fund Optimizer proof of concept; it cannot produce production recommendations and must be replaced by the approved external fund model binding.
 - Automatically importing arbitrary GitHub URLs, executable paths, or code supplied by a browser user. Connections are approved server-side deployments.
 - Order routing, settlement, collateral movement, trade execution, or automatic application of proposed allocations.
 - Combining money market yield and collateral savings into one total without an approved common objective and double-counting rule.
@@ -64,6 +71,7 @@ This spec adds the connection and operating layer for actual, separately owned m
 | OC-014 | Append-only audit events cover connection/profile changes, validation, submission, scheduling, lifecycle changes, verification, comparison creation, export, and administrative action. Authorized users can filter and export the audit trail with event time, actor, correlation ID, before/after references, and reason; secrets and raw sensitive payloads are excluded from event logs. | must |
 | OC-015 | Input source and as-of state (`DB`, `SIM`, user supplied, stale, missing, error) are visible in each module, `OPT`, comparison, and export. No silent DB-to-SIM fallback is allowed. | must |
 | OC-016 | Existing seeded OPT metrics, duals, and trades, and the collateral client-side savings formula, are removed from connected result paths. An unconnected model presents setup guidance and representative layout without invented run success. | must |
+| OC-017 | Provide a Money Market Fund Optimizer workspace distinct from CASH treasury funding. It may run the explicitly synthetic local POC while unbound; all output stays labeled SIM and is excluded from verified recommendation totals. The approved fund model, eligibility rules, input/result schemas, and independent verifier must be connected before live recommendations are enabled. | must |
 
 ## User interface slices
 
