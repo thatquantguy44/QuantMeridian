@@ -8,6 +8,7 @@ import logging
 import os
 from datetime import UTC, datetime
 from importlib.resources import files
+from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
@@ -38,6 +39,14 @@ app = FastAPI(
 
 def _local_model_binding_enabled() -> bool:
     return os.getenv("MONEY_MARKET_MODEL_BINDING", "").strip() == "local-mmkt-lp-v1"
+
+
+def _manifest_text() -> str:
+    """Packaged manifest (wheel install), else the service-root copy (run from source)."""
+    packaged = files("money_market_api").joinpath("capability-manifest.json")
+    if packaged.is_file():
+        return packaged.read_text()
+    return (Path(__file__).resolve().parents[2] / "capability-manifest.json").read_text()
 
 
 def _canonical_hash(payload: dict[str, Any]) -> str:
@@ -86,7 +95,7 @@ async def health() -> HealthResponse:
 
 @app.get("/v1/capabilities", response_model=CapabilityManifest)
 async def capabilities(_: Annotated[UUID, Depends(require_service_auth)]) -> CapabilityManifest:
-    raw = json.loads(files("money_market_api").joinpath("capability-manifest.json").read_text())
+    raw = json.loads(_manifest_text())
     enabled = _local_model_binding_enabled()
     raw["solver_enabled"] = enabled
     raw["model_families"] = ["continuous_lp_relaxation"] if enabled else []

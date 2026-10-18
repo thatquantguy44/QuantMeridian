@@ -163,7 +163,12 @@ def solve_currency(payload: OptimizeRequest, currency: str) -> dict[str, Any]:
                     _name("buy", *account_key, candidate.candidate_id, day),
                     objective=net_return,
                     lower=0.0,
-                    upper=candidate.maximum_amount if rating_allowed else 0.0,
+                    # A null maximum_amount means uncapped in the v1.0.0 contract.
+                    upper=(
+                        (math.inf if candidate.maximum_amount is None else candidate.maximum_amount)
+                        if rating_allowed
+                        else 0.0
+                    ),
                 )
                 positions.append({
                     "variable": variable,

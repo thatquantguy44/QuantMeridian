@@ -39,3 +39,17 @@ Use hand-computable golden portfolios, one test per constraint family, verifier 
 6. Close with evidence, model card/validation, and as-built white paper.
 
 The owner-authorized integration and LP work is in progress while the child spec remains draft.
+
+**2026-10-18 — MMKT module (owner request).** A terminal module at `/money-market` drives the
+service end to end. It does the following:
+- Reports service, binding and token readiness, with setup steps.
+- Requires an explicit rate-source choice (Gold, or a named SIM set), shows every snapshot row
+  with quoted and normalized yield and its pricing eligibility, and excludes non-OK rows.
+- Edits an illustrative candidate universe, forecast case, floors, WAM/WAL and exposure limits.
+- Runs the five named scenarios and presents only verified results.
+- Labels every result as a continuous LP relaxation, not an execution blotter.
+
+It does not resolve or encode the open owner questions:
+- No baseline comparison is shown (question 1).
+- The illustrative book is single-currency USD (question 2).
+- Non-OK rows are displayed but never priced (question 3, recommended fail-closed behaviour).

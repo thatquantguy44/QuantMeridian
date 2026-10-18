@@ -87,6 +87,14 @@ function fromFile(): { url: string; file: string } | undefined {
   return undefined;
 }
 
+const LOOPBACK_BYPASS = ["localhost", "127.0.0.1", "::1"];
+
+/** NO_PROXY from the environment, always extended with loopback hosts. */
+export function noProxyList(env: NodeJS.ProcessEnv = process.env): string {
+  const configured = (env.NO_PROXY ?? env.no_proxy ?? "").split(",").map((item) => item.trim()).filter(Boolean);
+  return [...new Set([...configured, ...LOOPBACK_BYPASS])].join(",");
+}
+
 function proxyMatch(): { url: string; source: string } | undefined {
   const envUrl = fromEnv();
   if (envUrl) return { url: envUrl, source: "environment" };
@@ -108,9 +116,11 @@ export function ensureProxy(): Promise<void> {
       return;
     }
     try {
-      const { ProxyAgent, setGlobalDispatcher } = await import("undici");
-      setGlobalDispatcher(new ProxyAgent(match.url));
-      console.log(`[proxy] server fetch routed through ${match.url} (from ${match.source})`);
+      const { EnvHttpProxyAgent, setGlobalDispatcher } = await import("undici");
+      // Honour NO_PROXY so loopback and internal model services (MMKT on 127.0.0.1:8014,
+      // IBAL, …) are reached directly instead of through an outbound proxy.
+      setGlobalDispatcher(new EnvHttpProxyAgent({ httpProxy: match.url, httpsProxy: match.url, noProxy: noProxyList() }));
+      console.log(`[proxy] server fetch routed through ${match.url} (from ${match.source}); bypass: ${noProxyList()}`);
     } catch (err) {
       console.warn(`[proxy] failed to enable proxy ${match.url} (from ${match.source}): ${(err as Error).message}`);
     }

@@ -23,6 +23,7 @@ const PAGES = [
   { path: "/prime-finance", title: "Prime Finance", code: "PB" },
   { path: "/collateral", title: "Collateral Management", code: "COLL" },
   { path: "/cash-optimizer", title: "Cash Optimizer", code: "CASH" },
+  { path: "/money-market", title: "Money Market Optimizer", code: "MMKT" },
   { path: "/reinvestment", title: "Cash Reinvestment", code: "REINV" },
   { path: "/liquidity", title: "Liquidity Stress", code: "LIQ" },
   { path: "/sources-uses", title: "Sources & Uses", code: "SXU" },

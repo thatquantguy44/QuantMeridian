@@ -4,7 +4,9 @@ import {
   gatePricingCandidates,
   loadGoldMmktRateSnapshot,
   MmktRateSnapshotError,
+  type MmktRateRow,
 } from "@/lib/server/mmktRateSnapshot";
+import { loadSimMmktRateSnapshot, simRateSetSummaries } from "@/lib/server/mmktSimRateSets";
 
 export const runtime = "nodejs";
 
@@ -30,11 +32,26 @@ function errorResponse(
 /**
  * GET /api/econ/mmkt-rate-snapshot?source=gold[&instrument_id=...]
  *
- * SIM is opt-in by named set. No set is silently selected, and this route currently
- * fails closed because no approved MMKT SIM rate set is registered in the terminal.
+ * SIM is opt-in by named set. No set is silently selected; an unknown set ID fails closed
+ * and Gold data is never substituted. `?sets=1` lists the registered SIM sets.
  */
+function rowStatuses(rows: MmktRateRow[], okDisplay: "DB" | "SIM") {
+  return rows.map((row) => ({
+    instrument_id: row.instrument_id,
+    status: row.status,
+    display_status: row.status === "ok" ? okDisplay : "ERR",
+    status_detail: row.status_detail,
+    observation_date: row.observation_date,
+    staleness_days: row.staleness_days,
+    pricing_eligible: row.status === "ok" && row.mm_yield_pct !== null,
+  }));
+}
+
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
+  if (params.get("sets") === "1") {
+    return json({ ok: true, sim_sets: simRateSetSummaries() }, { headers: { "cache-control": "no-store" } });
+  }
   const source = params.get("source") ?? "gold";
   const simSetId = params.get("sim_set_id");
   const candidateIds = params.getAll("instrument_id");
@@ -60,11 +77,31 @@ export async function GET(request: Request) {
     if (!simSetId) {
       return errorResponse(400, "SIM_SET_REQUIRED", "Select a named SIM rate set explicitly.");
     }
-    return errorResponse(
-      503,
-      "SIM_SET_UNAVAILABLE",
-      "The selected SIM rate set is not registered; Gold data will not be substituted.",
-      { selected_sim_set_id: simSetId },
+    const snapshot = loadSimMmktRateSnapshot(simSetId);
+    if (!snapshot) {
+      return errorResponse(
+        503,
+        "SIM_SET_UNAVAILABLE",
+        "The selected SIM rate set is not registered; Gold data will not be substituted.",
+        { selected_sim_set_id: simSetId },
+      );
+    }
+    return json(
+      {
+        source: "SIM",
+        ok: true,
+        rate_snapshot: {
+          source: snapshot.source,
+          as_of_date: snapshot.as_of_date,
+          snapshot_hash: snapshot.snapshot_hash,
+          sim_set_id: snapshot.sim_set_id,
+          rows: snapshot.rows,
+        },
+        lineage: { origin: snapshot.origin, backend: snapshot.backend },
+        pricing_gate: candidateIds.length ? gatePricingCandidates(snapshot, candidateIds, "SIM", true) : null,
+        row_statuses: rowStatuses(snapshot.rows, "SIM"),
+      },
+      { headers: { "cache-control": "no-store" } },
     );
   }
   if (simSetId !== null) {
@@ -92,15 +129,7 @@ export async function GET(request: Request) {
         },
         lineage: { origin: snapshot.origin, backend: snapshot.backend },
         pricing_gate: pricingGate,
-        row_statuses: snapshot.rows.map((row) => ({
-          instrument_id: row.instrument_id,
-          status: row.status,
-          display_status: row.status === "ok" ? "DB" : "ERR",
-          status_detail: row.status_detail,
-          observation_date: row.observation_date,
-          staleness_days: row.staleness_days,
-          pricing_eligible: row.status === "ok" && row.mm_yield_pct !== null,
-        })),
+        row_statuses: rowStatuses(snapshot.rows, "DB"),
       },
       { headers: { "cache-control": "no-store" } },
     );

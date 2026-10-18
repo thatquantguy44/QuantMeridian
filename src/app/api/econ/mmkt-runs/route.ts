@@ -5,7 +5,9 @@ import {
   gatePricingCandidates,
   loadGoldMmktRateSnapshot,
   MmktRateSnapshotError,
+  type MmktRateSnapshot,
 } from "@/lib/server/mmktRateSnapshot";
+import { loadSimMmktRateSnapshot } from "@/lib/server/mmktSimRateSets";
 
 export const runtime = "nodejs";
 
@@ -64,8 +66,9 @@ function serviceConfig() {
  * POST /api/econ/mmkt-runs
  *
  * The terminal owns market-data access. Clients submit the forecast, candidates,
- * and policy; this route attaches the authoritative Gold rate snapshot and hash.
- * A named SIM set is required for SIM and currently fails closed until registered.
+ * and policy; this route attaches the authoritative rate snapshot and hash: Gold by
+ * default, or a registered SIM set only when the client names it explicitly. An unknown
+ * SIM set fails closed and Gold is never substituted (or vice versa).
  */
 export async function POST(request: Request) {
   const service = serviceConfig();
@@ -98,15 +101,18 @@ export async function POST(request: Request) {
   if (source !== "gold" && source !== "sim") {
     return failure(400, "RATE_SOURCE_INVALID", "rate_source must be gold or sim.");
   }
+  let simSnapshot: MmktRateSnapshot | undefined;
   if (source === "sim") {
     if (typeof payload.sim_set_id !== "string" || payload.sim_set_id.trim() === "") {
       return failure(400, "SIM_SET_REQUIRED", "Select a named SIM rate set explicitly.");
     }
-    return failure(503, "SIM_SET_UNAVAILABLE", "The selected SIM rate set is not registered; Gold data will not be substituted.", {
-      selected_sim_set_id: payload.sim_set_id,
-    });
-  }
-  if (payload.sim_set_id !== undefined) {
+    simSnapshot = loadSimMmktRateSnapshot(payload.sim_set_id);
+    if (!simSnapshot) {
+      return failure(503, "SIM_SET_UNAVAILABLE", "The selected SIM rate set is not registered; Gold data will not be substituted.", {
+        selected_sim_set_id: payload.sim_set_id,
+      });
+    }
+  } else if (payload.sim_set_id !== undefined) {
     return failure(400, "SIM_SET_NOT_ALLOWED", "sim_set_id is valid only with rate_source=sim.");
   }
 
@@ -127,26 +133,31 @@ export async function POST(request: Request) {
   }
   // Multiple candidates may legitimately use the same market rate; the pricing gate
   // deduplicates rate IDs while the service keeps candidate-level identity.
-  if (!goldEnabled()) {
-    return failure(503, "GOLD_UNAVAILABLE", "Gold DB is not configured.");
-  }
-
-  let snapshot;
-  try {
-    snapshot = await loadGoldMmktRateSnapshot(goldStore(), goldConfigStatus().backend);
-  } catch (error) {
-    if (error instanceof MmktRateSnapshotError) {
-      return failure(503, error.code, error.message);
+  let snapshot: MmktRateSnapshot;
+  if (simSnapshot) {
+    snapshot = simSnapshot;
+  } else {
+    if (!goldEnabled()) {
+      return failure(503, "GOLD_UNAVAILABLE", "Gold DB is not configured.");
     }
-    console.error("[mmkt-runs] Gold read failed", {
-      error_type: error instanceof Error ? error.name : "UnknownError",
-    });
-    return failure(503, "GOLD_READ_FAILED", "Gold rate snapshot could not be read.");
+    try {
+      snapshot = await loadGoldMmktRateSnapshot(goldStore(), goldConfigStatus().backend);
+    } catch (error) {
+      if (error instanceof MmktRateSnapshotError) {
+        return failure(503, error.code, error.message);
+      }
+      console.error("[mmkt-runs] Gold read failed", {
+        error_type: error instanceof Error ? error.name : "UnknownError",
+      });
+      return failure(503, "GOLD_READ_FAILED", "Gold rate snapshot could not be read.");
+    }
   }
 
-  const gate = gatePricingCandidates(snapshot, candidateIds, "DB");
+  const gate = simSnapshot
+    ? gatePricingCandidates(snapshot, candidateIds, "SIM", true)
+    : gatePricingCandidates(snapshot, candidateIds, "DB");
   if (!gate.eligible) {
-    return failure(409, "RATE_CANDIDATES_INELIGIBLE", "Every candidate must have an eligible normalized Gold rate.", {
+    return failure(409, "RATE_CANDIDATES_INELIGIBLE", `Every candidate must have an eligible normalized ${simSnapshot ? "SIM" : "Gold"} rate.`, {
       pricing_gate: gate,
       rate_snapshot_hash: snapshot.snapshot_hash,
       rate_as_of_date: snapshot.as_of_date,
@@ -162,6 +173,7 @@ export async function POST(request: Request) {
       source: snapshot.source,
       as_of_date: snapshot.as_of_date,
       snapshot_hash: snapshot.snapshot_hash,
+      ...(snapshot.sim_set_id ? { sim_set_id: snapshot.sim_set_id } : {}),
       rows: snapshot.rows,
     },
   };
@@ -191,7 +203,7 @@ export async function POST(request: Request) {
     }
     headers.set("x-correlation-id", correlationId);
     headers.set("x-rate-snapshot-hash", snapshot.snapshot_hash);
-    headers.set("x-rate-source", "gold");
+    headers.set("x-rate-source", snapshot.source);
     return new Response(upstream.body, { status: upstream.status, headers });
   } catch (error) {
     const aborted = error instanceof DOMException && error.name === "AbortError";

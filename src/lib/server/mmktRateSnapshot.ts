@@ -129,7 +129,7 @@ function normalizeRow(raw: RawMmktRateRow): MmktRateRow {
   return row;
 }
 
-function canonicalHash(payload: Omit<MmktRateSnapshot, "snapshot_hash">): string {
+export function canonicalHash(payload: Omit<MmktRateSnapshot, "snapshot_hash">): string {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 

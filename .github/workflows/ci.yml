@@ -80,6 +80,24 @@ jobs:
           cd services/agent_worker
           pytest -m "not needs_quantsmith" -rs
 
+  mmkt-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MMKT service and shared optimization core
+        run: pip install ./services/optimization_core -e ./services/money_market_api pytest httpx
+
+      - name: MMKT service tests
+        run: |
+          cd services/money_market_api
+          pytest -q
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
