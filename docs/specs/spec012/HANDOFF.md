@@ -4,8 +4,9 @@
 
 **Branch:** `claude/synthetic-snu-poc-27n9hu`. The SU-SIM showcase merged into `main` in
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
-follow-up [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167), rebased onto that merge, adds the module SIM switch (SU-013), the approval
-records and this handoff refresh.
+follow-ups [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) (module SIM switch SU-013, approval records, handoffs) and
+[PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) (owner decisions 1–4) are also merged. The full-spec approval record (SU-001)
+follows in a later PR from the same branch.
 
 **State:** the full spec was **approved on 2026-10-18** (SU-001; see the `SPEC.md` decision log),
 so the production optimizer is authorized. It is not built yet. Two bounded slices are in place,
@@ -14,7 +15,7 @@ and neither one is the production optimizer.
 | Slice | Where | Status |
 |---|---|---|
 | Setup-only configuration workspace | `main` (merged before this branch) | Done. Edits, validates and imports/exports configurations. No solving. |
-| Synthetic PoC showcase (SU-SIM) | `main` (PR #166); SIM switch in PR #167 | Done. A browser-only, illustrative solve on a fixed SIM book. |
+| Synthetic PoC showcase (SU-SIM) | `main` (PR #166); SIM switch in PR #167 (merged) | Done. A browser-only, illustrative solve on a fixed SIM book. |
 | Production optimizer (service, contracts, run hash, OPT history) | — | Not started. Spec approved and questions 1–4 resolved; this is the next work. |
 
 The same PR also carries the MMKT module (spec011, see `docs/specs/spec011/HANDOFF.md`) and the
@@ -137,8 +138,8 @@ need owner review.
 
 ## Next steps (in order)
 
-1. **Merge PR #167** (SIM switch, approval records, handoff refresh). The earlier `build/spec012-sources-uses-optimizer` branch no
-   longer exists on the remote, so ignore any older reference to it.
+1. ~~**Merge PR #167**~~ (merged, as is PR #168). The earlier `build/spec012-sources-uses-optimizer`
+   branch no longer exists on the remote, so ignore any older reference to it.
 2. ~~**Owner approval** (SU-001).~~ Done 2026-10-18: questions 1–4 resolved and the full spec,
    plan, tasks and design paper approved.
 3. **Service contracts.** Define versioned request/result contracts and canonical

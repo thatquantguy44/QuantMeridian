@@ -1,7 +1,7 @@
 # Market Terminal Handoff
 
 **Updated:** 2026-10-18. The top-priority section was updated for PR #166 (merged: spec012
-SU-SIM, the spec011 MMKT module, demo books) and its follow-up PR #167. The rest of this file was last updated 2026-09-16 and is
+SU-SIM, the spec011 MMKT module, demo books) and its follow-ups PR #167 and PR #168. The rest of this file was last updated 2026-09-16 and is
 retained as context.
 **Default branch:** `main` (0018 was merged in PR #148; subsequent follow-up docs were merged in PR #150)
 
@@ -20,11 +20,11 @@ current `src/data/collateral.ts` economics and client what-if remain illustrativ
 Focus" and "Next Work" below; those stay as context.
 
 **Active checkpoint (2026-10-18):**
-[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) and its follow-up
-[PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) are **merged into `main`**.
-Between them they bring the SU-SIM showcase, the MMKT module, the SXU module SIM switch, these
-handoffs and the approval records. The next PR from `claude/synthetic-snu-poc-27n9hu` adds the
-MMKT selectable baseline: spec011 question 1, resolved 2026-10-18, default government MMF sweep.
+[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) and its follow-ups
+[PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) and [PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) are **merged into `main`**.
+Between them they bring the SU-SIM showcase, the MMKT module, the SXU module SIM switch, the
+MMKT selectable baseline (default government MMF sweep), these handoffs and the owner decisions.
+The full-spec approval records follow in a later PR from `claude/synthetic-snu-poc-27n9hu`.
 On 2026-10-18 the owner
 explicitly approved the spec012 SU-SIM showcase, the SXU module SIM switch and the spec011 MMKT
 module slice. Each is recorded in the decision log of its `SPEC.md`. Later the same day the owner
@@ -89,7 +89,7 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
-4. **As of 2026-10-18:** merge PR #167, then follow the ordered next steps in the spec011 and
+4. **As of 2026-10-18:** follow the ordered next steps in the spec011 and
    spec012 handoffs. All listed owner questions were resolved on 2026-10-18 (spec012 questions
    1–4 and spec011 questions 1–3) and both specs were approved; the highest-value items are the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.
