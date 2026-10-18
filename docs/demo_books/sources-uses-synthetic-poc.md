@@ -243,7 +243,7 @@ point out that the **Certified** tile stays green.
 | K | Stress: **Demand scale → 130%** | Coverage **90.6%**. Matched book short $780mm and SN hedges short $31mm. All hard uses whole. Every source binding. | Growth stress: the model tells you which business gets squeezed first. |
 | L | Penalty panel: **Haircut capital charge** 40 → **200** | Objective → **$28.17mm**. Haircut line $0.54mm → **$2.70mm**. Bilateral repo's uᵢ falls 19 → 6bp. | The cost of encumbered collateral is explicit and tunable. |
 | M | Stress: **Demand scale → 60%**, then toggle **Idle capacity penalty** off and on | With idle **on**, SBL cash is used **$451mm** and its uᵢ is **−10bp**. With it **off**, SBL cash use drops to $350mm. | Idle money has a cost (negative carry, reserve lock-up). The dummy sink prices it, and a negative shadow price means "this capacity is a burden". |
-| N | Footer: **Copy to workspace** | Switches to the Workspace tab with a "SIM · …" configuration, tagged SIM. | Bridge to the configurable workspace. Solving there is still gated by spec. |
+| N | Footer: **Copy to workspace** | Switches to the Workspace tab with a "SIM · …" configuration, tagged SIM. | Bridge to the configurable workspace. Solving there arrives with the production service (approved, not yet built). |
 
 ## Tailor it to the audience
 
@@ -263,9 +263,9 @@ No. It is a handwritten synthetic book, identical on every load, with no randomn
 early and often.
 
 **Is this the production optimizer?**
-No. It is a bounded proof of concept approved in spec012 (SU-SIM). The production service,
-contract and run history are still gated on full spec approval. The model questions themselves
-were all resolved on 2026-10-18.
+No. It is a bounded proof of concept approved in spec012 (SU-SIM). The full spec, including the
+production service, contract and run history, was approved on 2026-10-18, but that production
+model is not built yet.
 
 **How is currency handled? What if a portfolio holds several currencies?**
 Today it isn't normalised: the showcase is deliberately single-currency (USD). The owner decided

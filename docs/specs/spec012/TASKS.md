@@ -1,14 +1,14 @@
 # Tasks: Configurable Sources and Uses Optimizer
 
 - **Spec:** spec012-configurable-sources-uses (`SPEC.md`, `PLAN.md`)
-- **Status:** Bounded setup-only phase (in `main`) and SU-SIM showcase (merged in PR #166) approved; open questions 1–4 resolved 2026-10-18; production solver/service behaviour remains gated on full spec approval
+- **Status:** Bounded setup-only phase (in `main`) and SU-SIM showcase (merged in PR #166) approved; open questions 1–4 resolved and full spec approved 2026-10-18; production solver/service is authorized but not yet built
 - **Last updated:** 2026-10-18
 - **Checkpoint:** See [HANDOFF.md](HANDOFF.md) for branch state and pickup instructions
 - **Parent requirements:** 0018 REQ-021–029, REQ-041
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
-| SU-001 | Resolve compatibility, units, internalization, and currency questions; approve child docs. | SU-001–009 | blocked | **2026-10-18:** all four questions resolved and recorded in the SPEC.md decision log (currency hard block; display-only rounding; internalization definition; one currency per run). Still blocked on owner approval of the full SPEC, PLAN, TASKS and child design docs. |
+| SU-001 | Resolve compatibility, units, internalization, and currency questions; approve child docs. | SU-001–009 | done | **2026-10-18:** all four questions resolved (currency hard block; display-only rounding; internalization definition; one currency per run), and the full SPEC, PLAN, TASKS and design paper (`docs/whitepapers/sources_and_uses.md`, standing in for the child design docs) approved. Both recorded in the SPEC.md decision log. |
 | SU-002 | Define versioned contracts, config schema, canonical hash, and CSV/JSON round-trip. | SU-001, SU-009 | in-progress | Schema, generated types/models, parity and round-trip fixtures; current browser schema is a setup-only draft without a canonical run hash. **Decided 2026-10-18:** add an explicit per-source `internality` field (`internal`/`external`, unset allowed) with provenance; the run request carries exactly one currency; amounts and the hash keep full precision (no rounding). |
 | SU-003 | Implement compatibility rules and editable matrix with explicit override state. | SU-002 | in-progress | Rule-by-rule and override golden tests; current UI records explicit pair states only and does not solve. **Decided 2026-10-18:** the rules engine must reject any `allowed` rule on a currency-mismatched pair (a hard block, with no override). Cross-entity pairs are allowed only through an explicit rule. |
 | SU-004 | Implement LP with hard/soft uses and lexicographic tiers. | SU-003, SU-004 | todo | Hand-derived cases include large lower-tier economics. Reject a run spanning more than one currency before solving, naming the records; no rounding inside the model. |

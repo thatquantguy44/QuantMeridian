@@ -1,7 +1,7 @@
 # Plan: Money Market Execution Optimizer
 
 - **Spec:** spec011-money-market-execution (`SPEC.md`)
-- **Status:** Draft — implementation in progress; owner review pending
+- **Status:** Approved 2026-10-18 (see the `SPEC.md` decision log) — implementation in progress
 - **Last updated:** 2026-10-18
 
 > HOW. This plan stays within 0018's separate-service and shared-library decisions.
@@ -31,14 +31,14 @@ Use hand-computable golden portfolios, one test per constraint family, verifier 
 
 ## Sequence and gates
 
-1. Resolve owner questions and approve `SPEC.md` / this plan / tasks / white-paper design.
+1. ~~Resolve owner questions and approve `SPEC.md` / this plan / tasks / white-paper design.~~ Done 2026-10-18.
 2. Scaffold shared `optimization_core` and service contracts per 0018 T-003/T-004.
 3. Implement rate snapshot route and instrument/cash input validation (XR-5).
 4. Implement and verify the continuous LP relaxation (current slice); add opt-in MIP rules next.
 5. Build blotter, timeline, ladder, CSV, baseline, frontier, and scenario UI.
 6. Close with evidence, model card/validation, and as-built white paper.
 
-The owner-authorized integration and LP work is in progress while the child spec remains draft.
+The owner-authorized integration and LP work started while the child spec was a draft. The spec was approved on 2026-10-18.
 
 **2026-10-18 — MMKT module (requested, then explicitly approved by the owner; see the `SPEC.md` decision log).** A terminal module at `/money-market` drives the
 service end to end. It does the following:

@@ -1,6 +1,6 @@
 # Money Market Execution Optimization
 
-**Status:** Design draft — pending spec011 approval; not implemented.
+**Status:** Design draft — approved as design direction with spec011 on 2026-10-18; partially implemented (continuous LP only). Becomes as-built under spec011 MM-010.
 **Parent:** InventoryBallast 0018 REQ-016–020 and REQ-041.
 
 ## Application

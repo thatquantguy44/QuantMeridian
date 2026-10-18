@@ -27,8 +27,10 @@ handoffs and the approval records. The next PR from `claude/synthetic-snu-poc-27
 MMKT selectable baseline: spec011 question 1, resolved 2026-10-18, default government MMF sweep.
 On 2026-10-18 the owner
 explicitly approved the spec012 SU-SIM showcase, the SXU module SIM switch and the spec011 MMKT
-module slice. Each is recorded in the decision log of its `SPEC.md`. Full spec approvals and the
-listed open questions remain pending.
+module slice. Each is recorded in the decision log of its `SPEC.md`. Later the same day the owner
+resolved every listed owner question and **approved the full spec011 and spec012 packs** (spec,
+plan, tasks and design paper). Approval authorizes the remaining work; most of the production
+model is not built yet (see each `TASKS.md`).
 
 | Workstream | What PR #166 (merged) added | Pickup document |
 |---|---|---|
@@ -89,7 +91,7 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
 4. **As of 2026-10-18:** merge PR #167, then follow the ordered next steps in the spec011 and
    spec012 handoffs. All listed owner questions were resolved on 2026-10-18 (spec012 questions
-   1–4 and spec011 questions 1–3); the highest-value items are full spec approvals, the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
+   1–4 and spec011 questions 1–3) and both specs were approved; the highest-value items are the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.
 
 **Current IBAL integration status (2026-10-17):** InventoryBallast PR #34 is merged to `main`.
@@ -116,7 +118,7 @@ not depend on this branch being merged:
 | XR-3 | EcoMedallion Phase 1: wire `gold.mmkt_rate_snapshot` into SQLite, Postgres and Databricks (about eight places; the Spark path needs CI or a real cluster). Until then QuantMeridian **cannot read the table**. | EcoMedallion | `spec011` real-rate mode (`0018` T-010) | **todo** |
 | XR-4 | EcoMedallion Phase 2–3: Treasury bill auction results; SEC Form N-MFP and OFR source clients for money-fund yield, WAM, WAL, daily/weekly liquid assets, and repo by tenor. Each source must clear EcoMedallion `spec006` §4.1 and be recorded in `config/data_licensing.yml`. | EcoMedallion | Realistic MMKT fund parameters (`0018` REQ-017); until then they are user policy inputs labeled "illustrative" | **todo** |
 | XR-5 | **QuantMeridian side:** an `/api/econ/...` route reading `gold.mmkt_rate_snapshot` through the existing `useGoldView` DB \| LOADING \| ERR pattern; build the **rate snapshot** (every row, with its `status`) plus a hash; pass it into the `services/money_market_api` solve request so the service has no database dependency and stays deterministic; record the hash on each run. A row with `status != ok` renders as `ERR` and is not priced off. The `SIM` set is selectable only by an explicit user choice. | QuantMeridian, with `spec011` (`0018` T-010) | MMKT demo | **in-progress** — snapshot route/hash/gate, solve wiring and two registered SIM sets done (2026-10-18; `/money-market` module); OPT run history remains |
-| XR-6 | `spec011` must cite EcoMedallion `spec009` and its column contract (`instrument_id`, `quoted_rate_pct`, `quoted_basis`, `mm_yield_pct`, `observation_date`, `staleness_days`, `status`, `status_detail`). | QuantMeridian | `spec011` approval | **todo** |
+| XR-6 | `spec011` must cite EcoMedallion `spec009` and its column contract (`instrument_id`, `quoted_rate_pct`, `quoted_basis`, `mm_yield_pct`, `observation_date`, `staleness_days`, `status`, `status_detail`). | QuantMeridian | `spec011` approval | **done** — `spec011/SPEC.md` § Problem & Context cites the column contract and Related documents cites `spec009`; spec011 approved 2026-10-18 |
 
 Two facts the terminal side must not lose:
 

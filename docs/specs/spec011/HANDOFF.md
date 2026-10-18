@@ -13,9 +13,10 @@ PR from the same branch. The same PRs carry the spec012 SU-SIM work; see
 continuous LP end to end, on explicitly selected SIM rate sets. Results are verified by the
 service before they are shown. They are **not execution-ready** and not recommendations.
 
-**Spec status:** the owner **explicitly approved the MMKT module slice on 2026-10-18**. It is
-recorded in the decision log in `SPEC.md`. The spec as a whole is still a draft. Owner
-questions 1–3 were all resolved on 2026-10-18 (see the `SPEC.md` decision log).
+**Spec status:** **approved on 2026-10-18.** The owner approved the MMKT module slice and then
+the full spec, plan, tasks and white-paper design (MM-001). Owner questions 1–3 were resolved
+first. All are in the `SPEC.md` decision log. Approval authorizes the remaining tasks; it does
+not mean they are built. See "Next steps" below.
 
 ## Start here
 
@@ -150,8 +151,7 @@ headroom) and the CSV export.
 ## Next steps (in order)
 
 1. Merge the baseline PR (follow-up to #167).
-2. Owner approval of the full spec, plan, tasks and white paper (MM-001). Owner questions 1–3 are
-   all resolved (see the `SPEC.md` decision log).
+2. ~~Owner approval of the full spec, plan, tasks and white paper (MM-001).~~ Done 2026-10-18.
 3. **MM-006 MIP slice.** Add ticket, lot, count and cutoff rules with formulation disclosure,
    and verify integrality. Only after this can the UI present an execution blotter and cutoff
    timeline (MM-007).

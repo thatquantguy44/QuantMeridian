@@ -2,9 +2,9 @@
 
 - **ID:** spec011-money-market-execution
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-016–020, REQ-027–030, REQ-041
-- **Status:** Draft — the MMKT module slice was explicitly approved and owner questions 1–3 were resolved on 2026-10-18 (see the decision log). Approval of the full spec, plan, tasks and white paper (MM-001) is pending. See `PLAN.md` and [HANDOFF.md](HANDOFF.md).
+- **Status:** Approved 2026-10-18 — the full spec, plan, task list and white-paper design (MM-001), with owner questions 1–3 resolved (see the decision log). Implementation is partial; see `TASKS.md` and [HANDOFF.md](HANDOFF.md).
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** Owner, for the MMKT module slice (2026-10-18). Full spec approval is pending.
+- **Approver:** Owner. MMKT module slice approved 2026-10-18; full spec, plan, tasks and white-paper design approved 2026-10-18.
 - **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Service architecture and task sequencing belong in `PLAN.md` and `TASKS.md`.
@@ -72,12 +72,13 @@ MMKT is a QuantMeridian service-backed module. It receives a rate snapshot from 
 | 2026-10-18 | **Question 2 resolved — horizon and buffer units.** The default horizon is 10 business days, configurable up to the contract's 366 periods. Liquidity floors stay in each entity's native currency, per currency; there is no cross-currency floor, matching the service's independent per-currency solves. A base-currency view is allowed for reporting only, with a dated, labelled FX snapshot. | Owner (accepted recommendation) |
 | 2026-10-18 | **Question 3 resolved — stale rows.** Rows that are stale but present are displayed with their status and staleness in days, and are never priced (fail closed). A per-run override to price stale rows up to N days is not built. If it is ever added, it must be off by default and recorded in the run lineage. | Owner (accepted recommendation) |
 | 2026-10-18 | **Question 1 resolved — baseline.** Any of four baselines can be selected: (a) uninvested cash earning zero; (b) sweep all cash above the liquidity floors into the government money-market fund; (c) roll overnight in tri-party repo and the Fed's overnight reverse repo facility; (d) the actual current allocation. **The default is (b), the government MMF sweep.** Each computable baseline is a separate, verified service run with the same forecast, floors and policy, restricted to its instruments. (d) needs a current-positions feed that does not exist yet, so it fails closed with a stated reason until one is connected (MM-011). | Owner |
+| 2026-10-18 | **Approved: full spec (MM-001).** The owner approved this `SPEC.md`, `PLAN.md`, `TASKS.md` and the design draft `docs/whitepapers/money_market_execution.md` after reviewing a built-vs-not-built summary. This authorizes the remaining work in `TASKS.md`, including the MIP/execution slice (MM-006), the execution blotter and cutoff timeline, shadow prices, the frontier, OPT run history and the positions feed (MM-011). The white paper is approved as design direction; it becomes as-built only under MM-010, with its worked example pinned to a golden test. Results stay labelled not execution-ready until MM-006 passes verification. | Owner, explicit approval in the build session |
 | 2026-10-18 | **Approved:** the MMKT terminal module (`/money-market`) as built in PR #166. This covers explicit rate-source selection, the two named SIM rate sets with fail-closed pricing, the five named scenarios, verified-only result presentation labelled as a continuous LP relaxation, and the service fixes and tests. | Owner, explicit approval in the build session |
 
-This approval does not cover the MIP/execution slice (MM-006), an execution blotter, a baseline
-definition, or the questions below.
+The module-slice approval alone did not cover the MIP/execution slice (MM-006) or an execution
+blotter. The full-spec approval above now does.
 
-**Owner confirmation needed before approval:**
+**Owner questions (all resolved before approval):**
 1. ~~Naive baseline definition.~~ **Resolved 2026-10-18** — see the decision log above.
 2. ~~Default horizon and liquidity-buffer units.~~ **Resolved 2026-10-18** — see the decision log above.
 3. ~~Stale-but-present rows.~~ **Resolved 2026-10-18** — see the decision log above.

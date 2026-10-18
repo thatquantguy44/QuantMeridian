@@ -1,6 +1,6 @@
 # Sources and Uses Network Optimization
 
-**Status:** Design draft — pending spec012 approval; not implemented.
+**Status:** Design draft — approved as design direction with spec012 on 2026-10-18 (it stands in for the child design documents); production model not implemented. Becomes as-built under spec012 SU-010.
 **Parent:** InventoryBallast 0018 REQ-021–029 and REQ-041.
 
 ## Application

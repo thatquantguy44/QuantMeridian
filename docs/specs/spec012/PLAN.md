@@ -1,7 +1,7 @@
 # Plan: Configurable Sources and Uses Optimizer
 
 - **Spec:** spec012-configurable-sources-uses (`SPEC.md`)
-- **Status:** Setup-only phase (in `main`) and synthetic PoC showcase (SU-SIM, merged in PR #166) approved; open questions 1–4 resolved 2026-10-18; full optimizer design approval remains pending
+- **Status:** Approved 2026-10-18 (see the `SPEC.md` decision log). Setup-only phase and SU-SIM showcase built; production optimizer not yet built
 - **Last updated:** 2026-10-18
 
 ## Approach
@@ -36,7 +36,7 @@ updating the manifest.
 
 ## Sequence
 
-The owner has approved a bounded setup-only phase: versioned browser configuration, source/use editing, explicit compatibility setup, and validated import/export. This phase does not enable solving or expose recommendations. The owner resolved the four model questions on 2026-10-18 (SPEC decision log). Child-document approval still gates service/model behavior. After that approval, scaffold the service contracts, implement the compatibility engine and LP, add optional MIP rules, connect result views and OPT run history, and finish with independent validation and as-built evidence. Follow the pinned Agent Skills throughout.
+The owner has approved a bounded setup-only phase: versioned browser configuration, source/use editing, explicit compatibility setup, and validated import/export. This phase does not enable solving or expose recommendations. The owner resolved the four model questions and approved the full spec, this plan, the tasks and the design paper on 2026-10-18 (SPEC decision log). Next, scaffold the service contracts, implement the compatibility engine and LP, add optional MIP rules, connect result views and OPT run history, and finish with independent validation and as-built evidence. Follow the pinned Agent Skills throughout.
 
 Separately, the owner approved a synthetic proof-of-concept showcase (SPEC § SU-SIM). It runs the
 illustrative penalised, balanced transportation LP in the browser against a fixed SIM book. It is
