@@ -2,7 +2,7 @@
 
 - **Spec:** spec015-pluggable-optimization-center (`SPEC.md`)
 - **Status:** Draft — implementation in progress; model binding approval pending
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 ## Architecture
 
