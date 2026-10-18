@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
+import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
 
 type Readiness = "READY" | "UNCONFIGURED" | "UNAVAILABLE" | "INCOMPATIBLE";
@@ -140,7 +141,7 @@ export default function MoneyMarketFundOptimizer() {
         title="Money Market Fund Optimizer"
         desc="Fund Allocation · Local POC Model"
         showStreaming={false}
-        right={<Tag tone="amber">POC · SIM</Tag>}
+        right={<><Tag tone="amber">POC</Tag>{syntheticMode ? <ProvenanceBadge source="SIM" simSelected /> : <ProvenanceBadge source="UNAVAILABLE" />}</>}
       />
 
       <div className="m-2 border border-term-amber/50 bg-term-amber/5 px-3 py-2 text-xs leading-relaxed text-term-text-dim">
