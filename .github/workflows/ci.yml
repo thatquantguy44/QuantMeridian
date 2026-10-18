@@ -98,6 +98,25 @@ jobs:
           cd services/money_market_api
           pytest -q
 
+  sxu-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Sources & Uses service
+        run: pip install -e ./services/sources_uses_api pytest ruff
+
+      - name: Sources & Uses service lint and tests
+        run: |
+          cd services/sources_uses_api
+          ruff check .
+          pytest -q
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20

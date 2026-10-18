@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sources-uses-api"
+version = "0.1.0"
+description = "Bounded model-service API for QuantMeridian Sources & Uses (spec012)."
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.11,<3",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sources_uses_api"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

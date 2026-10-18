@@ -17,7 +17,8 @@ and neither one is the production optimizer.
 |---|---|---|
 | Setup-only configuration workspace | `main` (merged before this branch) | Done. Edits, validates and imports/exports configurations. No solving. |
 | Synthetic PoC showcase (SU-SIM) | `main` (PR #166); SIM switch in PR #167 (merged) | Done. A browser-only, illustrative solve on a fixed SIM book. |
-| Production optimizer (service, contracts, run hash, OPT history) | — | Not started. Spec approved and questions 1–4 resolved; this is the next work. |
+| Request contracts and canonical hashes (SU-002) | `services/sources_uses_api`, `src/lib/sourcesUsesContract.ts` | Done. Versioned request contract, TS/Python hash parity, published schema. No solver or endpoint yet. |
+| Production optimizer (LP, verifier, API, OPT history) | — | Not started. Builds on the SU-002 contracts; this is the next work. |
 
 The same PR also carries the MMKT module (spec011, see `docs/specs/spec011/HANDOFF.md`) and the
 demo guide in `docs/demo_books/`.
@@ -143,9 +144,10 @@ need owner review.
    branch no longer exists on the remote, so ignore any older reference to it.
 2. ~~**Owner approval** (SU-001).~~ Done 2026-10-18: questions 1–4 resolved and the full spec,
    plan, tasks and design paper approved.
-3. **Service contracts.** Define versioned request/result contracts and canonical
-   configuration/run hashing (SU-002), including the per-source `internality` field and a
-   single run currency. Reuse the showcase's verifier checks as acceptance fixtures.
+3. ~~**Service contracts.**~~ Done (SU-002): `services/sources_uses_api` holds the versioned
+   request contract, provenance, single-currency and question-1 checks, and canonical hashes that
+   match `src/lib/sourcesUsesContract.ts` byte for byte. See the service `README.md`. The result
+   contract is defined with the LP.
 4. **Production LP.** The compatibility engine must enforce the currency hard block from
    question 1 and reject an `allowed` rule on any currency-mismatched pair. Validation rejects a
    multi-currency run (question 4). Keep the model unrounded (question 2) and compute the

@@ -85,3 +85,27 @@ describe("Sources & Uses configuration contracts", () => {
     expect(() => parseConfigurationCsv("recordType,id,label\nsource,s1,No metadata")).toThrow(/sources\[0\]\.category/);
   });
 });
+
+describe("CSV import robustness (spec012 AC-001)", () => {
+  test("keeps a quoted trailing carriage return in the last column", () => {
+    const config = completeConfiguration();
+    const withRule = setCompatibilityRule(config, config.sources[0].id, config.uses[0].id, "allowed");
+    const noted = { ...withRule, compatibility: withRule.compatibility.map((rule) => ({ ...rule, note: "x\r" })) };
+    expect(parseConfigurationCsv(configurationToCsv(noted)).compatibility[0].note).toBe("x\r");
+  });
+
+  test("ignores a leading byte-order mark instead of importing an empty configuration", () => {
+    const config = completeConfiguration();
+    const imported = parseConfigurationCsv(`﻿${configurationToCsv(config)}`);
+    expect(imported.sources).toEqual(config.sources);
+  });
+
+  test("round-trips explicit record provenance and rejects unknown values", () => {
+    const config = completeConfiguration();
+    const sim = { ...config, sources: config.sources.map((source) => ({ ...source, provenance: "sim" as const })) };
+    expect(parseConfigurationCsv(configurationToCsv(sim)).sources[0].provenance).toBe("sim");
+    expect(parseConfigurationJson(JSON.stringify(sim)).sources[0].provenance).toBe("sim");
+    const bad = { ...config, sources: config.sources.map((source) => ({ ...source, provenance: "gold" })) };
+    expect(validateConfiguration(bad).some((issue) => issue.path === "sources[0].provenance")).toBe(true);
+  });
+});

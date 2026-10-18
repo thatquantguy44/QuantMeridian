@@ -1,0 +1,423 @@
+{
+  "$defs": {
+    "CompatibilityRule": {
+      "additionalProperties": false,
+      "properties": {
+        "note": {
+          "maxLength": 2000,
+          "title": "Note",
+          "type": "string"
+        },
+        "provenance": {
+          "enum": [
+            "user_input",
+            "sim"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "source_id": {
+          "pattern": "^[\\x21-\\x7e]{1,128}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "unspecified",
+            "allowed",
+            "denied"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "use_id": {
+          "pattern": "^[\\x21-\\x7e]{1,128}$",
+          "title": "Use Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "use_id",
+        "status",
+        "note",
+        "provenance"
+      ],
+      "title": "CompatibilityRule",
+      "type": "object"
+    },
+    "ConfigurationContent": {
+      "additionalProperties": false,
+      "description": "Everything a run depends on. A configuration's name, ID and timestamps are not part of it.",
+      "properties": {
+        "compatibility": {
+          "items": {
+            "$ref": "#/$defs/CompatibilityRule"
+          },
+          "title": "Compatibility",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceRecord"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "uses": {
+          "items": {
+            "$ref": "#/$defs/UseRecord"
+          },
+          "title": "Uses",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "sources",
+        "uses",
+        "compatibility"
+      ],
+      "title": "ConfigurationContent",
+      "type": "object"
+    },
+    "SourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "minimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "asset_class": {
+          "maxLength": 256,
+          "title": "Asset Class",
+          "type": "string"
+        },
+        "category": {
+          "maxLength": 256,
+          "pattern": "\\S",
+          "title": "Category",
+          "type": "string"
+        },
+        "cost_bps": {
+          "minimum": 0,
+          "title": "Cost Bps",
+          "type": "number"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        },
+        "haircut_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Haircut Pct",
+          "type": "number"
+        },
+        "id": {
+          "pattern": "^[\\x21-\\x7e]{1,128}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "internality": {
+          "enum": [
+            "internal",
+            "external",
+            "unclassified"
+          ],
+          "title": "Internality",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 256,
+          "pattern": "\\S",
+          "title": "Label",
+          "type": "string"
+        },
+        "legal_entity": {
+          "maxLength": 256,
+          "title": "Legal Entity",
+          "type": "string"
+        },
+        "lot_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lot Size"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Maximum"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Minimum"
+        },
+        "priority_tier": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Priority Tier",
+          "type": "integer"
+        },
+        "provenance": {
+          "enum": [
+            "user_input",
+            "sim"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "tenor_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tenor Days"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "category",
+        "amount",
+        "currency",
+        "legal_entity",
+        "asset_class",
+        "tenor_days",
+        "priority_tier",
+        "minimum",
+        "maximum",
+        "lot_size",
+        "tags",
+        "provenance",
+        "cost_bps",
+        "haircut_pct",
+        "internality"
+      ],
+      "title": "SourceRecord",
+      "type": "object"
+    },
+    "UseRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "minimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "asset_class": {
+          "maxLength": 256,
+          "title": "Asset Class",
+          "type": "string"
+        },
+        "bid_bps": {
+          "minimum": 0,
+          "title": "Bid Bps",
+          "type": "number"
+        },
+        "category": {
+          "maxLength": 256,
+          "pattern": "\\S",
+          "title": "Category",
+          "type": "string"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[\\x21-\\x7e]{1,128}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 256,
+          "pattern": "\\S",
+          "title": "Label",
+          "type": "string"
+        },
+        "legal_entity": {
+          "maxLength": 256,
+          "title": "Legal Entity",
+          "type": "string"
+        },
+        "lot_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lot Size"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Maximum"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Minimum"
+        },
+        "policy": {
+          "enum": [
+            "hard",
+            "soft"
+          ],
+          "title": "Policy",
+          "type": "string"
+        },
+        "priority_tier": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Priority Tier",
+          "type": "integer"
+        },
+        "provenance": {
+          "enum": [
+            "user_input",
+            "sim"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "shortfall_penalty_bps": {
+          "minimum": 0,
+          "title": "Shortfall Penalty Bps",
+          "type": "number"
+        },
+        "tags": {
+          "items": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "tenor_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tenor Days"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "category",
+        "amount",
+        "currency",
+        "legal_entity",
+        "asset_class",
+        "tenor_days",
+        "priority_tier",
+        "minimum",
+        "maximum",
+        "lot_size",
+        "tags",
+        "provenance",
+        "bid_bps",
+        "policy",
+        "shortfall_penalty_bps"
+      ],
+      "title": "UseRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "api_schema_version": {
+      "const": "1.0.0",
+      "title": "Api Schema Version",
+      "type": "string"
+    },
+    "configuration": {
+      "$ref": "#/$defs/ConfigurationContent"
+    },
+    "configuration_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Configuration Hash",
+      "type": "string"
+    },
+    "currency": {
+      "pattern": "^[A-Z]{3}$",
+      "title": "Currency",
+      "type": "string"
+    }
+  },
+  "required": [
+    "api_schema_version",
+    "currency",
+    "configuration",
+    "configuration_hash"
+  ],
+  "title": "SolveRequest",
+  "type": "object"
+}

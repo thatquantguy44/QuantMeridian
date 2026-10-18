@@ -1,0 +1,1108 @@
+{
+  "numbers": [
+    {"value": 0, "canonical": "0"},
+    {"value": -0.0, "canonical": "0"},
+    {"value": 1, "canonical": "1"},
+    {"value": -1, "canonical": "-1"},
+    {"value": 0.1, "canonical": "0.1"},
+    {"value": 2.5, "canonical": "2.5"},
+    {"value": 100, "canonical": "100"},
+    {"value": 125000000, "canonical": "125000000"},
+    {"value": 123456789.123, "canonical": "123456789.123"},
+    {"value": 0.30000000000000004, "canonical": "0.30000000000000004"},
+    {"value": 1e-6, "canonical": "0.000001"},
+    {"value": 1e-7, "canonical": "1e-7"},
+    {"value": 1.5e-7, "canonical": "1.5e-7"},
+    {"value": 1e20, "canonical": "100000000000000000000"},
+    {"value": 1e21, "canonical": "1e+21"},
+    {"value": 1.2345e21, "canonical": "1.2345e+21"},
+    {"value": 5e-324, "canonical": "5e-324"},
+    {"value": 1.7976931348623157e308, "canonical": "1.7976931348623157e+308"},
+    {"value": -0.000001234, "canonical": "-0.000001234"},
+    {"value": 98.76543210987, "canonical": "98.76543210987"}
+  ],
+  "configurations": [
+    {
+      "name": "empty",
+      "content": {
+        "schema_version": "1.0.0",
+        "sources": [],
+        "uses": [],
+        "compatibility": []
+      },
+      "configuration_hash": "b51aa0e1ed50f4b2a82f4fa99279dabf02587bfc78ecd47fa4e48c8a08004c04"
+    },
+    {
+      "name": "multi-currency-edge-cases",
+      "content": {
+        "schema_version": "1.0.0",
+        "sources": [
+          {
+            "id": "src-b",
+            "label": "Repo · Agency \"MBS\"",
+            "category": "Secured\nfunding",
+            "amount": 1700.25,
+            "currency": "USD",
+            "legal_entity": "QMS",
+            "asset_class": "Secured",
+            "tenor_days": 30,
+            "priority_tier": 1,
+            "minimum": 0.1,
+            "maximum": 1e+21,
+            "lot_size": 5e-7,
+            "tags": [
+              "b",
+              "é",
+              "a"
+            ],
+            "provenance": "user_input",
+            "cost_bps": 26.5,
+            "haircut_pct": 2.5,
+            "internality": "external"
+          },
+          {
+            "id": "src-a",
+            "label": "Cash pool",
+            "category": "Cash",
+            "amount": 123456789.123,
+            "currency": "EUR",
+            "legal_entity": "QMP",
+            "asset_class": "",
+            "tenor_days": null,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [],
+            "provenance": "user_input",
+            "cost_bps": 0,
+            "haircut_pct": 0,
+            "internality": "unclassified"
+          }
+        ],
+        "uses": [
+          {
+            "id": "use-2",
+            "label": "Client shorts",
+            "category": "Prime",
+            "amount": 0.000001,
+            "currency": "USD",
+            "legal_entity": "",
+            "asset_class": "",
+            "tenor_days": null,
+            "priority_tier": 2,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [],
+            "provenance": "user_input",
+            "bid_bps": 3,
+            "policy": "soft",
+            "shortfall_penalty_bps": 40
+          },
+          {
+            "id": "use-1",
+            "label": "CCP margin",
+            "category": "Margin",
+            "amount": 900,
+            "currency": "EUR",
+            "legal_entity": "",
+            "asset_class": "",
+            "tenor_days": null,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [],
+            "provenance": "user_input",
+            "bid_bps": 0,
+            "policy": "hard",
+            "shortfall_penalty_bps": 0
+          }
+        ],
+        "compatibility": [
+          {
+            "source_id": "src-b",
+            "use_id": "use-2",
+            "status": "allowed",
+            "note": "",
+            "provenance": "user_input"
+          },
+          {
+            "source_id": "src-a",
+            "use_id": "use-1",
+            "status": "allowed",
+            "note": "",
+            "provenance": "user_input"
+          },
+          {
+            "source_id": "src-b",
+            "use_id": "use-1",
+            "status": "denied",
+            "note": "",
+            "provenance": "user_input"
+          },
+          {
+            "source_id": "src-a",
+            "use_id": "use-2",
+            "status": "unspecified",
+            "note": "kept: note only — review ✓",
+            "provenance": "user_input"
+          }
+        ]
+      },
+      "configuration_hash": "2f5bfdc5dca948410ba7f9979f6ac913a4438d4d79fbdbac6b1a4a47452da5f5"
+    },
+    {
+      "name": "sim-base-book",
+      "content": {
+        "schema_version": "1.0.0",
+        "sources": [
+          {
+            "id": "S1",
+            "label": "Firm cash pool",
+            "category": "Internal",
+            "amount": 1400,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Cash",
+            "tenor_days": 1,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 8,
+            "haircut_pct": 0,
+            "internality": "internal"
+          },
+          {
+            "id": "S2",
+            "label": "Prime free credits",
+            "category": "Internal",
+            "amount": 820,
+            "currency": "USD",
+            "legal_entity": "QM Prime Services",
+            "asset_class": "Cash",
+            "tenor_days": 1,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 18,
+            "haircut_pct": 0,
+            "internality": "internal"
+          },
+          {
+            "id": "S3",
+            "label": "Sec-lending cash collateral",
+            "category": "Internal",
+            "amount": 640,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Cash",
+            "tenor_days": 1,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 34,
+            "haircut_pct": 1,
+            "internality": "internal"
+          },
+          {
+            "id": "S4",
+            "label": "Tri-party repo · UST",
+            "category": "Secured repo",
+            "amount": 1700,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Secured funding",
+            "tenor_days": 1,
+            "priority_tier": 1,
+            "minimum": 600,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 26,
+            "haircut_pct": 2,
+            "internality": "external"
+          },
+          {
+            "id": "S5",
+            "label": "Tri-party repo · Agency MBS",
+            "category": "Secured repo",
+            "amount": 900,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Secured funding",
+            "tenor_days": 30,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 38,
+            "haircut_pct": 5,
+            "internality": "external"
+          },
+          {
+            "id": "S6",
+            "label": "Bilateral repo · IG credit",
+            "category": "Secured repo",
+            "amount": 620,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Secured funding",
+            "tenor_days": 90,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 64,
+            "haircut_pct": 8,
+            "internality": "external"
+          },
+          {
+            "id": "S7",
+            "label": "Commercial paper",
+            "category": "Unsecured & committed",
+            "amount": 850,
+            "currency": "USD",
+            "legal_entity": "QM Holdings Inc",
+            "asset_class": "Cash",
+            "tenor_days": 60,
+            "priority_tier": 1,
+            "minimum": 350,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 88,
+            "haircut_pct": 0,
+            "internality": "external"
+          },
+          {
+            "id": "S8",
+            "label": "Committed revolver",
+            "category": "Unsecured & committed",
+            "amount": 1000,
+            "currency": "USD",
+            "legal_entity": "QM Holdings Inc",
+            "asset_class": "Cash",
+            "tenor_days": 365,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "cost_bps": 135,
+            "haircut_pct": 0,
+            "internality": "external"
+          }
+        ],
+        "uses": [
+          {
+            "id": "U1",
+            "label": "CCP initial margin",
+            "category": "Tier 1 · Regulatory & CCP",
+            "amount": 880,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 90,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "hard",
+            "shortfall_penalty_bps": 0
+          },
+          {
+            "id": "U2",
+            "label": "Liquidity buffer top-up",
+            "category": "Tier 1 · Regulatory & CCP",
+            "amount": 520,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 365,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "hard",
+            "shortfall_penalty_bps": 0
+          },
+          {
+            "id": "U3",
+            "label": "Intraday settlement buffer",
+            "category": "Tier 1 · Regulatory & CCP",
+            "amount": 300,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 1,
+            "priority_tier": 1,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "hard",
+            "shortfall_penalty_bps": 0
+          },
+          {
+            "id": "U4",
+            "label": "Govt & agency inventory",
+            "category": "Tier 2 · Core franchise",
+            "amount": 1350,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 1,
+            "priority_tier": 2,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "hard",
+            "shortfall_penalty_bps": 0
+          },
+          {
+            "id": "U5",
+            "label": "Prime margin lending",
+            "category": "Tier 2 · Core franchise",
+            "amount": 1050,
+            "currency": "USD",
+            "legal_entity": "QM Prime Services",
+            "asset_class": "Funding need",
+            "tenor_days": 30,
+            "priority_tier": 2,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "soft",
+            "shortfall_penalty_bps": 320
+          },
+          {
+            "id": "U6",
+            "label": "Equity inventory",
+            "category": "Tier 2 · Core franchise",
+            "amount": 640,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 30,
+            "priority_tier": 2,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "soft",
+            "shortfall_penalty_bps": 260
+          },
+          {
+            "id": "U7",
+            "label": "Credit inventory",
+            "category": "Tier 3 · Trading inventory",
+            "amount": 520,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 90,
+            "priority_tier": 3,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "soft",
+            "shortfall_penalty_bps": 210
+          },
+          {
+            "id": "U8",
+            "label": "Securities borrow collateral",
+            "category": "Tier 3 · Trading inventory",
+            "amount": 430,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 30,
+            "priority_tier": 3,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "soft",
+            "shortfall_penalty_bps": 180
+          },
+          {
+            "id": "U9",
+            "label": "Structured note hedges",
+            "category": "Tier 3 · Trading inventory",
+            "amount": 330,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 180,
+            "priority_tier": 3,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "soft",
+            "shortfall_penalty_bps": 150
+          },
+          {
+            "id": "U10",
+            "label": "Matched-book reverse repo",
+            "category": "Tier 4 · Opportunistic",
+            "amount": 600,
+            "currency": "USD",
+            "legal_entity": "QM Securities LLC",
+            "asset_class": "Funding need",
+            "tenor_days": 1,
+            "priority_tier": 4,
+            "minimum": null,
+            "maximum": null,
+            "lot_size": null,
+            "tags": [
+              "SIM"
+            ],
+            "provenance": "sim",
+            "bid_bps": 0,
+            "policy": "soft",
+            "shortfall_penalty_bps": 45
+          }
+        ],
+        "compatibility": [
+          {
+            "source_id": "S1",
+            "use_id": "U1",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U2",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U3",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U4",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U5",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U6",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U7",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U8",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U9",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S1",
+            "use_id": "U10",
+            "status": "allowed",
+            "note": "Fungible firm cash · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U1",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U2",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U3",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U4",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U5",
+            "status": "allowed",
+            "note": "Customer credits fund customer debits · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U6",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U7",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U8",
+            "status": "allowed",
+            "note": "Reuse limited to customer short coverage · pair penalty 4bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U9",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S2",
+            "use_id": "U10",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U1",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U2",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U3",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U4",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U5",
+            "status": "allowed",
+            "note": "Reinvestment into Prime · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U6",
+            "status": "allowed",
+            "note": "Cash collateral reinvestment · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U7",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U8",
+            "status": "allowed",
+            "note": "Recycled into borrows · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U9",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S3",
+            "use_id": "U10",
+            "status": "allowed",
+            "note": "Reinvestment risk in matched book · pair penalty 8bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U1",
+            "status": "allowed",
+            "note": "Cash posted after repo settlement · pair penalty 3bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U2",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U3",
+            "status": "allowed",
+            "note": "Same-day settlement liquidity · pair penalty 2bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U4",
+            "status": "allowed",
+            "note": "Collateral-matched financing · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U5",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U6",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U7",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U8",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U9",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S4",
+            "use_id": "U10",
+            "status": "allowed",
+            "note": "Matched-book funding leg · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U1",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U2",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U3",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U4",
+            "status": "allowed",
+            "note": "Collateral-matched financing · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U5",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U6",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U7",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U8",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U9",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S5",
+            "use_id": "U10",
+            "status": "allowed",
+            "note": "Matched-book funding leg · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U1",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U2",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U3",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U4",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U5",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U6",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U7",
+            "status": "allowed",
+            "note": "Collateral-matched financing · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U8",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U9",
+            "status": "allowed",
+            "note": "Hedge collateral substitution · pair penalty 5bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S6",
+            "use_id": "U10",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U1",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U2",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U3",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U4",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U5",
+            "status": "allowed",
+            "note": "Two-hop downstream via Securities · pair penalty 6bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U6",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U7",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U8",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U9",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S7",
+            "use_id": "U10",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U1",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U2",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U3",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U4",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U5",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U6",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U7",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U8",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U9",
+            "status": "allowed",
+            "note": "Downstreamed from Holdings · pair penalty 0bp",
+            "provenance": "sim"
+          },
+          {
+            "source_id": "S8",
+            "use_id": "U10",
+            "status": "denied",
+            "note": "Not eligible in SIM book",
+            "provenance": "sim"
+          }
+        ]
+      },
+      "configuration_hash": "77a0cc5a5443ce2741d9cce368b6e6e432da9efd2007f0d45600940ec6b01d46"
+    }
+  ]
+}
