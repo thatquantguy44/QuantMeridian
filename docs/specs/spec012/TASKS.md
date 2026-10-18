@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | SU-001 | Resolve compatibility, units, internalization, and currency questions; approve child docs. | SU-001–009 | blocked | Decisions and approval recorded in SPEC.md |
 | SU-002 | Define versioned contracts, config schema, canonical hash, and CSV/JSON round-trip. | SU-001, SU-009 | in-progress | Schema, generated types/models, parity and round-trip fixtures; current browser schema is a setup-only draft without a canonical run hash |
-| SU-003 | Implement compatibility rules and editable matrix with explicit override state. | SU-002 | in-progress | Rule-by-rule and override golden tests; current UI records explicit pair states only and does not solve |
+| SU-003 | Implement compatibility rules and editable matrix with explicit override state. | SU-002 | in-progress | Rule-by-rule and override golden tests; current UI records explicit pair states only and does not solve. **Decided 2026-10-18:** the rules engine must reject any `allowed` rule on a currency-mismatched pair (a hard block, with no override). Cross-entity pairs are allowed only through an explicit rule. |
 | SU-004 | Implement LP with hard/soft uses and lexicographic tiers. | SU-003, SU-004 | todo | Hand-derived cases include large lower-tier economics |
 | SU-005 | Add independent verifier, binding rows, duals, and infeasibility explanation. | SU-006, SU-007 | todo | Tamper tests; MIP dual caveat fixture |
 | SU-006 | Add optional MIP rules and formulation disclosure. | SU-005 | todo | Per-rule binding/invalid cases |

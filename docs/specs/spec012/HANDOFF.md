@@ -101,11 +101,13 @@ the workspace instead. Turning SIM off hides the PoC entirely.
   credited as `flow × (1 − h_i)`. Pair-specific haircuts are out of scope initially.
 - **SU-SIM showcase:** explicitly approved by the owner on 2026-10-18 as a bounded demo mode.
 - **Module SIM switch:** explicitly approved by the owner on 2026-10-18 (SU-013).
-- Both are recorded in the decision log in `SPEC.md` § Decisions and open questions.
+- **Mismatches (open decision 1, resolved 2026-10-18):** a currency mismatch is always a hard
+  block. A legal-entity mismatch is not; a cross-entity pair is usable when an explicit
+  compatibility rule allows it.
+- All are recorded in the decision log in `SPEC.md` § Decisions and open questions.
 
 **Open (do not encode):**
-1. Are currency and legal-entity mismatches always incompatible, or can an explicit override
-   allow them?
+1. ~~Mismatches~~ (resolved, see above).
 2. The rounding convention for fractional capacity and coverage.
 3. The internalization numerator and denominator, and how internal sources are classified.
 4. Can one solve contain multiple currencies? The design options (one currency per run, base-
@@ -131,13 +133,15 @@ need owner review.
 
 1. **Merge PR #167** (SIM switch, approval records, handoff refresh). The earlier `build/spec012-sources-uses-optimizer` branch no
    longer exists on the remote, so ignore any older reference to it.
-2. **Owner decisions.** Resolve open decisions 1–4 and approve the full `SPEC.md`, `PLAN.md`,
+2. **Owner decisions.** Resolve open decisions 2–4 (decision 1 is resolved) and approve the full `SPEC.md`, `PLAN.md`,
    `TASKS.md` and child design docs (SU-001).
 3. **Service contracts.** Define versioned request/result contracts and canonical
    configuration/run hashing (SU-002). Reuse the showcase's verifier checks as acceptance
    fixtures.
-4. **Production LP.** Build `services/sources_uses_api` on `services/optimization_core` (HiGHS)
-   with the compatibility engine, the lexicographic LP and an independent verifier (SU-003–005).
+4. **Production LP.** The compatibility engine must enforce the currency hard block from
+   decision 1 and reject an `allowed` rule on any currency-mismatched pair. Then build
+   `services/sources_uses_api` on `services/optimization_core` (HiGHS) with the compatibility
+   engine, the lexicographic LP and an independent verifier (SU-003–005).
    The showcase's hand-computable cases in `sourcesUsesSynthetic.test.ts` make good golden
    cases.
 5. **Then:** MIP rules (SU-006), result views wired to the service (SU-007), OPT run history

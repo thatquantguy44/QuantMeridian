@@ -267,8 +267,10 @@ No. It is a bounded proof of concept approved in spec012 (SU-SIM). The productio
 contract and run history are still gated on open decisions.
 
 **How is currency handled? What if a portfolio holds several currencies?**
-Today it isn't normalised: the showcase is deliberately single-currency (USD). Whether one solve
-may mix currencies is **open decision 4** in spec012, so the model doesn't assume an answer. The
+Today it isn't normalised: the showcase is deliberately single-currency (USD). The owner decided
+on 2026-10-18 that a **currency mismatch is a hard block**: a source can never fund a use in
+another currency. A legal-entity mismatch is allowed through an explicit rule. Whether one solve
+may contain several currencies at all is still **open decision 4** in spec012. The
 workspace stores a currency on each record but does not convert. See
 [Multi-currency: options for the open decision](#multi-currency-options-for-the-open-decision).
 

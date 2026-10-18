@@ -14,8 +14,8 @@ continuous LP end to end, on explicitly selected SIM rate sets. Results are veri
 service before they are shown. They are **not execution-ready** and not recommendations.
 
 **Spec status:** the owner **explicitly approved the MMKT module slice on 2026-10-18**. It is
-recorded in the decision log in `SPEC.md`. The spec as a whole is still a draft, and owner
-questions 1–3 in `SPEC.md` are still open and must not be encoded.
+recorded in the decision log in `SPEC.md`. The spec as a whole is still a draft. Owner
+questions 1–3 were all resolved on 2026-10-18 (see the `SPEC.md` decision log).
 
 ## Start here
 
@@ -130,8 +130,8 @@ headroom) and the CSV export.
   fails closed with a clear message.
 - **Contract parity and idempotency.** There are no generated TS/Python contract parity checks
   (MM-002), and the idempotency key is logged but not enforced (MM-009).
-- **Multi-currency.** The service solves each currency independently. The demo book is USD only
-  (owner question 2).
+- **Multi-currency demo data.** The service solves each currency independently, and floors are
+  native-currency per entity (decided 2026-10-18). The demo book is USD only.
 
 ## Verification evidence (2026-10-18, branch head)
 
@@ -150,8 +150,8 @@ headroom) and the CSV export.
 ## Next steps (in order)
 
 1. Merge the baseline PR (follow-up to #167).
-2. Owner decisions: questions 2–3 in `SPEC.md` (question 1 is resolved), then approve the spec,
-   plan, tasks and white paper (MM-001).
+2. Owner approval of the full spec, plan, tasks and white paper (MM-001). Owner questions 1–3 are
+   all resolved (see the `SPEC.md` decision log).
 3. **MM-006 MIP slice.** Add ticket, lot, count and cutoff rules with formulation disclosure,
    and verify integrality. Only after this can the UI present an execution blotter and cutoff
    timeline (MM-007).

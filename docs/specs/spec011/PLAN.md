@@ -55,5 +55,7 @@ It does not resolve or encode the open owner questions:
 - Baseline: question 1 was resolved on 2026-10-18 (see the `SPEC.md` decision log). The four
   options are selectable, the government MMF sweep is the default, and each baseline is its own
   verified run.
-- The illustrative book is single-currency USD (question 2).
-- Non-OK rows are displayed but never priced (question 3, recommended fail-closed behaviour).
+- Horizon and buffer units: question 2 was resolved on 2026-10-18. The default is 10 business days,
+  and floors are in native currency per entity. The illustrative book is single-currency USD.
+- Stale rows: question 3 was resolved on 2026-10-18. Non-OK rows are displayed but never priced,
+  which is already implemented.

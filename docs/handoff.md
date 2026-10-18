@@ -79,8 +79,8 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
 4. **As of 2026-10-18:** merge PR #167, then follow the ordered next steps in the spec011 and
-   spec012 handoffs. The highest-value items are owner decisions (spec012 open decisions 1–4,
-   spec011 questions 1–3), the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
+   spec012 handoffs. The highest-value items are owner decisions (spec012 open decisions 2–4;
+   spec012 decision 1 and spec011 questions 1–3 were resolved 2026-10-18), the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.
 
 **Current IBAL integration status (2026-10-17):** InventoryBallast PR #34 is merged to `main`.

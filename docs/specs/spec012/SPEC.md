@@ -207,6 +207,7 @@ production objective.
 |---|---|---|
 | 2026-10-17 | Setup-only phase approved. Haircut is per source (decision 2 below). | Owner |
 | 2026-10-18 | **Approved:** the SU-SIM synthetic PoC showcase as built in PR #166. This covers the penalised balanced transportation LP, configurable penalties, verifier and LP certificate, and the visual front end, within the scope and limits in § SU-SIM. | Owner, explicit approval in the build session |
+| 2026-10-18 | **Question 1 resolved — mismatches.** A **currency mismatch is always a hard block**: no override can make a source in one currency fund a use in another. A **legal-entity mismatch is not a hard block**: a cross-entity pair may be used when an explicit compatibility rule allows it. Compatibility is still never inferred (see Non-goals). | Owner |
 | 2026-10-18 | **Approved:** the module SIM switch. SIM is on by default until the page is wired to a production model, with an on-screen ON/OFF switch (SU-013). | Owner |
 
 These approvals do not cover the production optimizer, the service contract, OPT run history or
@@ -214,7 +215,7 @@ the open questions below.
 
 **Open questions**
 
-1. Confirm whether currency mismatches and legal-entity mismatches are always hard incompatibilities or may be allowed by an explicit override.
+1. ~~Currency and legal-entity mismatches.~~ **Resolved 2026-10-18** — currency is a hard block; legal entity is not (see the decision log).
 2. **Resolved (2026-10-17):** Haircut is attached to each source and is configurable in the source/use configuration, not hard-coded. For a nominal flow `x_ij` from source `i`, source capacity is consumed by `x_ij` and use coverage is credited as `x_ij × (1 − h_i)`, where `h_i` is that source's configured haircut rate. The same source haircut applies to all compatible uses. Pair-specific haircuts are out of scope for the initial release. **Still open:** rounding convention for fractional capacity and coverage.
 3. Confirm internalization-rate numerator/denominator and how to classify “internal” sources.
 4. Confirm whether a configuration can contain multiple currencies in one solve; otherwise enforce one currency per run.
