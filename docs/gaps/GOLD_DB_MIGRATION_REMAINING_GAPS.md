@@ -14,7 +14,7 @@ snapshot/SIM, or carries dead code referencing removed systems.
 | ID | File | Issue | Severity |
 |----|------|--------|----------|
 | G1 | `src/app/api/econ/calendar/route.ts` | RESOLVED — reads `gold.release_calendar` through `goldStore`; no live FRED/Finnhub route path | Closed |
-| G2 | `market_lens_studio/data/series_catalog.py` | `preferred_source = "yahoo"` for all equity entries; all equity views silently empty | High |
+| G2 | `services/market_lens_studio/src/market_lens_studio/data/series_catalog.py` | `preferred_source = "yahoo"` for all equity entries; all equity views silently empty | High |
 | G3 | `src/app/api/econ/benchmark/route.ts` | Per-series SIM fallback inside gold path for series absent from gold table | Medium |
 | G4 | `src/app/api/econ/batch/route.ts` | Same per-series SIM inside gold path | Medium |
 | G5 | `src/app/api/dataops/health/route.ts` | Runtime reads of `MARKET_DB_URL`, `MARKET_DATA_DIR`, `MARKET_PIPELINE_URL` and labels them YAHOO | Medium |
@@ -23,7 +23,7 @@ snapshot/SIM, or carries dead code referencing removed systems.
 | G8 | `src/app/api/dataops/runs/route.ts` | Legacy `MARKET_PIPELINE_URL` manifest fallback | Low |
 | G9 | `market_data_pipeline/src/config/settings.py` | Orphaned `allow_yahoo` / `yahoo_rate_limit` config fields | Low |
 | G10 | `market_data_pipeline/src/config/catalog.py` | `AssetDef` default `source = "YAHOO"` | Low |
-| G11 | `market_lens_studio/api/routes.py` | `get_yahoo_ticker` imported but dispatches to a handler that no longer exists | Low |
+| G11 | `services/market_lens_studio/src/market_lens_studio/api/routes.py` | `get_yahoo_ticker` imported but dispatches to a handler that no longer exists | Low |
 | G12 | `macro_data_etl/scripts/seed_demo.py` | Stale comment referencing live WorldBank/BIS/CME connectors | Info |
 
 ---
@@ -46,8 +46,8 @@ and it is no longer exempted by `scripts/check-gold-db-policy.sh`.
 ### G2 — market_lens_studio equity views silently empty (High)
 
 **Files:**
-- `market_lens_studio/data/series_catalog.py` — all equity/ETF entries have `preferred_source = "yahoo"` and `yahoo_ticker` fields
-- `market_lens_studio/api/routes.py` line 119–129 — `_fetch_series()` uses `FredAdapter` exclusively; `get_yahoo_ticker` is imported (line 54) but never used for routing fetches
+- `services/market_lens_studio/src/market_lens_studio/data/series_catalog.py` — all equity/ETF entries have `preferred_source = "yahoo"` and `yahoo_ticker` fields
+- `services/market_lens_studio/src/market_lens_studio/api/routes.py` line 119–129 — `_fetch_series()` uses `FredAdapter` exclusively; `get_yahoo_ticker` is imported (line 54) but never used for routing fetches
 
 **What breaks:** When the `/run` endpoint processes equity series (SPY, QQQ, IWM, DIA, EFA,
 EEM, GLD, SLV, USO, VIX, DXY), `_fetch_series` passes the bare ticker symbol to
@@ -180,7 +180,7 @@ No connector reads these fields after Yahoo was removed.
 
 ### G11 — `get_yahoo_ticker` dead import in routes.py (Low)
 
-**File:** `market_lens_studio/api/routes.py` line 54
+**File:** `services/market_lens_studio/src/market_lens_studio/api/routes.py` line 54
 
 ```python
 from ..data.series_catalog import ..., get_yahoo_ticker
@@ -241,4 +241,4 @@ explicitly on missing DB):
 - `/api/news` and `/api/social` — intentionally kept on live providers
 - `/api/polymarket/*` — intentionally stubbed DISABLED
 - `/api/cron/refresh` — clean; no MARKET_PIPELINE_URL; warms gold-sourced routes only
-- `macro_data_etl/` Python pipeline — no live BIS/WorldBank/IMF/CME connector classes remain; transform functions for existing silver Parquet files are still valid for gold-rebuild
+- `services/macro_data_etl/` Python pipeline — no live BIS/WorldBank/IMF/CME connector classes remain; transform functions for existing silver Parquet files are still valid for gold-rebuild

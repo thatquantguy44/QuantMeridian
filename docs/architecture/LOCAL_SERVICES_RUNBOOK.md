@@ -228,7 +228,7 @@ event-clustering service. Market Terminal remains usable without it.
 First-time lightweight setup (lexicon fallback service):
 
 ```bash
-cd "/Users/joshualutkemuller/Documents/Quant Sandbox/platforms/market_terminal/news_nlp"
+cd "/Users/joshualutkemuller/Documents/Quant Sandbox/platforms/market_terminal/services/news_nlp"
 python3.12 -m venv .venv
 .venv/bin/pip install -e .
 ```
@@ -245,7 +245,7 @@ NEWS_NLP_URL=http://127.0.0.1:8088
 Start and verify the service:
 
 ```bash
-cd "/Users/joshualutkemuller/Documents/Quant Sandbox/platforms/market_terminal/news_nlp"
+cd "/Users/joshualutkemuller/Documents/Quant Sandbox/platforms/market_terminal/services/news_nlp"
 .venv/bin/news-nlp serve --host 127.0.0.1 --port 8088
 
 # From another terminal:

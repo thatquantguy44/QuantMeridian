@@ -29,10 +29,18 @@ browser ──► terminal (Vite dev server, :3000) ──► model service (127
 | [`sources_uses_api`](../services/sources_uses_api/README.md) | SXU `/sources-uses` | 8015 (reserved) | **not yet**: contracts and tests only | [`spec012/HANDOFF.md`](specs/spec012/HANDOFF.md) |
 | `liquidity_api` | `/cash-optimizer/liquidity` | 8016 (reserved) | **not yet**: spec014 is a draft | `docs/specs/spec014/` |
 | [`collateral_optimizer_api`](../services/collateral_optimizer_api/README.md) | COLL `/collateral`, OPT preview | 8017 | yes, needs an authorized InventoryBallast checkout | `docs/specs/spec016/` |
+| [`news_nlp`](../services/news_nlp/README.md) | NEWS sentiment, NER, clustering | 8088 | yes (lexicon fallback without the model stack) | [`services/news_nlp/README.md`](../services/news_nlp/README.md) |
+| [`macro_data_etl`](../services/macro_data_etl/README.md) | ETL batch jobs for global macro data | — (CLI) | yes, run on demand | [`services/macro_data_etl/README.md`](../services/macro_data_etl/README.md) |
 | `agent_worker` | ECOIQ agent panel | — (polls a queue) | yes | `docs/specs/spec009/` |
 | [`optimization_core`](../services/optimization_core/README.md) | shared library | — | no, it is installed into other services | — |
 
 All Python services need **Python 3.12 or newer**. Use one virtual environment per service.
+
+**Everything at once:** `npm run dev:all` (or `scripts/dev-all.sh`) starts the terminal, IBAL, MMKT,
+COLL and the agent worker, builds what they need under `.data/` on first run, and stops them all on
+Ctrl-C. It reads tokens from `.env.local` and needs an InventoryBallast checkout
+(`INVENTORY_BALLAST_REPO`, default `../../models/InventoryBallast`). Flags: `--no-agent`, `--no-coll`.
+Logs go to `.data/logs/`.
 
 ## 1. The terminal
 
@@ -179,7 +187,38 @@ AGENT_WORKER_TOKEN=<random-32-bytes>
 - QuantSmith-backed workflows also need `QUANTSMITH_ROOT` pointing at your local QuantSmith
   copy; it is never fetched over the network (`npm run check:quantsmith-pin` checks it).
 
-## 7. Shared library: `optimization_core`
+## 7. News NLP: `news_nlp` (port 8088)
+
+FinBERT-style sentiment, entity extraction and event clustering for the NEWS and SENT modules.
+Without the optional model stack it falls back to a lexicon scorer, so it always starts.
+
+```bash
+cd services/news_nlp
+python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"     # add ".[nlp]" for FinBERT/spaCy
+.venv/bin/news-nlp serve --port 8088
+```
+
+Terminal `.env.local` (no default; unset means the terminal uses its own heuristic scorer):
+
+```bash
+NEWS_NLP_URL=http://127.0.0.1:8088
+```
+
+- **Check:** `curl http://127.0.0.1:8088/health`, or the NEWS_NLP row of `/api/dataops/health`.
+
+## 8. Macro ETL: `macro_data_etl` (CLI, no port)
+
+Batch ETL for World Bank, BIS and CME data into a local DuckDB and gold parquet files. The terminal
+does **not** call it at runtime: it reads the committed JSON snapshots in `src/data/etl/`, which are
+exported from this package (`macro-etl export`). Run it only to refresh those snapshots.
+
+```bash
+cd services/macro_data_etl
+python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+.venv/bin/macro-etl --help
+```
+
+## 9. Shared library: `optimization_core`
 
 The sparse LP builder, SciPy HiGHS adapter and independent verifier that model services build
 on. It is not a service. Install it into the consuming service's environment, as in the MMKT
