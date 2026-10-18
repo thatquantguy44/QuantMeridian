@@ -297,8 +297,8 @@ configurable.
 - That it handles multiple currencies, FX or cross-currency funding.
 - That discrete (MIP) rules, minimum tickets or lot sizes are applied.
 - That the penalty values are calibrated.
-- That the Money Market Fund Optimizer (MMFO) module runs a model. It is a gated shell (see the
-  note below).
+- That the Money Market Fund Optimizer (MMFO) runs a verified or production model. Its local
+  PoC is SIM-only and unverified (see the note below).
 
 ## Multi-currency: options for the open decision
 
@@ -333,23 +333,24 @@ When the owner resolves open decision 4, the usual designs are:
 Whichever option is chosen, rounding and the internalisation definition (open decisions 2 and 3)
 should be settled at the same time, because both interact with converted amounts.
 
-## Note on the Money Market Fund Optimizer (MMFO)
+## Note on the money-market modules (MMFO and MMKT)
 
-Do not demo MMFO as a working model. As of this guide:
+These are separate modules from SXU. Neither is part of this demo.
 
-- The MMFO page (`src/app/money-market-fund-optimizer/page.tsx`) is a **gated workspace**. It
-  calls a server route (`/api/mm-fund-optimizer/connection`) that probes
-  `MM_FUND_OPTIMIZER_API_URL/health`.
-- That URL is unset by default, so the page shows **UNCONFIGURED**. The **Run fund optimization**
-  button is permanently disabled until spec015 approves a model repository, revision, schemas and
-  verifier (task OC-T013, in progress).
-- No fund-allocation model exists in this repository. The model is meant to live in a separate,
-  as-yet unidentified repository.
-- There *is* a separate, real LP prototype for money-market cash investment in
-  `services/money_market_api` (MMKT, port 8014). It is a HiGHS LP with an independent verifier,
-  and it is disabled unless an operator sets `MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1`.
-  Spec015 explicitly says it is **not** approved as the MMFO binding. No page in the terminal
-  currently calls its run endpoint; the Optimization Center only health-checks it.
+- **Money Market Fund Optimizer (MMFO, spec015):**
+  - Has a local proof-of-concept model (`src/lib/mmfo/pocModel.ts`, merged in PRs #163–#165).
+  - It is a small vertex-enumeration LP over a fixed, fictional eight-share-class dataset, which
+    runs only when **Synthetic Demo Mode** is switched on.
+  - Outputs are labelled SIM and **not independently verified**.
+  - The external model binding (`MM_FUND_OPTIMIZER_API_URL`) is still gated by spec015 (task
+    OC-T013).
+  - You can demo it as a SIM proof of concept, not as a verified or production model.
+- **Money Market Optimizer (MMKT, spec011, `/money-market`):**
+  - Drives the separate `services/money_market_api` service: a HiGHS LP with an independent
+    verifier.
+  - Runs only when an operator starts the service with
+    `MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1` and the terminal holds the matching token.
+  - Spec015 says it is **not** the MMFO binding.
 
 ## Troubleshooting
 
