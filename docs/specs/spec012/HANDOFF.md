@@ -5,8 +5,9 @@
 **Branch:** `claude/synthetic-snu-poc-27n9hu`. The SU-SIM showcase merged into `main` in
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
 follow-ups [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) (module SIM switch SU-013, approval records, handoffs) and
-[PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) (owner decisions 1–4) are also merged. The full-spec approval record (SU-001)
-follows in a later PR from the same branch.
+[PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) (owner decisions 1–4) are also merged. The full-spec approval record (SU-001) is merged in
+[PR #170](https://github.com/thatquantguy44/QuantMeridian/pull/170). Re-checked against `main` at PR #170: the next steps below
+are still open.
 
 **State:** the full spec was **approved on 2026-10-18** (SU-001; see the `SPEC.md` decision log),
 so the production optimizer is authorized. It is not built yet. Two bounded slices are in place,

@@ -5,8 +5,9 @@
 **Branch:** `claude/synthetic-snu-poc-27n9hu`. The MMKT module merged into `main` in
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
 follow-ups [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) (module approval, handoffs) and [PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) (selectable
-baseline, owner questions 1–3) are also merged. The full-spec approval record (MM-001) follows in
-a later PR from the same branch. The same PRs carry the spec012 work; see
+baseline, owner questions 1–3) are also merged. The full-spec approval record (MM-001) is merged in
+[PR #170](https://github.com/thatquantguy44/QuantMeridian/pull/170). Re-checked against `main` at PR #170: the next steps below
+are still open. The same PRs carry the spec012 work; see
 `docs/specs/spec012/HANDOFF.md`.
 
 **State:** the terminal module `/money-market` drives the existing `services/money_market_api`
