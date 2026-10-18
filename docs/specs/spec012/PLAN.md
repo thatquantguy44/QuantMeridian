@@ -38,4 +38,9 @@ updating the manifest.
 
 The owner has approved a bounded setup-only phase: versioned browser configuration, source/use editing, explicit compatibility setup, and validated import/export. This phase does not enable solving or expose recommendations. The remaining model decisions and child-document approval still gate service/model behavior. After those decisions are recorded, scaffold the service contracts, implement the compatibility engine and LP, add optional MIP rules, connect result views and OPT run history, and finish with independent validation and as-built evidence. Follow the pinned Agent Skills throughout.
 
+Separately, the owner approved a synthetic proof-of-concept showcase (SPEC § SU-SIM). It runs the
+illustrative lexicographic transport LP in the browser against a fixed SIM book. It is clearly
+labelled and independently verified. It is not the production service, and it does not resolve or
+encode any open decision.
+
 See [HANDOFF.md](HANDOFF.md) for the current branch checkpoint, verified commands, implementation boundary, open decisions, and ordered next steps.

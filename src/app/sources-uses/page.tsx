@@ -6,6 +6,8 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel, Tag } from "@/components/ui/Panel";
+import { SyntheticShowcase } from "./synthetic/SyntheticShowcase";
+import { toWorkspaceConfiguration, type SimProblem } from "@/data/sourcesUsesSynthetic";
 import {
   CONFIGURATION_STORAGE_KEY, SOURCES_USES_SCHEMA_VERSION, configurationToCsv, createEmptyConfiguration,
   createSource, createUse, newId, parseConfigurationCsv, parseConfigurationJson, ruleFor,
@@ -15,6 +17,7 @@ import {
 } from "@/data/sourcesUses";
 
 type WorkspaceTab = "sources" | "uses" | "compatibility";
+type PageMode = "workspace" | "synthetic";
 type EditTarget = { kind: "source"; value: ConfigurableSource } | { kind: "use"; value: ConfigurableUse } | null;
 const tabs: { id: WorkspaceTab; label: string }[] = [
   { id: "sources", label: "Sources" }, { id: "uses", label: "Uses" }, { id: "compatibility", label: "Compatibility" },
@@ -30,6 +33,7 @@ export default function SourcesUses() {
   const [selectedPair, setSelectedPair] = useState<{ sourceId: string; useId: string } | null>(null);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<PageMode>(() => (typeof window !== "undefined" && window.location.hash === "#synthetic" ? "synthetic" : "workspace"));
   const configuration = configurations.find((item) => item.id === activeId) ?? null;
   const issues = useMemo(() => configuration ? validateConfiguration(configuration) : [], [configuration]);
   const filteredSources = useMemo(() => configuration?.sources.filter((source) => matchesSearch(source, search)) ?? [], [configuration, search]);
@@ -69,6 +73,20 @@ export default function SourcesUses() {
     setActiveId(item.id);
     setTab("sources");
     setNotice({ kind: "success", message: "New configuration created." });
+  }
+
+  function switchMode(next: PageMode) {
+    setMode(next);
+    try { window.history.replaceState(null, "", next === "synthetic" ? "#synthetic" : window.location.pathname + window.location.search); } catch { /* non-browser */ }
+  }
+
+  function copySyntheticToWorkspace(problem: SimProblem, scenarioTitle: string) {
+    const item = toWorkspaceConfiguration(problem, `SIM · ${scenarioTitle}`, newId("cfg"));
+    setConfigurations((current) => [item, ...current]);
+    setActiveId(item.id);
+    setTab("sources");
+    switchMode("workspace");
+    setNotice({ kind: "success", message: `Copied “${item.name}” into the workspace as an editable configuration. It is tagged SIM.` });
   }
 
   function deleteConfiguration() {
@@ -170,7 +188,23 @@ export default function SourcesUses() {
 
   return (
     <div className="flex min-h-full flex-col bg-term-bg">
-      <PageHeader code="SXU" title="Sources & Uses" desc="Configuration workspace" showStreaming={false} right={<Tag tone="amber">SETUP ONLY</Tag>} />
+      <PageHeader code="SXU" title="Sources & Uses" desc={mode === "synthetic" ? "Synthetic optimizer proof of concept" : "Configuration workspace"} showStreaming={false}
+        right={<div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-md border border-term-border" role="tablist" aria-label="Sources & Uses mode">
+            {([["workspace", "Workspace"], ["synthetic", "Synthetic PoC"]] as const).map(([id, label]) => (
+              <button key={id} type="button" role="tab" aria-selected={mode === id} onClick={() => switchMode(id)}
+                className={`px-2.5 py-1 text-[11px] font-medium transition ${mode === id ? "bg-term-amber text-black" : "bg-term-panel-2 text-term-text-dim hover:text-term-text"}`}>{label}</button>
+            ))}
+          </div>
+          {mode === "synthetic" ? <Tag tone="blue">SIM</Tag> : <Tag tone="amber">SETUP ONLY</Tag>}
+        </div>} />
+
+      {mode === "synthetic" && <>
+        {notice && <div className="mx-4 mt-3 rounded-md border border-term-up/25 bg-term-up/5 px-3 py-2 text-xs text-term-up lg:mx-6" role="status">{notice.message}</div>}
+        <SyntheticShowcase onCopyToWorkspace={copySyntheticToWorkspace} />
+      </>}
+
+      {mode === "workspace" && <>
 
       <div className="border-b border-term-border bg-[radial-gradient(ellipse_at_top_left,rgba(255,140,0,0.10),transparent_48%),linear-gradient(110deg,#111315,#0b0c0d_60%)] px-4 py-4 lg:px-6">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -273,6 +307,7 @@ export default function SourcesUses() {
           </div>
         </div>
       )}
+      </>}
 
       <RecordEditor target={editTarget} onClose={() => setEditTarget(null)} onSave={saveRecord} />
     </div>

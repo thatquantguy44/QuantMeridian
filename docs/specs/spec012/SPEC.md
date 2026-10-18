@@ -2,10 +2,10 @@
 
 - **ID:** spec012-configurable-sources-uses
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-021–029, REQ-041
-- **Status:** Draft — bounded setup-only phase approved; full optimizer pending decisions and review
+- **Status:** Draft — bounded setup-only phase and synthetic PoC showcase (SU-SIM) approved; full optimizer pending decisions and review
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** Owner (setup-only phase scope; full optimizer approval remains pending)
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Implementation details belong in `PLAN.md` and `TASKS.md`.
 
@@ -68,6 +68,83 @@ its child design documents.
 - **AC-007:** Sankey totals, table totals, and verified solution totals agree; internalization denominator is defined in the approved design.
 - **AC-008:** No random-number matches remain; OPT history contains the verified configuration/run hashes.
 - **AC-009:** For each source, nominal flow consumes capacity and haircut-adjusted flow contributes to use coverage; changing a configured source haircut changes the canonical run hash.
+
+## Synthetic proof-of-concept showcase (SU-SIM)
+
+**Status:** Approved by the owner on 2026-10-18 as a bounded demonstration mode. It does not
+approve the production optimizer, service contract, OPT run-history integration, or production
+recommendations. Those stay gated on the open decisions below.
+
+### Why
+
+Stakeholders need to see what the optimizer will do before the production service is approved.
+A fixed, hand-built synthetic book shows the model on a realistic treasury funding day. It covers
+the classic transportation problem, haircut-adjusted coverage, lexicographic priority tiers,
+shadow prices, and infeasibility diagnosis. It uses no live, customer, or production data.
+
+### Scope
+
+The Sources & Uses page offers a **Synthetic PoC** mode next to the configuration workspace. In
+this mode:
+
+- The dataset is a fixed, handwritten synthetic broker-dealer funding book. It has no random
+  generation and is identical on every load. Every surface labels it `SIM`.
+- The model is solved in the browser by a deterministic, dependency-free LP (two-phase simplex,
+  Bland's rule). It never calls a service and never writes to OPT run history.
+- Results are presented as illustrative model behaviour, never as a funding recommendation.
+
+### Showcase formulation (illustrative economics)
+
+For each explicitly allowed lane `(i, j)` the nominal flow `x_ij ≥ 0`. For each soft use `j` the
+coverage shortfall `s_j ≥ 0`. Hard uses have no shortfall variable.
+
+- Capacity: `Σ_j x_ij ≤ A_i` for each source `i`.
+- Coverage: `Σ_i (1 − h_i) · x_ij + s_j = D_j` for each use `j`. This follows resolved decision 2:
+  the haircut is per source and applies to all of that source's lanes.
+- Priority (SU-004): tiers are solved in ascending order. Stage `t` minimises
+  `Σ_{j∈t} p_j s_j`. Before the next stage, its optimum is fixed as an upper bound with a stated
+  tolerance.
+- Economics (final stage): minimise `Σ (c_i + f_ij) · x_ij + Σ p_j s_j`. Here `c_i` is the
+  source cost in bps, `f_ij` is a per-lane transfer friction in bps, and `p_j` is the soft-use
+  penalty in bps. Lane friction applies only to this synthetic dataset. It is not a decision about
+  the production objective.
+- Infeasibility: if a hard use cannot be covered, an elastic LP adds hard-coverage slack. It
+  minimises total slack and reports the short uses and the binding sources by stable ID. The
+  elastic result is never shown as a solution.
+
+### How the showcase stays clear of open decisions
+
+- **Currency (open decisions 1 and 4):** one currency, USD. No currency mismatch exists, so
+  nothing about mismatch policy is assumed.
+- **Compatibility (open decision 1):** every lane is an explicit `allowed` or `denied` rule.
+  Nothing is inferred from legal entity or asset class. A cross-entity lane exists only where the
+  dataset states it, with its friction.
+- **Rounding (open decision 2):** the solve is fully continuous. Values are rounded only for
+  display, to $0.1mm. Verification uses absolute and relative tolerances, not rounded values.
+- **Internalization (open decision 3):** no internalization rate is computed. The UI shows the
+  funding mix by synthetic source family only.
+
+### Requirements
+
+| ID | Requirement | Priority |
+|---|---|---|
+| SIM-001 | A deterministic synthetic dataset of eight sources (three families: internal, secured, unsecured & committed), ten uses (four tiers, mixed hard/soft) and explicit lanes with friction. | must |
+| SIM-002 | At least six named scenarios. Each is a documented transformation of the base book: base case, repo squeeze, haircut shock, margin-call surge, unsecured rate shock, and a hard-infeasible cascade. | must |
+| SIM-003 | Interactive stress controls re-solve live: capacity per family, haircut shift, demand scale, unsecured cost shift, and a per-lane allow/deny toggle. | must |
+| SIM-004 | Visuals: a bipartite transport network with flow-weighted animated lanes, a transportation tableau, source utilisation, use coverage by tier, shadow prices, a priority-tier ladder, and a scenario comparison. Each visual has a hover/focus readout and a text/table equivalent. | must |
+| SIM-005 | An independent verifier recomputes the following from problem data and reports each as a visible check: primal feasibility, denied-lane zero flow, coverage reconciliation, hard-use coverage, objective, dual feasibility, complementary slackness, and the duality gap. | must |
+| SIM-006 | Shadow prices are labelled as final-stage LP duals, conditional on the fixed tier levels. | must |
+| SIM-007 | The formulation, solve statistics (variables, rows, stages, pivots, time), and the SIM label are disclosed on the page. | must |
+| SIM-008 | A scenario can be copied into the configuration workspace as a normal, editable configuration. Copying does not enable solving there. | should |
+
+### Acceptance criteria
+
+- **SIM-AC-001:** Loading the dataset twice yields deeply equal objects, and the module has no random source.
+- **SIM-AC-002:** Hand-computable LP cases solve to the known optimum with the expected duals.
+  These cover a two-by-two transport, haircut coverage, and a tier that cannot be outbid by cost.
+- **SIM-AC-003:** Every feasible scenario passes all verifier checks. A tampered flow fails verification.
+- **SIM-AC-004:** The cascade scenario reports infeasible, names the short hard uses, and shows no flows as a solution.
+- **SIM-AC-005:** Network totals, tableau totals and KPI totals agree with the verified solution.
 
 ## Decisions and open questions
 
