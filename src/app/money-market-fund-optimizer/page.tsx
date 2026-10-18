@@ -123,6 +123,7 @@ export default function MoneyMarketFundOptimizer() {
     { key: "aum", header: "AUM ($bn)", align: "right", render: (row) => <span className="tnum text-term-text-dim">{row.fund.aum_usd_bn.toFixed(1)}</span> },
     { key: "wamwal", header: "WAM / WAL", align: "right", render: (row) => <span className="tnum text-term-text-dim">{row.fund.wam_days} / {row.fund.wal_days}d</span> },
     { key: "liquidassets", header: "DLA / WLA", align: "right", render: (row) => <span className="tnum text-term-text-dim">{pct(row.fund.daily_liquid_assets_pct)} / {pct(row.fund.weekly_liquid_assets_pct)}</span> },
+    { key: "mix", header: "UST / Repo / Agency / Other", align: "right", render: (row) => <span className="tnum text-term-text-mute" title="Illustrative asset mix: Treasury, repo, agency securities, other">{row.fund.treasury_assets_pct} / {row.fund.repo_assets_pct} / {row.fund.agency_assets_pct} / {row.fund.other_assets_pct}%</span> },
     { key: "allocation", header: "Allocation", align: "right", render: (row) => <span className="tnum font-semibold text-term-text">{dollars2(row.allocated_amount)}</span> },
     { key: "weight", header: "Weight", align: "right", render: (row) => <span className="tnum text-term-text-dim">{pct(row.portfolio_weight_pct)}</span> },
     { key: "income", header: "Est. Annual Income", align: "right", render: (row) => <span className="tnum text-term-up">{dollars2(row.estimated_annual_income)}</span> },
@@ -173,31 +174,31 @@ export default function MoneyMarketFundOptimizer() {
               <label className="flex flex-col gap-1 text-xs text-term-text-dim sm:col-span-2">
                 Total cash to allocate
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <span>$</span><input aria-label="Total cash to allocate" inputMode="decimal" type="number" min="100" step="1000" value={totalCash} onChange={(e) => setTotalCash(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" />
+                  <span>$</span><input aria-label="Total cash to allocate" inputMode="decimal" type="number" min="100" step="1000" value={totalCash} onChange={(e) => { setTotalCash(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" />
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Cash reserve
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Cash reserve percentage" inputMode="decimal" type="number" min="0" max="99" step="1" value={cashReserve} onChange={(e) => setCashReserve(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Cash reserve percentage" inputMode="decimal" type="number" min="0" max="99" step="1" value={cashReserve} onChange={(e) => { setCashReserve(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Minimum same-day liquidity
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Minimum same-day liquidity percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={minSameDay} onChange={(e) => setMinSameDay(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Minimum same-day liquidity percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={minSameDay} onChange={(e) => { setMinSameDay(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Maximum prime exposure
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Maximum prime exposure percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxPrime} onChange={(e) => setMaxPrime(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Maximum prime exposure percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxPrime} onChange={(e) => { setMaxPrime(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Maximum per fund
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Maximum per fund percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxFund} onChange={(e) => setMaxFund(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Maximum per fund percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxFund} onChange={(e) => { setMaxFund(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
               <button type="button" onClick={() => void runOptimization()} disabled={solving || !syntheticMode} className="self-end border border-term-amber bg-term-amber/15 px-3 py-2 text-xs font-bold uppercase text-term-amber hover:bg-term-amber/25 disabled:opacity-50">
