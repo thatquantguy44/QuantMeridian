@@ -6,7 +6,7 @@
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
-| OC-T001 | Identify both model repositories or local checkouts, owners, entry points, licenses, approved revisions, verifier approach, and collateral semantics; resolve spec011 and spec015 decisions. | OC-001–005, OC-007–009 | blocked | Reviewed binding and contract decisions recorded; no guessed repository or policy default. |
+| OC-T001 | Identify both model repositories or local checkouts, owners, entry points, licenses, approved revisions, verifier approach, and collateral semantics; resolve spec011 and spec015 decisions. | OC-001–005, OC-007–009 | blocked | Spec016 identifies the collateral package and candidate SHA, but its binding review and the MMKT repository remain open; no guessed policy default. |
 | OC-T002 | Define common capability, configuration, snapshot, run, result, error, comparison, and audit schemas; generate TS/Python contract types. | OC-003–007, OC-010–015 | todo | Versioned schemas, canonical hash rules, parity fixtures, compatibility policy. |
 | OC-T003 | Implement deployment-approved local and pinned Git binding workflow and adapter conformance suite for both services. | OC-001–003 | todo | Local/remote golden fixtures match; revision drift and invalid adapter fail closed; rollback tested. |
 | OC-T004 | Extend `money_market_api` scaffold to adapt the approved MMKT model and approved verifier, keeping spec011 provenance and source rules. | OC-001, OC-004, OC-007, OC-008, OC-015 | blocked | Service contract and financial fixtures pass; `solver_enabled` becomes true only for approved binding. |

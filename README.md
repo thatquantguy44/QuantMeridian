@@ -29,7 +29,7 @@ BlackRock.
 - [`docs/roadmaps/FUTURE_FEATURE_ROADMAP.md`](docs/roadmaps/FUTURE_FEATURE_ROADMAP.md) is the main forward-looking product and engineering backlog.
 - [`docs/roadmaps/MARKET_TERMINAL_ROADMAP.md`](docs/roadmaps/MARKET_TERMINAL_ROADMAP.md) is the broader platform review and roadmap reference.
 - [`docs/handoff.md`](docs/handoff.md) tracks active workstream status and next implementation handoffs.
-- [`docs/specs/`](docs/specs/) contains active feature/module specs, including `spec003` for the proposed Market Volatility module.
+- [`docs/specs/`](docs/specs/) contains active feature/module specs, including [spec016](docs/specs/spec016/SPEC.md) for the proposed InventoryBallast collateral model binding.
 
 ---
 
