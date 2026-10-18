@@ -13,7 +13,7 @@
 | LIQ-005 | Implement cash balance paths, breach probability, first breach, P90 shortfall, survival horizon and alerts. | LIQ-004 | todo | Hand-computable paths and threshold cases |
 | LIQ-006 | Implement anomaly ensemble and per-alert detector/feature explanations. | LIQ-005 | todo | Injected signal precision/recall and negative controls |
 | LIQ-007 | Implement review queue, audit trail, and threshold-only recalibration. | LIQ-006 | todo | Confirm/dismiss reason persisted; no retraining side effect |
-| LIQ-008 | Implement portfolio cockpit, reconciliation, and lever board with provenance. | LIQ-007/008/012 | todo | Source totals reconcile, stale/missing inputs explicit |
+| LIQ-008 | Implement portfolio cockpit, reconciliation, and lever board with provenance at `/cash-optimizer/liquidity`; redirect `/liquidity`, remove the `LIQ` nav entry and `src/data/liquidity.ts`, and carry over the two live FRED early-warning signals. | LIQ-007/008/012 | todo | Source totals reconcile, stale/missing inputs explicit; redirect and nav tests updated |
 | LIQ-009 | Implement lever-remediation MIP on optimization_core and independent verification. | LIQ-009 | todo | Feasible/binding/delayed/infeasible golden cases |
 | LIQ-010 | Add service auth, health, telemetry, run history, and terminal route composition. | LIQ-011 | todo | Contract parity, redaction and source-boundary tests |
 | LIQ-011 | Add model cards, drift monitoring, demo-scale benchmark, and as-built papers. | LIQ-010, REQ-041 | todo | Hash/version/PSI/coverage evidence and validation report |

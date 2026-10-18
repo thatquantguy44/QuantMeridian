@@ -17,7 +17,7 @@ A verified lever MIP chooses recommendations for each projected P90 shortfall, o
 1. Deterministic generator supplies evaluation history with calendar regimes, injected shortfalls/anomalies, and drift labels.
 2. Known scheduled flows are separated from residual by source contract.
 3. Candidate residual models (seasonal naive, ridge, boosted quantile) are trained/evaluated walk-forward; the serving gate selects baseline unless a candidate beats it.
-4. Conformal calibration supplies P10/P50/P90 residual bands.
+4. Conformalized quantile regression (CQR, NumPy in the service, rolling calibration window) supplies P10/P50/P90 residual bands.
 5. Balance paths estimate buffer breaches and survival; outputs include first breach and P90 shortfall.
 6. MAD, band-exceedance, and Isolation Forest detectors produce alert scores, detector names, and feature explanations.
 7. Review queue records human decisions and threshold adjustments only.
@@ -28,8 +28,8 @@ A verified lever MIP chooses recommendations for each projected P90 shortfall, o
 
 - Python service: services/liquidity_api, port 8016, using optimization_core only for lever selection.
 - QuantMeridian server routes compose source inputs and pass a hashed, explicit snapshot; the service does not read Gold or call MMKT/S&U.
-- ML stack: scikit-learn (Q6, resolved 2026-10-18); split-conformal bands are implemented in the service on NumPy.
-- Cockpit location: under `/cash-optimizer/` as its lever view (Q7, resolved 2026-10-18); the sub-route and the fate of `/liquidity` are still open.
+- ML stack: scikit-learn (Q6, resolved 2026-10-18); CQR bands are implemented in the service on NumPy, with no MAPIE.
+- Cockpit location: `/cash-optimizer/liquidity`, behind the `CASH` module toggle (Q7, resolved 2026-10-18). `/liquidity` stays until that view ships; the same PR redirects it, removes the `LIQ` nav entry and deletes `src/data/liquidity.ts`, carrying the two live FRED early-warning signals over as labeled market indicators.
 - Local development uses labeled synthetic fixtures only; production remains disabled.
 
 ## Validation strategy
