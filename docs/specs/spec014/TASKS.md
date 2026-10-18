@@ -6,7 +6,7 @@
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
-| LIQ-001 | Resolve Q6/Q7, source contracts, currency grain, forecast window, thresholds, and retention; approve child docs. | LIQ-001–012 | blocked | Owner decisions recorded |
+| LIQ-001 | Resolve Q6/Q7, source contracts, currency grain, forecast window, thresholds, and retention; approve child docs. | LIQ-001–012 | blocked | Owner decisions recorded. Q6 (scikit-learn) and Q7 (under `/cash-optimizer/`) resolved 2026-10-18; questions 3–4 and approval remain |
 | LIQ-002 | Define versioned cash-history, forecast, alert, review, lever, and model-card contracts. | LIQ-001–012 | todo | Schema and TS/Python parity fixtures |
 | LIQ-003 | Build deterministic synthetic generator and event labels. | LIQ-001 | todo | Fixed-seed/calendar/shortfall/anomaly/drift golden tests |
 | LIQ-004 | Implement residual forecast ladder, walk-forward evaluation, baseline gate, and conformal bands. | LIQ-002/003/010 | todo | Leakage tests, score gate, coverage evidence |

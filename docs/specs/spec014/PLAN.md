@@ -2,7 +2,7 @@
 
 - **Spec:** spec014-liquidity-oversight (SPEC.md)
 - **Status:** Draft — pending owner review
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 ## Approach
 
@@ -28,7 +28,8 @@ A verified lever MIP chooses recommendations for each projected P90 shortfall, o
 
 - Python service: services/liquidity_api, port 8016, using optimization_core only for lever selection.
 - QuantMeridian server routes compose source inputs and pass a hashed, explicit snapshot; the service does not read Gold or call MMKT/S&U.
-- Cockpit location and ML stack remain owner decisions Q7/Q6.
+- ML stack: scikit-learn (Q6, resolved 2026-10-18); split-conformal bands are implemented in the service on NumPy.
+- Cockpit location: under `/cash-optimizer/` as its lever view (Q7, resolved 2026-10-18); the sub-route and the fate of `/liquidity` are still open.
 - Local development uses labeled synthetic fixtures only; production remains disabled.
 
 ## Validation strategy
@@ -37,7 +38,7 @@ Use synthetic known ground truth only for pipeline checks, never as evidence of 
 
 ## Sequence
 
-1. Resolve Q6/Q7 and input/source contracts; approve child docs and whitepapers.
+1. ~~Resolve Q6/Q7~~ (done 2026-10-18); resolve input/source contracts; approve child docs and whitepapers.
 2. Add deterministic history generator and schema.
 3. Build forecast and baseline gate; add bands and model cards.
 4. Add shortfall and anomaly paths with review queue.

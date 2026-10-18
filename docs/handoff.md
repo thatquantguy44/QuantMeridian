@@ -63,7 +63,7 @@ InventoryBallast):
 | B — IBAL showcase: engine re-pin (merged InventoryBallast `main` `e84801b`), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` (approved 2026-10-17) | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
 | C — Money market execution optimizer (`MMKT` module; terminal module and SIM path merged in PR #166) | `spec011` (approved 2026-10-18) | `services/money_market_api/` (port 8014), `src/app/money-market/` |
 | D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only and SU-SIM showcase in `main`, service not started) | `spec012` (approved 2026-10-18) | `services/sources_uses_api/` (port 8015, not yet created), `src/app/sources-uses/` |
-| E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` (draft, not approved) | `services/liquidity_api/` (port 8016), `src/app/liquidity/` |
+| E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` (draft, not approved) | `services/liquidity_api/` (port 8016), under `src/app/cash-optimizer/` (spec014 Q7) |
 | Shared — model library: sparse builder, HiGHS adapter, verifier, elastic relaxation | — | `services/optimization_core/` (a library, not a service; in `main`, elastic follow-ups PRs #152–#153) |
 | White papers, one per model (mechanics, theory, application) | — | `docs/whitepapers/` |
 
@@ -83,15 +83,17 @@ four services (REQ-029). Every number shown must come from a verified solve or a
    user-selected `SIM` set and **no silent fallback**. See "Cross-repo follow-up: EcoMedallion" below —
    that work is **not finished and nothing in it is live-verified**.
 
-Still open (spec014 Q6 and Q7; spec014 is still a draft): the ML stack (scikit-learn recommended),
-and whether the liquidity cockpit replaces `/liquidity` with `/cash-optimizer` as its lever view
-(recommended).
+spec014 Q6 and Q7 were resolved on 2026-10-18: the ML stack is **scikit-learn**, and the new
+liquidity view lives **under `/cash-optimizer/`** as its lever view. Still open in spec014
+(still a draft): currency scoping and source contracts (question 3), forecast window, coverage
+target, alert thresholds and retention (question 4), the exact sub-route, and what happens to the
+existing `/liquidity` page.
 
 **Pick up here on the terminal side:**
 
 1. ~~Review the draft packs in PR #151 for `spec011`–`spec014`~~ PR #151 is merged. `spec011`,
    `spec012` and `spec013` are approved; **`spec014` is still a draft** awaiting owner review
-   (Q6 ML stack, Q7 placement) before liquidity code.
+   before liquidity code (Q6 and Q7 resolved 2026-10-18; questions 3–4 and approval remain).
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
    `optimization_core` and `money_market_api` exist in `main`; **`sources_uses_api` (8015) and
    `liquidity_api` (8016) do not exist yet.**

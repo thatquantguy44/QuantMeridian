@@ -2,10 +2,10 @@
 
 - **ID:** spec014-liquidity-oversight
 - **Parent:** InventoryBallast specs/0018-live-poc-showcase/spec.md, REQ-031–040, REQ-027–030, REQ-041
-- **Status:** Draft — pending owner review; not approved for implementation
+- **Status:** Draft — pending owner review; not approved for implementation. Q6 and Q7 resolved 2026-10-18; questions 3–4 remain open.
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Model architecture belongs in PLAN.md; task ordering belongs in TASKS.md.
 
@@ -68,10 +68,17 @@ This module depends on the MMKT and Sources & Uses contracts for holdings, matur
 
 ## Decisions required before implementation
 
-1. **Q6 / stack:** confirm allowed ML stack and dependency versions for boosted quantile regression and Isolation Forest (scikit-learn is recommended in 0018).
-2. **Q7 / placement:** confirm whether the cockpit replaces /liquidity or lives under /cash-optimizer; parent recommends /cash-optimizer as its lever view.
+1. ~~**Q6 / stack:** confirm allowed ML stack and dependency versions for boosted quantile regression and Isolation Forest.~~ **Resolved 2026-10-18:** scikit-learn. See the decision log.
+2. ~~**Q7 / placement:** confirm whether the cockpit replaces /liquidity or lives under /cash-optimizer.~~ **Resolved 2026-10-18:** under `/cash-optimizer/`. See the decision log.
 3. Define currency scoping and which account/instrument dimensions have approved source contracts.
 4. Confirm forecast history window, conformal coverage target, breach-alert thresholds, and review-queue retention.
+
+## Decision log
+
+| Date | Decision | By |
+|---|---|---|
+| 2026-10-18 | **Q6 resolved — ML stack is scikit-learn.** It supplies the residual-model ladder's ridge and boosted quantile regression (gradient boosting with quantile loss) and the Isolation Forest detector. The exact version is pinned in `services/liquidity_api` when the service is created. scikit-learn has no conformal-prediction API: split-conformal calibration (PLAN step 4) is written in the service on NumPy, and any further ML library (for example MAPIE) needs its own owner decision. | Owner (accepted recommendation) |
+| 2026-10-18 | **Q7 resolved — the new liquidity view lives under `/cash-optimizer/`,** as its lever view, rather than replacing `/liquidity` in place. Not yet decided: the exact sub-route, and whether the existing `/liquidity` page is retired, redirected or kept once the new view ships. Until then `/liquidity` stays as it is (seeded synthetic data). | Owner (accepted recommendation) |
 
 ## Related documents
 
