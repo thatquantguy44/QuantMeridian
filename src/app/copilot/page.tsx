@@ -281,7 +281,7 @@ export default function AICopilot() {
       id: 1,
       role: "assistant",
       answer: {
-        text: "Bloomberg GPT — Securities Finance Intelligence. I'm connected live to every desk dataset. Ask about revenue drivers, borrower rankings, hard-to-borrow risk, collateral savings, internalization, or funding costs, and I'll query the data, chart it, and recommend actions.",
+        text: "Bloomberg GPT — Securities Finance Intelligence. Ask about available desk data, revenue drivers, borrower rankings, hard-to-borrow risk, or funding costs. Collateral model results are available only as a labeled SIM preview in COLL; no governed collateral savings run is registered.",
         bullets: ["Pick a suggested prompt on the right, or type your own question below."],
       },
     },

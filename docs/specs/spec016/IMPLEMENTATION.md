@@ -17,7 +17,7 @@ No runtime branch checkout or Git installation occurs.
 | Standalone upstream native suite | 8 tests passed. |
 | Adapter contract and integration suite | 8 tests passed: exact pin drift, schema/fixture parity, direct/service solve parity, five scenarios, seven invalid snapshot cases, allocation/cost/flag tamper rejection, unverified target stripping, auth/size/production gates. |
 | Python compile | Pass for adapter, tests, wheel builder and update preparer. |
-| Terminal typecheck, Vitest and Playwright | Added to the pinned integration workflow; not run locally because the workspace has no `node_modules` and its npm proxy was unreachable. CI result is pending. |
+| Terminal typecheck, Vitest and Playwright | Added to the pinned integration workflow; not run locally because the workspace has no `node_modules` and its npm proxy was unreachable. The first PR CI run failed before any job step executed; no job log was available through GitHub. Terminal checks remain unverified. |
 
 For the pinned synthetic baseline, direct model and service return a verified
 155,625.454892 USD target cost and 275,582.028182 USD savings over the
@@ -45,3 +45,10 @@ newer upstream release was available to exercise a real update PR. A rejected
 pin remains on the old manifest; restoring a drifted attestation to the exact
 pin restores READY in the identity test. Historical rollback lineage depends
 on spec015's durable registry.
+
+The first PR run of both general CI and pinned integration reported failure
+within seconds. GitHub returned zero job steps and no downloadable job logs
+for those runs, so the cause cannot yet be assigned to code, credentials, or
+runner configuration. The Vercel status also reported failure without a build
+log in the available connection. These checks must be rerun or their platform
+logs inspected before merge.
