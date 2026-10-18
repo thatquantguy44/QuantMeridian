@@ -1,7 +1,7 @@
 # Market Terminal Handoff
 
-**Updated:** 2026-10-18. The top-priority section was updated for PR #166 (spec012 SU-SIM, the
-spec011 MMKT module, demo books). The rest of this file was last updated 2026-09-16 and is
+**Updated:** 2026-10-18. The top-priority section was updated for PR #166 (merged: spec012
+SU-SIM, the spec011 MMKT module, demo books) and its follow-up PR #FOLLOWUP. The rest of this file was last updated 2026-09-16 and is
 retained as context.
 **Default branch:** `main` (0018 was merged in PR #148; subsequent follow-up docs were merged in PR #150)
 
@@ -11,19 +11,21 @@ retained as context.
 Focus" and "Next Work" below; those stay as context.
 
 **Active checkpoint (2026-10-18):**
-[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) is open from branch
-`claude/synthetic-snu-poc-27n9hu` and merges cleanly into `main`. On 2026-10-18 the owner
+[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) is **merged into `main`**
+(merge commit `2b32b7c`). The follow-up [PR #FOLLOWUP](https://github.com/thatquantguy44/QuantMeridian/pull/FOLLOWUP) on the same branch,
+`claude/synthetic-snu-poc-27n9hu`, adds three things: the SXU module SIM switch, this handoff
+refresh, and the approval records. On 2026-10-18 the owner
 explicitly approved the spec012 SU-SIM showcase, the SXU module SIM switch and the spec011 MMKT
 module slice. Each is recorded in the decision log of its `SPEC.md`. Full spec approvals and the
 listed open questions remain pending.
 
-| Workstream | What PR #166 adds | Pickup document |
+| Workstream | What PR #166 (merged) added | Pickup document |
 |---|---|---|
 | D · spec012 Sources & Uses | The **Synthetic PoC** tab (SU-SIM). A penalised, balanced classic transportation LP solved in the browser on a fixed SIM book, with configurable penalties, an LP optimality certificate and a visual front end. The setup-only workspace is already in `main`. The production service is not started. | [`docs/specs/spec012/HANDOFF.md`](specs/spec012/HANDOFF.md) |
 | C · spec011 Money market (MMKT) | The **`/money-market` module**, driving `services/money_market_api` end to end on two registered SIM rate sets. It has five scenarios, and results are shown only after the service verifier passes. It also fixes two service bugs and adds a pytest suite with a CI job. Results are LP relaxations, not execution-ready. | [`docs/specs/spec011/HANDOFF.md`](specs/spec011/HANDOFF.md) |
 | Demo | A presenter guide for the SXU showcase | [`docs/demo_books/`](demo_books/README.md) |
 
-Also in PR #166: `src/lib/server/fetchProxy.ts` now honours `NO_PROXY` and always bypasses
+Also in PR #166 (merged): `src/lib/server/fetchProxy.ts` now honours `NO_PROXY` and always bypasses
 loopback. Without this, server routes behind an outbound proxy could not reach the local model
 services, including OPT's MMKT probe.
 
@@ -31,7 +33,7 @@ Separately, `main` now has the spec015 MMFO local PoC (PRs #163–#165). It is S
 independently verified. It is not the MMKT service.
 
 **Known red test:** `src/tests/badge-coverage.test.ts` fails on `main` because the MMFO page has
-no provenance badge (spec015). PR #166 fixes the SXU half: the SXU page now has a module SIM
+no provenance badge (spec015). PR #FOLLOWUP fixes the SXU half: the SXU page now has a module SIM
 switch and badge (spec012 SU-013).
 
 **Source of truth:** `thatquantguy44/InventoryBallast`, `specs/0018-live-poc-showcase/`
@@ -43,8 +45,8 @@ InventoryBallast):
 | Workstream | Child spec (drafts in PR #151) | Code |
 | --- | --- | --- |
 | B — IBAL showcase: engine re-pin (merged InventoryBallast `main` `e84801b`), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
-| C — Money market execution optimizer (`MMKT` module; terminal module and SIM path in PR #166) | `spec011` | `services/money_market_api/` (port 8014), `src/app/money-market/` |
-| D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only in `main`, SU-SIM showcase in PR #166, service not started) | `spec012` | `services/sources_uses_api/` (port 8015, not yet created), `src/app/sources-uses/` |
+| C — Money market execution optimizer (`MMKT` module; terminal module and SIM path merged in PR #166) | `spec011` | `services/money_market_api/` (port 8014), `src/app/money-market/` |
+| D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only and SU-SIM showcase in `main`, service not started) | `spec012` | `services/sources_uses_api/` (port 8015, not yet created), `src/app/sources-uses/` |
 | E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` | `services/liquidity_api/` (port 8016), `src/app/liquidity/` |
 | Shared — model library: sparse builder, HiGHS adapter, verifier, elastic relaxation | — | `services/optimization_core/` (a library, not a service) |
 | White papers, one per model (mechanics, theory, application) | — | `docs/whitepapers/` |
@@ -74,7 +76,7 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
-4. **As of 2026-10-18:** merge PR #166, then follow the ordered next steps in the spec011 and
+4. **As of 2026-10-18:** merge PR #FOLLOWUP, then follow the ordered next steps in the spec011 and
    spec012 handoffs. The highest-value items are owner decisions (spec012 open decisions 1–4,
    spec011 questions 1–3), the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.

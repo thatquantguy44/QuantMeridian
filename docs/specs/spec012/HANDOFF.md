@@ -2,9 +2,10 @@
 
 **Updated:** 2026-10-18
 
-**Branch:** `claude/synthetic-snu-poc-27n9hu`, open as
-[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) into `main`.
-The branch was cut from `main` at `0d8fe15`; it merges cleanly into `main` at `f6f2dba`.
+**Branch:** `claude/synthetic-snu-poc-27n9hu`. The SU-SIM showcase merged into `main` in
+[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
+follow-up [PR #FOLLOWUP](https://github.com/thatquantguy44/QuantMeridian/pull/FOLLOWUP), rebased onto that merge, adds the module SIM switch (SU-013), the approval
+records and this handoff refresh.
 
 **State:** two owner-approved, bounded slices are in place. Neither one is the production
 optimizer.
@@ -12,7 +13,7 @@ optimizer.
 | Slice | Where | Status |
 |---|---|---|
 | Setup-only configuration workspace | `main` (merged before this branch) | Done. Edits, validates and imports/exports configurations. No solving. |
-| Synthetic PoC showcase (SU-SIM) | PR #166 | Done, pending merge. A browser-only, illustrative solve on a fixed SIM book. |
+| Synthetic PoC showcase (SU-SIM) | `main` (PR #166); SIM switch in PR #FOLLOWUP | Done. A browser-only, illustrative solve on a fixed SIM book. |
 | Production optimizer (service, contracts, run hash, OPT history) | — | Not started. Gated on open decisions and spec approval. |
 
 The same PR also carries the MMKT module (spec011, see `docs/specs/spec011/HANDOFF.md`) and the
@@ -40,7 +41,7 @@ every open decision.
   import and export (validated before applying).
 - `src/data/sourcesUses.test.ts`: 8 contract tests.
 
-## Slice 2: synthetic PoC showcase (SU-SIM, PR #166)
+## Slice 2: synthetic PoC showcase (SU-SIM, merged in PR #166)
 
 The page opens on it by default while **SIM** is on. Use `/sources-uses#workspace` to land on
 the workspace instead. Turning SIM off hides the PoC entirely.
@@ -128,7 +129,7 @@ need owner review.
 
 ## Next steps (in order)
 
-1. **Merge PR #166** after review. The earlier `build/spec012-sources-uses-optimizer` branch no
+1. **Merge PR #FOLLOWUP** (SIM switch, approval records, handoff refresh). The earlier `build/spec012-sources-uses-optimizer` branch no
    longer exists on the remote, so ignore any older reference to it.
 2. **Owner decisions.** Resolve open decisions 1–4 and approve the full `SPEC.md`, `PLAN.md`,
    `TASKS.md` and child design docs (SU-001).

@@ -1,7 +1,7 @@
 # Plan: Configurable Sources and Uses Optimizer
 
 - **Spec:** spec012-configurable-sources-uses (`SPEC.md`)
-- **Status:** Setup-only phase (in `main`) and synthetic PoC showcase (SU-SIM, PR #166) approved; full optimizer design remains pending
+- **Status:** Setup-only phase (in `main`) and synthetic PoC showcase (SU-SIM, merged in PR #166) approved; full optimizer design remains pending
 - **Last updated:** 2026-10-18
 
 ## Approach

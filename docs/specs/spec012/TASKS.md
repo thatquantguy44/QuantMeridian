@@ -1,7 +1,7 @@
 # Tasks: Configurable Sources and Uses Optimizer
 
 - **Spec:** spec012-configurable-sources-uses (`SPEC.md`, `PLAN.md`)
-- **Status:** Bounded setup-only phase (in `main`) and SU-SIM showcase (PR #166) approved; production solver/service behaviour remains gated on open decisions
+- **Status:** Bounded setup-only phase (in `main`) and SU-SIM showcase (merged in PR #166) approved; production solver/service behaviour remains gated on open decisions
 - **Last updated:** 2026-10-18
 - **Checkpoint:** See [HANDOFF.md](HANDOFF.md) for branch state and pickup instructions
 - **Parent requirements:** 0018 REQ-021–029, REQ-041
