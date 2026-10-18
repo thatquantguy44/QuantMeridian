@@ -4,7 +4,7 @@
 
 **Branch:** `claude/synthetic-snu-poc-27n9hu`. The MMKT module merged into `main` in
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
-follow-up [PR #FOLLOWUP](https://github.com/thatquantguy44/QuantMeridian/pull/FOLLOWUP) records the owner approval and refreshes the handoffs. The same PRs carry the
+follow-up [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) records the owner approval and refreshes the handoffs. The same PRs carry the
 spec012 SU-SIM work; see `docs/specs/spec012/HANDOFF.md`.
 
 **State:** the terminal module `/money-market` drives the existing `services/money_market_api`
@@ -131,7 +131,7 @@ headroom) and the CSV export.
 
 ## Next steps (in order)
 
-1. Merge PR #FOLLOWUP (approval records and handoff refresh).
+1. Merge PR #167 (approval records and handoff refresh).
 2. Owner decisions: questions 1–3 in `SPEC.md`, then approve the spec, plan, tasks and white
    paper (MM-001).
 3. **MM-006 MIP slice.** Add ticket, lot, count and cutoff rules with formulation disclosure,
