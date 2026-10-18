@@ -22,7 +22,7 @@ Make QuantMeridian's Optimization Center the operating surface for independent m
 
 `services/money_market_api` already validates a versioned request and advertises `solver_enabled: false`; its run endpoint currently returns `501 MODEL_NOT_IMPLEMENTED`. Spec011 defines the money market model goals but has open decisions. `src/app/optimization/page.tsx` reads generated runs, duals, and trades from `src/data/optimization.ts`; `src/app/collateral/page.tsx` presents generated data and a client-side what-if estimate. Neither is an auditable source of real solve results. The existing `/cash-optimizer` page is a funding view, not a connected money market execution optimizer.
 
-This spec adds the connection and operating layer for actual, separately owned models. It does not choose or implement either mathematical model. The model repository, entry point, solver, license, and approved policies must be supplied and verified during integration. Spec011 remains the source for MMKT financial requirements; collateral-specific model requirements and acceptance fixtures must be approved before collateral recommendations are enabled.
+This spec adds the connection and operating layer for actual, separately owned models. It does not implement either mathematical model. [Spec016](../spec016/SPEC.md) identifies the InventoryBallast collateral package and proposes its exact initial pin and native contract; that binding still needs review and conformance evidence before activation. The money market model repository remains unresolved. Spec011 remains the source for MMKT financial requirements.
 
 ## Goals
 
@@ -100,8 +100,8 @@ All slices use the existing terminal navigation, dense table patterns, provenanc
 
 ## Decisions required before implementation
 
-1. Identify the money market and collateral model repositories (or local checkout paths), their owners, supported invocation surfaces, licenses, and first approved immutable revisions. Do not infer these from similar repository names.
-2. Approve the collateral model's input, policy, output, objective, units, and independent verification contract, including whether its use is limited to one currency/legal entity per run.
+1. Identify the money market model repository and its first approved immutable revision. Spec016 identifies the collateral repository and a merged-main candidate commit; approve its binding only after build, ownership, license and conformance review.
+2. Review spec016's native collateral input, policy, output, objective, units and verifier contract. The candidate supports multiple currencies and legal entities through explicit agreements; approve the QuantMeridian adapter and source policy before recommendations are enabled.
 3. Resolve spec011's baseline, horizon/currency, and stale-rate decisions before enabling money market recommendations.
 4. Select durable run/audit storage and worker deployment for local and hosted environments, retention periods, user identity/RBAC source, and schedule failure notification destination.
 5. Define whether any combined economic metric across MMKT and COLL is valid; otherwise keep the two impact panels separate.
@@ -111,6 +111,7 @@ All slices use the existing terminal navigation, dense table patterns, provenanc
 - `docs/specs/spec011/` — money market model requirements and existing `money_market_api` scaffold.
 - `docs/specs/spec012/` — Sources & Uses, including its bounded setup-only approval.
 - `docs/specs/spec013/` and `docs/specs/spec007/` — InventoryBallast capability/version and UI integration precedents.
+- `docs/specs/spec016/` — specific InventoryBallast collateral package, candidate pin and update protocol.
 - `docs/specs/spec014/` — liquidity forecast source dependency and proposed service port 8016.
 - `services/optimization_core/` — current LP builder and independent verifier; MIP support is not yet implemented there.
 - `src/app/optimization/page.tsx`, `src/app/collateral/page.tsx`, `src/app/cash-optimizer/page.tsx` — current product surfaces.

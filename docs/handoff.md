@@ -5,6 +5,15 @@ SU-SIM, the spec011 MMKT module, demo books) and its follow-up PR #167. The rest
 retained as context.
 **Default branch:** `main` (0018 was merged in PR #148; subsequent follow-up docs were merged in PR #150)
 
+## Collateral model binding spec — 2026-10-18
+
+The owner identified the standalone model in InventoryBallast for the `COLL` module.
+[`docs/specs/spec016/`](specs/spec016/) proposes the exact merged-main package pin,
+`services/collateral_optimizer_api` adapter contract, five upstream SIM scenarios and a
+reviewed pin-update PR workflow. This resolves spec015's repository-identification question
+for collateral; implementation, binding approval and production sources remain open. The
+current `src/data/collateral.ts` economics and client what-if remain illustrative SIM only.
+
 ## ▶ TOP PRIORITY — live proof-of-concept showcase (InventoryBallast spec `0018`, set 2026-10-17)
 
 **This is the highest-priority work for Market Terminal. Start here.** It outranks "Current
