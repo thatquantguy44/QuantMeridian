@@ -1,6 +1,6 @@
 # Spec012 build handoff
 
-**Updated:** 2026-10-17
+**Updated:** 2026-10-18
 
 **Branch:** `build/spec012-sources-uses-optimizer`
 
@@ -27,6 +27,40 @@ Do not infer or implement solver behavior from unresolved decisions.
   check. Source: `thatquantguy44/agent-skills` at
   `f63ec56a3cc936408d792956ae583c3c96a825bd`; its MIT license is retained. See
   `contracts/agent/agent-skills.pin.json`.
+
+## Synthetic PoC showcase (SU-SIM, 2026-10-18)
+
+The owner approved a bounded synthetic demonstration mode (see `SPEC.md` § SU-SIM). It is separate
+from the setup-only workspace and does not unlock the production optimizer.
+
+- `src/lib/optimization/simplex.ts`: a dependency-free dense two-phase simplex (Bland's rule). It
+  recovers duals from the final basis.
+- `src/data/sourcesUsesSynthetic.ts`: a deterministic SIM book (8 sources, 10 uses, 35 explicit
+  lanes) and six scenarios. Also the stress knobs, the lexicographic tier solve, the elastic
+  infeasibility diagnostic, the independent verifier (primal, dual, complementary slackness,
+  duality gap), and the copy-to-workspace bridge.
+- `src/app/sources-uses/synthetic/`: the Synthetic PoC view, reached from the page header toggle
+  or `/sources-uses#synthetic`. It has the transport network (flow ribbons taper by haircut), the
+  transportation tableau with uᵢ/vⱼ duals and click-to-deny lanes, live stress controls, a tier
+  ladder, utilisation, coverage, marginal cost, scenario comparison, verification, and
+  formulation disclosure.
+- The model is a balanced, penalised classic transportation problem. Dummy unmet-demand and
+  idle-capacity nodes balance it. Each lane cost `c_ij` sums the source cost, the pair penalty,
+  cross-entity, tenor mismatch and the haircut charge. A convex concentration penalty, minimum-draw
+  penalties and lexicographic or weighted priority complete it. Everything is configurable in the
+  Penalty configuration panel and the tableau's lane inspector. See `SPEC.md` § SU-SIM for the
+  penalty catalogue.
+- Verification: business checks are recomputed from configuration. `certifyLp` in `simplex.ts`
+  then certifies optimality on the exact final-stage LP (primal and dual feasibility,
+  complementary slackness, duality gap).
+- Tests:
+  - `src/lib/optimization/simplex.test.ts` (6).
+  - `src/data/sourcesUsesSynthetic.test.ts` (34): a hand-computable case per penalty, both
+    priority modes, dual and flow tamper failures, the infeasible cascade, and a 432-corner
+    stress/penalty grid that must verify or report a hard gap.
+
+The showcase does not touch the open decisions. It uses one currency, explicit lanes only, a
+continuous solve with display-only rounding, and computes no internalization rate.
 
 ## Explicitly out of scope for this slice
 

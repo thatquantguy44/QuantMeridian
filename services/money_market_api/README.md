@@ -40,7 +40,11 @@ Install both packages in a Python 3.12 environment and run:
 ```bash
 pip install ./services/optimization_core ./services/money_market_api
 cd services/money_market_api
-MONEY_MARKET_API_TOKEN=local-token uvicorn money_market_api.app:app --app-dir src --port 8014
+MONEY_MARKET_API_TOKEN=local-token MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1 \
+  uvicorn money_market_api.app:app --app-dir src --port 8014
 ```
+
+Give the terminal the same token (`MONEY_MARKET_API_TOKEN=local-token` in `.env.local`) and open
+`/money-market`. Run the service tests with `pytest` from this directory.
 
 Health is available at `http://127.0.0.1:8014/health`.

@@ -17,6 +17,7 @@
 | SU-008 | Remove random matches and add verified OPT run history. | SU-008 | todo | No random source remains on page; run hashes shown |
 | SU-009 | Add service auth/health/telemetry and local launcher integration. | 0018 REQ-027 | todo | Service/API parity, redaction, health evidence |
 | SU-010 | Benchmark and document the as-built model and demo path. | REQ-041 | todo | Approved worked example, model card, validation record |
+| SU-012 | Synthetic PoC showcase mode (SU-SIM): deterministic dataset, scenarios, penalised balanced transport LP, configurable penalties, verifier and LP certificate, and visual front end. | SIM-001–010 | done | `src/data/sourcesUsesSynthetic.ts`, `src/lib/optimization/simplex.ts`, `src/app/sources-uses/synthetic/`; unit tests cover hand-computable LPs, every penalty, both priority modes, verifier and certificate tamper, and infeasibility |
 | SU-011 | Pin and apply upstream Agent Skills for production engineering, testing, and independent validation. | SU-002–010 | done | `thatquantguy44/agent-skills` snapshot pinned by commit, SHA-256, and Git blob IDs; repository guidance and hosted pin check |
 
 ## Definition of Done

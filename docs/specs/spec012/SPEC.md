@@ -2,10 +2,10 @@
 
 - **ID:** spec012-configurable-sources-uses
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-021–029, REQ-041
-- **Status:** Draft — bounded setup-only phase approved; full optimizer pending decisions and review
+- **Status:** Draft — bounded setup-only phase and synthetic PoC showcase (SU-SIM) approved; full optimizer pending decisions and review
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** Owner (setup-only phase scope; full optimizer approval remains pending)
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Implementation details belong in `PLAN.md` and `TASKS.md`.
 
@@ -68,6 +68,131 @@ its child design documents.
 - **AC-007:** Sankey totals, table totals, and verified solution totals agree; internalization denominator is defined in the approved design.
 - **AC-008:** No random-number matches remain; OPT history contains the verified configuration/run hashes.
 - **AC-009:** For each source, nominal flow consumes capacity and haircut-adjusted flow contributes to use coverage; changing a configured source haircut changes the canonical run hash.
+
+## Synthetic proof-of-concept showcase (SU-SIM)
+
+**Status:** Approved by the owner on 2026-10-18 as a bounded demonstration mode. It does not
+approve the production optimizer, service contract, OPT run-history integration, or production
+recommendations. Those stay gated on the open decisions below.
+
+### Why
+
+Stakeholders need to see what the optimizer will do before the production service is approved.
+A fixed, hand-built synthetic book shows the model on a realistic treasury funding day. It covers
+the classic transportation problem, haircut-adjusted coverage, lexicographic priority tiers,
+shadow prices, and infeasibility diagnosis. It uses no live, customer, or production data.
+
+### Scope
+
+The Sources & Uses page offers a **Synthetic PoC** mode next to the configuration workspace. In
+this mode:
+
+- The dataset is a fixed, handwritten synthetic broker-dealer funding book. It has no random
+  generation and is identical on every load. Every surface labels it `SIM`.
+- The model is solved in the browser by a deterministic, dependency-free LP (two-phase simplex,
+  Bland's rule). It never calls a service and never writes to OPT run history.
+- Results are presented as illustrative model behaviour, never as a funding recommendation.
+
+### Showcase formulation: penalised classic transportation problem
+
+The showcase solves the textbook **balanced transportation problem**. Sources are supply nodes
+and uses are demand nodes. A unit cost `c_ij` applies on each explicitly allowed lane. Two dummy
+nodes balance the problem:
+
+- **Dummy supply ("unmet demand"):** feeds each soft use at that use's shortfall penalty `π_j`.
+  Hard uses have no dummy lane.
+- **Dummy demand ("idle capacity"):** absorbs each source's unused capacity at that source's idle
+  penalty `ι_i`.
+
+Haircuts make it a generalised transportation problem. A nominal dollar from source `i` covers
+`(1 − h_i)` of a use, following resolved decision 2.
+
+**Variables:**
+- `x_ij ≥ 0`: lane flow up to the concentration threshold.
+- `x̂_ij ≥ 0`: lane flow above the threshold.
+- `s_j ≥ 0`: shortfall of a soft use.
+- `e_i ≥ 0`: idle capacity of a source.
+- `m_i ≥ 0`: shortfall below a source's minimum draw.
+
+**Constraints:**
+- Supply: `Σ_j (x_ij + x̂_ij) + e_i = A_i`.
+- Demand: `Σ_i (1 − h_i)(x_ij + x̂_ij) + s_j = D_j`. `s_j ≡ 0` for hard uses.
+- Concentration split: `x_ij ≤ θ · D_j / (1 − h_i)`. This makes the concentration penalty convex,
+  so the model stays an LP.
+- Minimum draw: `Σ_j (x_ij + x̂_ij) + m_i ≥ floor_i`.
+
+**Objective:** `min Σ c_ij·x_ij + Σ (c_ij + κ)·x̂_ij + Σ π_j·s_j + Σ ι_i·e_i + Σ μ_i·m_i`, where
+`c_ij = c_i + p_ij + χ·[entity_i ≠ entity_j] + τ·max(0, T_j − T_i)/30 + η·h_i`.
+
+Every penalty is configurable in the UI:
+
+| Penalty | Symbol | Scope | Meaning in a Sources & Uses book |
+|---|---|---|---|
+| Source cost | `c_i` | per source | All-in funding spread of the source |
+| Pair penalty | `p_ij` | per lane, overridable | Operational transfer cost, reuse restriction or wrong-way risk on one specific pairing |
+| Cross-entity transfer | `χ` | global | Intercompany downstreaming cost when source and use sit in different legal entities |
+| Tenor mismatch | `τ` per 30 days | global | Rollover risk when short funding finances a longer-dated use |
+| Haircut capital charge | `η × h_i` | global | Cost of the encumbered over-collateral that a haircut locks up |
+| Concentration | `κ` above `θ`% | global | Convex penalty when one lane carries more than a share of a use's demand |
+| Shortfall | `π_j` | per soft use, overridable | Cost of leaving coverage unmet (dummy supply) |
+| Idle capacity | `ι_i` | per source, overridable, switchable | Negative carry or reserve lock-up on unused funding (dummy demand) |
+| Minimum draw | `μ_i` below `floor_i` | per source, switchable | Programme floor or balance commitment (for example CP market access, tri-party relationship) |
+
+**Priority handling:**
+- **Lexicographic (default, SU-004):** tiers are solved in ascending order. Stage `t` minimises
+  `Σ_{j∈t} π_j s_j`. Its optimum is then fixed as an upper bound, with a stated tolerance, before
+  the full penalised objective is minimised.
+- **Weighted (comparison only):** a single penalised transport solve that trades shortfall
+  penalties directly against cost. It shows why lexicographic tiers matter. It is not the
+  production rule.
+
+**Infeasibility:** if a hard use cannot be covered, an elastic LP adds hard-coverage slack. It
+minimises total slack and reports the short uses and the binding sources by stable ID. The elastic
+result is never shown as a solution.
+
+All penalty values in the SIM book are illustrative economics. They are not decisions about the
+production objective.
+
+### How the showcase stays clear of open decisions
+
+- **Currency (open decisions 1 and 4):** one currency, USD. No currency mismatch exists, so
+  nothing about mismatch policy is assumed.
+- **Compatibility (open decision 1):** every lane is an explicit `allowed` or `denied` rule.
+  Nothing is inferred from legal entity or asset class. A cross-entity lane exists only where the
+  dataset states it, with its friction.
+- **Rounding (open decision 2):** the solve is fully continuous. Values are rounded only for
+  display, to $0.1mm. Verification uses absolute and relative tolerances, not rounded values.
+- **Internalization (open decision 3):** no internalization rate is computed. The UI shows the
+  funding mix by synthetic source family only.
+
+### Requirements
+
+| ID | Requirement | Priority |
+|---|---|---|
+| SIM-001 | A deterministic synthetic dataset of eight sources (three families: internal, secured, unsecured & committed) and ten uses (four tiers, mixed hard/soft), with tenors, idle penalties, minimum draws and explicit lanes with pair penalties. | must |
+| SIM-002 | At least six named scenarios. Each is a documented transformation of the base book: base case, repo squeeze, haircut shock, margin-call surge, unsecured rate shock, and a hard-infeasible cascade. | must |
+| SIM-003 | Interactive stress controls re-solve live: capacity per family, haircut shift, demand scale, unsecured cost shift, and a per-lane allow/deny toggle. | must |
+| SIM-004 | Visuals: a bipartite transport network with flow-weighted animated lanes, a transportation tableau, source utilisation, use coverage by tier, shadow prices, a priority-tier ladder, and a scenario comparison. Each visual has a hover/focus readout and a text/table equivalent. | must |
+| SIM-005 | An independent verifier recomputes the following from problem data and reports each as a visible check: primal feasibility, denied-lane zero flow, coverage reconciliation, hard-use coverage, objective, dual feasibility, complementary slackness, and the duality gap. | must |
+| SIM-006 | Shadow prices are labelled as final-stage LP duals, conditional on the fixed tier levels. Capacity prices may be negative when idle capacity is penalised. | must |
+| SIM-007 | The formulation, solve statistics (variables, rows, stages, pivots, time), and the SIM label are disclosed on the page. | must |
+| SIM-008 | A scenario can be copied into the configuration workspace as a normal, editable configuration. Copying does not enable solving there. | should |
+| SIM-009 | The solver is the balanced penalised transportation problem above. Dummy supply and demand nodes appear in both the network and the tableau. | must |
+| SIM-010 | Every penalty in the catalogue is configurable live: global sliders and toggles, per-lane pair-penalty overrides, per-use shortfall penalties, per-source idle penalties, and lexicographic or weighted priority. An objective decomposition and a per-lane cost stack show each term's contribution. | must |
+
+### Acceptance criteria
+
+- **SIM-AC-001:** Loading the dataset twice yields deeply equal objects, and the module has no random source.
+- **SIM-AC-002:** Hand-computable LP cases solve to the known optimum with the expected duals.
+  These cover a two-by-two transport, haircut coverage, and a tier that cannot be outbid by cost.
+- **SIM-AC-003:** Every feasible scenario passes all verifier checks. A tampered flow fails verification.
+- **SIM-AC-004:** The cascade scenario reports infeasible, names the short hard uses, and shows no flows as a solution.
+- **SIM-AC-005:** Network totals, tableau totals and KPI totals agree with the verified solution.
+- **SIM-AC-006:** Each penalty has a hand-computable case. In each case, switching the penalty on
+  or overriding it moves the optimum as predicted. The objective decomposition sums to the LP
+  objective.
+- **SIM-AC-007:** A generic primal/dual certificate on the exact final-stage LP passes for every
+  feasible scenario in both priority modes. A tampered dual fails it.
 
 ## Decisions and open questions
 
