@@ -12,7 +12,10 @@ Focus" and "Next Work" below; those stay as context.
 
 **Active checkpoint (2026-10-18):**
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) is open from branch
-`claude/synthetic-snu-poc-27n9hu` and merges cleanly into `main`.
+`claude/synthetic-snu-poc-27n9hu` and merges cleanly into `main`. On 2026-10-18 the owner
+explicitly approved the spec012 SU-SIM showcase, the SXU module SIM switch and the spec011 MMKT
+module slice. Each is recorded in the decision log of its `SPEC.md`. Full spec approvals and the
+listed open questions remain pending.
 
 | Workstream | What PR #166 adds | Pickup document |
 |---|---|---|

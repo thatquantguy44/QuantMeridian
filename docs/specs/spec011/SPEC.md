@@ -2,9 +2,9 @@
 
 - **ID:** spec011-money-market-execution
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-016–020, REQ-027–030, REQ-041
-- **Status:** Draft — pending owner review. Not approved as a whole, but owner-authorized slices are in progress (see `PLAN.md` and [HANDOFF.md](HANDOFF.md)).
+- **Status:** Draft — the MMKT module slice was explicitly approved by the owner on 2026-10-18 (see the decision log). The full spec is pending owner review and owner questions 1–3 remain open. See `PLAN.md` and [HANDOFF.md](HANDOFF.md).
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** — (pending owner review)
+- **Approver:** Owner, for the MMKT module slice (2026-10-18). Full spec approval is pending.
 - **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Service architecture and task sequencing belong in `PLAN.md` and `TASKS.md`.
@@ -63,6 +63,16 @@ MMKT is a QuantMeridian service-backed module. It receives a rate snapshot from 
 ## Decisions and open questions
 
 **Already decided in parent 0018:** rate source is MacroMedallion through `MACRO_DB_URL`; SIM is explicitly user-selected with no silent fallback; snapshot is passed into each solve. Rates must be compared using normalized yield. Missing fund-yield/WAM/WAL, CP tenor, repo-tenor, and auction inputs remain explicit user policy inputs labeled illustrative until upstream sources exist.
+
+**Decision log**
+
+| Date | Decision | Recorded by |
+|---|---|---|
+| 2026-10-17 | Owner-authorized integration and LP work proceeds while the spec is in draft (`PLAN.md`). | Owner |
+| 2026-10-18 | **Approved:** the MMKT terminal module (`/money-market`) as built in PR #166. This covers explicit rate-source selection, the two named SIM rate sets with fail-closed pricing, the five named scenarios, verified-only result presentation labelled as a continuous LP relaxation, and the service fixes and tests. | Owner, explicit approval in the build session |
+
+This approval does not cover the MIP/execution slice (MM-006), an execution blotter, a baseline
+definition, or the questions below.
 
 **Owner confirmation needed before approval:**
 1. Naive baseline definition (for example, hold forecast surplus as overnight cash versus the lowest-risk permitted instrument).

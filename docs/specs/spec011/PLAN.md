@@ -40,7 +40,7 @@ Use hand-computable golden portfolios, one test per constraint family, verifier 
 
 The owner-authorized integration and LP work is in progress while the child spec remains draft.
 
-**2026-10-18 — MMKT module (owner request).** A terminal module at `/money-market` drives the
+**2026-10-18 — MMKT module (requested, then explicitly approved by the owner; see the `SPEC.md` decision log).** A terminal module at `/money-market` drives the
 service end to end. It does the following:
 - Reports service, binding and token readiness, with setup steps.
 - Requires an explicit rate-source choice (Gold, or a named SIM set), shows every snapshot row

@@ -4,7 +4,7 @@
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-021–029, REQ-041
 - **Status:** Draft — bounded setup-only phase and synthetic PoC showcase (SU-SIM) approved; full optimizer pending decisions and review
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** Owner (setup-only phase scope; full optimizer approval remains pending)
+- **Approver:** Owner, for the setup-only phase (2026-10-17), the SU-SIM showcase and the module SIM switch (explicitly approved 2026-10-18). Full optimizer approval remains pending.
 - **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Implementation details belong in `PLAN.md` and `TASKS.md`.
@@ -71,7 +71,7 @@ its child design documents.
 
 ## Synthetic proof-of-concept showcase (SU-SIM)
 
-**Status:** Approved by the owner on 2026-10-18 as a bounded demonstration mode. It does not
+**Status:** Explicitly approved by the owner on 2026-10-18 as a bounded demonstration mode (see the decision log below). It does not
 approve the production optimizer, service contract, OPT run-history integration, or production
 recommendations. Those stay gated on the open decisions below.
 
@@ -200,6 +200,19 @@ production objective.
   feasible scenario in both priority modes. A tampered dual fails it.
 
 ## Decisions and open questions
+
+**Decision log**
+
+| Date | Decision | Recorded by |
+|---|---|---|
+| 2026-10-17 | Setup-only phase approved. Haircut is per source (decision 2 below). | Owner |
+| 2026-10-18 | **Approved:** the SU-SIM synthetic PoC showcase as built in PR #166. This covers the penalised balanced transportation LP, configurable penalties, verifier and LP certificate, and the visual front end, within the scope and limits in § SU-SIM. | Owner, explicit approval in the build session |
+| 2026-10-18 | **Approved:** the module SIM switch. SIM is on by default until the page is wired to a production model, with an on-screen ON/OFF switch (SU-013). | Owner |
+
+These approvals do not cover the production optimizer, the service contract, OPT run history or
+the open questions below.
+
+**Open questions**
 
 1. Confirm whether currency mismatches and legal-entity mismatches are always hard incompatibilities or may be allowed by an explicit override.
 2. **Resolved (2026-10-17):** Haircut is attached to each source and is configurable in the source/use configuration, not hard-coded. For a nominal flow `x_ij` from source `i`, source capacity is consumed by `x_ij` and use coverage is credited as `x_ij × (1 − h_i)`, where `h_i` is that source's configured haircut rate. The same source haircut applies to all compatible uses. Pair-specific haircuts are out of scope for the initial release. **Still open:** rounding convention for fractional capacity and coverage.

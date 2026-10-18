@@ -10,9 +10,9 @@ into cleanly. The same PR carries the spec012 SU-SIM showcase; see `docs/specs/s
 continuous LP end to end, on explicitly selected SIM rate sets. Results are verified by the
 service before they are shown. They are **not execution-ready** and not recommendations.
 
-**Spec status:** `SPEC.md` is still a draft and not approved. The owner authorized the
-integration, LP and module slices as work in progress (see `PLAN.md`, the 2026-10-18 note).
-Owner questions 1–3 in `SPEC.md` are still open and must not be encoded.
+**Spec status:** the owner **explicitly approved the MMKT module slice on 2026-10-18**. It is
+recorded in the decision log in `SPEC.md`. The spec as a whole is still a draft, and owner
+questions 1–3 in `SPEC.md` are still open and must not be encoded.
 
 ## Start here
 
@@ -130,7 +130,7 @@ headroom) and the CSV export.
 
 ## Next steps (in order)
 
-1. Merge PR #166 after review, and confirm the 2026-10-18 owner-authorization note in `PLAN.md`.
+1. Merge PR #166 after review.
 2. Owner decisions: questions 1–3 in `SPEC.md`, then approve the spec, plan, tasks and white
    paper (MM-001).
 3. **MM-006 MIP slice.** Add ticket, lot, count and cutoff rules with formulation disclosure,

@@ -98,8 +98,9 @@ the workspace instead. Turning SIM off hides the PoC entirely.
 **Resolved:**
 - **Haircut:** per source and configurable. Nominal flow consumes capacity, and coverage is
   credited as `flow × (1 − h_i)`. Pair-specific haircuts are out of scope initially.
-- **SU-SIM showcase:** approved 2026-10-18 as a bounded demo mode. The approval comes from the
-  session request. The owner should confirm the wording in `SPEC.md` on PR #166.
+- **SU-SIM showcase:** explicitly approved by the owner on 2026-10-18 as a bounded demo mode.
+- **Module SIM switch:** explicitly approved by the owner on 2026-10-18 (SU-013).
+- Both are recorded in the decision log in `SPEC.md` § Decisions and open questions.
 
 **Open (do not encode):**
 1. Are currency and legal-entity mismatches always incompatible, or can an explicit override
