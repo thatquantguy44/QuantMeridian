@@ -33,6 +33,14 @@
     "solver",
     "verification",
     "warnings",
-    "scenario_stress"
+    "scenario_stress",
+    "scenario_comparison",
+    "concentration",
+    "agency",
+    "prime",
+    "schedules",
+    "collateral",
+    "desk",
+    "showcase"
   ]
 }

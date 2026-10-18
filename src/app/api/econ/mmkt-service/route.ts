@@ -73,7 +73,7 @@ export async function GET() {
     api_schema_version: typeof body.api_schema_version === "string" ? body.api_schema_version : null,
     detail: ready
       ? "Service is reachable with an enabled model binding."
-      : "Service is reachable but has no model binding. Set MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1 on the service.",
+      : "Service is reachable but has no model binding. Set MONEY_MARKET_MODEL_BINDING=local-mmkt-execution-v2 on the service for verified ticketed plans.",
   };
   if (!ready || !token) {
     return json(token ? result : { ...result, detail: `${result.detail} The terminal has no MONEY_MARKET_API_TOKEN.` }, { headers });
