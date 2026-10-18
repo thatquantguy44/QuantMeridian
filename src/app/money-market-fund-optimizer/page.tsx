@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { DataGrid, type Column } from "@/components/ui/DataGrid";
@@ -63,6 +63,7 @@ export default function MoneyMarketFundOptimizer() {
   const [solving, setSolving] = useState(false);
   const [connection, setConnection] = useState<ConnectionResponse | null>(null);
   const [connectionLoading, setConnectionLoading] = useState(true);
+  const optimizeRequestId = useRef(0);
 
   const refreshConnection = useCallback(async () => {
     setConnectionLoading(true);
@@ -85,8 +86,9 @@ export default function MoneyMarketFundOptimizer() {
 
   useEffect(() => { void refreshConnection(); }, [refreshConnection]);
 
-  async function runOptimization() {
-    if (!syntheticMode) return;
+  async function runOptimization(allowEnableTransition = false) {
+    if (!syntheticMode && !allowEnableTransition) return;
+    const requestId = ++optimizeRequestId.current;
     setSolving(true);
     setSolveError(null);
     try {
@@ -104,12 +106,14 @@ export default function MoneyMarketFundOptimizer() {
       });
       const body = await response.json() as { ok: boolean; result?: OptimizeResult; error?: string };
       if (!response.ok || !body.ok || !body.result) throw new Error(body.error ?? "Optimization could not be completed.");
-      setResult(body.result);
+      if (requestId === optimizeRequestId.current) setResult(body.result);
     } catch (error) {
-      setResult(null);
-      setSolveError(error instanceof Error ? error.message : "Optimization could not be completed.");
+      if (requestId === optimizeRequestId.current) {
+        setResult(null);
+        setSolveError(error instanceof Error ? error.message : "Optimization could not be completed.");
+      }
     } finally {
-      setSolving(false);
+      if (requestId === optimizeRequestId.current) setSolving(false);
     }
   }
 
@@ -147,7 +151,7 @@ export default function MoneyMarketFundOptimizer() {
       <div className="mx-2 mb-1 flex flex-wrap items-center justify-between gap-3 border border-term-border bg-term-panel px-3 py-2">
         <div>
           <div className="text-xs font-semibold text-term-text">Synthetic Demo Mode</div>
-          <p className="mt-1 text-2xs text-term-text-mute">Uses a fixed, fictional institutional fund snapshot for presentations. Values are illustrative, not live market quotes.</p>
+          <p className="mt-1 text-2xs text-term-text-mute">Turning this on loads a fixed, fictional institutional fund snapshot and runs a sample allocation. Values are illustrative, not live market quotes.</p>
         </div>
         <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-term-text">
           <input
@@ -157,9 +161,12 @@ export default function MoneyMarketFundOptimizer() {
             checked={syntheticMode}
             onChange={(event) => {
               const enabled = event.target.checked;
+              optimizeRequestId.current += 1;
               setSyntheticMode(enabled);
               setResult(null);
               setSolveError(null);
+              if (!enabled) setSolving(false);
+              if (enabled) void runOptimization(true);
             }}
             className="h-4 w-4 accent-term-amber"
           />
