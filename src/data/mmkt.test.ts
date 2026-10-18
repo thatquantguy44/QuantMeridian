@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  MMKT_SCENARIOS, PERIOD_DATES, allocationsCsv, analyzeCurrency, buildRunInput, demoBook, demoCashForecast,
+  BASELINES, DEFAULT_BASELINE, MMKT_SCENARIOS, PERIOD_DATES, allocationsCsv, analyzeCurrency, buildBaselineInput, buildRunInput,
+  compareToBaseline, demoBook, demoCashForecast,
   runnableCandidates, type CurrencyResult, type MmktRunResult, type RateRow,
 } from "./mmkt";
 
@@ -125,5 +126,57 @@ describe("result analytics", () => {
     expect(lines).toHaveLength(4);
     expect(lines[1]).toContain("SIM-MMKT-2026-10-BASE");
     expect(lines[1].endsWith(",false")).toBe(true);
+  });
+});
+
+describe("baselines (owner decision 2026-10-18)", () => {
+  const book = demoBook();
+  const build = (kind: (typeof BASELINES)[number]["id"]) => buildBaselineInput(kind, book, RATES, "SIM-MMKT-2026-10-BASE", "00000000-0000-4000-8000-000000000000");
+
+  test("all four options exist and the government MMF sweep is the default", () => {
+    expect(BASELINES.map((b) => b.id)).toEqual(["government_mmf", "cash", "overnight", "current_allocation"]);
+    expect(DEFAULT_BASELINE).toBe("government_mmf");
+  });
+
+  test("government MMF sweep restricts the universe to government funds only", () => {
+    const r = build("government_mmf");
+    if (!("input" in r)) throw new Error("expected an input");
+    expect(r.input.instrument_candidates.map((c) => c.instrument_type)).toEqual(["government_mmf"]);
+    expect(r.input.policy).toEqual(book.policy);
+    expect(r.input.cash_forecast).toEqual(book.forecast);
+  });
+
+  test("uninvested cash keeps one anchor candidate capped at zero", () => {
+    const r = build("cash");
+    if (!("input" in r)) throw new Error("expected an input");
+    expect(r.input.instrument_candidates).toHaveLength(1);
+    expect(r.input.instrument_candidates[0].maximum_amount).toBe(0);
+  });
+
+  test("overnight roll uses only overnight repo and RRP candidates", () => {
+    const r = build("overnight");
+    if (!("input" in r)) throw new Error("expected an input");
+    const types = new Set(r.input.instrument_candidates.map((c) => c.instrument_type));
+    expect(types).toEqual(new Set(["fed_rrp", "tri_party_repo"]));
+    expect(r.input.instrument_candidates).toHaveLength(18);
+  });
+
+  test("current allocation fails closed until a positions feed exists", () => {
+    expect(build("current_allocation")).toEqual({ unavailable: expect.stringContaining("positions feed") });
+  });
+
+  test("a baseline with no eligible instruments is reported, not guessed", () => {
+    const noFund = { ...book, enabled: { ...book.enabled, "GMMF-USG": false } };
+    expect(buildBaselineInput("government_mmf", noFund, RATES, "S", "id")).toEqual({ unavailable: expect.stringContaining("government MMF") });
+  });
+
+  test("uplift is optimized minus baseline, annualized on the average total balance", () => {
+    const holdings = PERIOD_DATES.map((day) => ({ day, cash: 500, invested: 500, byFamily: { government: 500, secured: 0, bank: 0, credit: 0 } }));
+    const optimized = { objective: 2, holdings } as unknown as Parameters<typeof compareToBaseline>[0];
+    const baseline = { objective: 1.5, holdings } as unknown as Parameters<typeof compareToBaseline>[1];
+    const c = compareToBaseline(optimized, baseline, 11);
+    expect(c.upliftMm).toBeCloseTo(0.5, 12);
+    // 0.5 / 1000 × 365/11 × 10,000 bp
+    expect(c.upliftBps).toBeCloseTo((0.5 / 1000) * (365 / 11) * 10_000, 9);
   });
 });

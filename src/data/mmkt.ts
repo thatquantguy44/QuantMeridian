@@ -304,6 +304,73 @@ export function buildRunInput(book: BookInputs, rates: RateRow[] | null, simSetI
   };
 }
 
+// ── Baselines (spec011 MM-006/MM-007; owner decision 2026-10-18) ─────────────────────────────
+
+export type BaselineKind = "cash" | "government_mmf" | "overnight" | "current_allocation";
+
+export interface BaselineOption { id: BaselineKind; label: string; description: string }
+
+/**
+ * Owner decision (2026-10-18): any of these may be set as the baseline; the default is the
+ * government MMF sweep. Each computable baseline is a separate, verified service run with the
+ * same forecast, floors and policy, restricted to the baseline's instruments.
+ */
+export const BASELINES: BaselineOption[] = [
+  { id: "government_mmf", label: "Government MMF sweep", description: "All cash above the liquidity floors swept into the government money-market fund." },
+  { id: "cash", label: "Uninvested cash", description: "Surplus stays as cash earning zero. Easy to beat, so it overstates the model's value." },
+  { id: "overnight", label: "Overnight roll (repo + Fed RRP)", description: "Surplus rolled daily in tri-party repo and the Fed's overnight reverse repo facility." },
+  { id: "current_allocation", label: "Current allocation", description: "The book's actual holdings. Needs a current-positions feed, which is not connected yet." },
+];
+
+export const DEFAULT_BASELINE: BaselineKind = "government_mmf";
+
+const OVERNIGHT_TYPES: InstrumentType[] = ["fed_rrp", "tri_party_repo", "bilateral_repo"];
+
+/** The baseline's request, or the reason it cannot be computed (fail closed, never guessed). */
+export function buildBaselineInput(
+  kind: BaselineKind, book: BookInputs, rates: RateRow[] | null, simSetId: string, requestId: string,
+): { input: MmktRunInput } | { unavailable: string } {
+  const base = buildRunInput(book, rates, simSetId, requestId);
+  const runnable = base.instrument_candidates;
+  let candidates: InstrumentCandidate[];
+  if (kind === "current_allocation") {
+    return { unavailable: "The current-allocation baseline needs a current-positions feed, which is not connected. No baseline is computed." };
+  } else if (kind === "cash") {
+    // The contract needs at least one candidate; one capped at zero keeps every dollar in cash.
+    if (!runnable.length) return { unavailable: "No priced candidate is available to anchor the cash baseline." };
+    candidates = [{ ...runnable[0], maximum_amount: 0 }];
+  } else if (kind === "government_mmf") {
+    candidates = runnable.filter((c) => c.instrument_type === "government_mmf");
+    if (!candidates.length) return { unavailable: "No enabled, priced government MMF is in the universe." };
+  } else {
+    candidates = runnable.filter((c) => OVERNIGHT_TYPES.includes(c.instrument_type) && dayDiff(c.settlement_date, c.maturity_date) <= 4);
+    if (!candidates.length) return { unavailable: "No enabled, priced overnight repo or RRP candidate is in the universe." };
+  }
+  return { input: { ...base, instrument_candidates: candidates } };
+}
+
+export interface BaselineComparison {
+  baselineObjective: number;
+  upliftMm: number;
+  /** Uplift annualized over the optimized run's average total balance (cash + invested), in bp. */
+  upliftBps: number;
+}
+
+/** A verified baseline run, or why it could not be produced (never guessed). */
+export type BaselineOutcome =
+  | { kind: BaselineKind; status: "ok"; input: MmktRunInput; result: MmktRunResult; comparison: BaselineComparison }
+  | { kind: BaselineKind; status: "unavailable" | "error"; reason: string };
+
+export function compareToBaseline(optimized: RunAnalytics, baseline: RunAnalytics, horizonDays: number): BaselineComparison {
+  const avgBalance = optimized.holdings.reduce((s, h) => s + h.cash + h.invested, 0) / Math.max(1, optimized.holdings.length);
+  const upliftMm = optimized.objective - baseline.objective;
+  return {
+    baselineObjective: baseline.objective,
+    upliftMm,
+    upliftBps: avgBalance > 0 ? (upliftMm / avgBalance) * (365 / Math.max(1, horizonDays)) * 10_000 : 0,
+  };
+}
+
 // ── Named what-if scenarios (spec011 MM-007) ──────────────────────────────────────────────────
 
 export interface MmktScenario {

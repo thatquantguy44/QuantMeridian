@@ -11,10 +11,12 @@ retained as context.
 Focus" and "Next Work" below; those stay as context.
 
 **Active checkpoint (2026-10-18):**
-[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) is **merged into `main`**
-(merge commit `2b32b7c`). The follow-up [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) on the same branch,
-`claude/synthetic-snu-poc-27n9hu`, adds three things: the SXU module SIM switch, this handoff
-refresh, and the approval records. On 2026-10-18 the owner
+[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) and its follow-up
+[PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) are **merged into `main`**.
+Between them they bring the SU-SIM showcase, the MMKT module, the SXU module SIM switch, these
+handoffs and the approval records. The next PR from `claude/synthetic-snu-poc-27n9hu` adds the
+MMKT selectable baseline: spec011 question 1, resolved 2026-10-18, default government MMF sweep.
+On 2026-10-18 the owner
 explicitly approved the spec012 SU-SIM showcase, the SXU module SIM switch and the spec011 MMKT
 module slice. Each is recorded in the decision log of its `SPEC.md`. Full spec approvals and the
 listed open questions remain pending.

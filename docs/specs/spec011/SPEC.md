@@ -69,13 +69,14 @@ MMKT is a QuantMeridian service-backed module. It receives a rate snapshot from 
 | Date | Decision | Recorded by |
 |---|---|---|
 | 2026-10-17 | Owner-authorized integration and LP work proceeds while the spec is in draft (`PLAN.md`). | Owner |
+| 2026-10-18 | **Question 1 resolved — baseline.** Any of four baselines can be selected: (a) uninvested cash earning zero; (b) sweep all cash above the liquidity floors into the government money-market fund; (c) roll overnight in tri-party repo and the Fed's overnight reverse repo facility; (d) the actual current allocation. **The default is (b), the government MMF sweep.** Each computable baseline is a separate, verified service run with the same forecast, floors and policy, restricted to its instruments. (d) needs a current-positions feed that does not exist yet, so it fails closed with a stated reason until one is connected (MM-011). | Owner |
 | 2026-10-18 | **Approved:** the MMKT terminal module (`/money-market`) as built in PR #166. This covers explicit rate-source selection, the two named SIM rate sets with fail-closed pricing, the five named scenarios, verified-only result presentation labelled as a continuous LP relaxation, and the service fixes and tests. | Owner, explicit approval in the build session |
 
 This approval does not cover the MIP/execution slice (MM-006), an execution blotter, a baseline
 definition, or the questions below.
 
 **Owner confirmation needed before approval:**
-1. Naive baseline definition (for example, hold forecast surplus as overnight cash versus the lowest-risk permitted instrument).
+1. ~~Naive baseline definition.~~ **Resolved 2026-10-18** — see the decision log above.
 2. Default horizon and liquidity-buffer units when a portfolio has multiple currencies.
 3. Whether stale-but-present rows are displayed with status while remaining ineligible for optimization (recommended fail-closed behavior).
 

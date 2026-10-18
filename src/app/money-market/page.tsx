@@ -4,19 +4,20 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import {
-  BASE_SET, ENTITY_LABELS, MMKT_SCENARIOS, allocationsCsv, analyzeCurrency, buildRunInput, demoBook, explainRunError,
+  BASELINES, BASE_SET, DEFAULT_BASELINE, ENTITY_LABELS, MMKT_SCENARIOS, allocationsCsv, analyzeCurrency, buildBaselineInput,
+  buildRunInput, compareToBaseline, dayDiff, demoBook, explainRunError, type BaselineKind, type BaselineOutcome,
   type BookInputs, type MmktRunError, type MmktRunInput, type MmktRunResult, type RateRow,
 } from "@/data/mmkt";
 import { FloorChart, HoldingsChart, MaturityLadder, YieldBars } from "./components/charts";
 import {
-  AllocationTable, CandidateTable, CsvButton, ForecastTable, Lineage, PolicyEditor, RateTable, ScenarioCompare, SetupGuide,
+  AllocationTable, BaselinePanel, CandidateTable, CsvButton, ForecastTable, Lineage, PolicyEditor, RateTable, ScenarioCompare, SetupGuide,
   VerificationBlock, type CompareRow, type ServiceStatus,
 } from "./components/panels";
 
 interface SimSetSummary { sim_set_id: string; label: string; description: string; as_of_date: string; labels: Record<string, string> }
 type RateChoice = { source: "sim"; simSetId: string } | { source: "gold" } | null;
 interface Snapshot { rows: RateRow[]; hash: string; asOf: string; source: "SIM" | "DB" }
-interface RunRecord { input: MmktRunInput; result: MmktRunResult; title: string }
+interface RunRecord { input: MmktRunInput; result: MmktRunResult; title: string; book: BookInputs; rows: RateRow[]; choice: NonNullable<RateChoice>; baseline: BaselineOutcome | null }
 
 const fmt = (v: number, dp = 1) => v.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
@@ -48,6 +49,7 @@ export default function MoneyMarket() {
   const [runError, setRunError] = useState<MmktRunError | null>(null);
   const [compare, setCompare] = useState<CompareRow[] | null>(null);
   const [comparing, setComparing] = useState(false);
+  const [baselineKind, setBaselineKind] = useState<BaselineKind>(DEFAULT_BASELINE);
 
   const ready = status?.service_health === "READY" && Boolean(status.binding_id);
   const labels = useMemo(() => Object.assign({}, ...simSets.map((s) => s.labels)) as Record<string, string>, [simSets]);
@@ -93,14 +95,40 @@ export default function MoneyMarket() {
     return c.source === "sim" ? base : { ...base, rate_source: "gold", sim_set_id: undefined };
   }, []);
 
+  /** Run the selected baseline as its own verified service request and compare it. */
+  const runBaseline = useCallback(async (kind: BaselineKind, b: BookInputs, rows: RateRow[], c: NonNullable<RateChoice>, optimized: { input: MmktRunInput; result: MmktRunResult }): Promise<BaselineOutcome> => {
+    const built = buildBaselineInput(kind, b, rows, c.source === "sim" ? c.simSetId : "", crypto.randomUUID());
+    if ("unavailable" in built) return { kind, status: "unavailable", reason: built.unavailable };
+    const input = c.source === "sim" ? built.input : { ...built.input, rate_source: "gold" as const, sim_set_id: undefined };
+    const { result, error } = await postRun(input);
+    if (!result) return { kind, status: "error", reason: error ? `${explainRunError(error).title} (${error.code})` : "Baseline run failed." };
+    const comparison = compareToBaseline(
+      analyzeCurrency(optimized.result.currency_results[0], optimized.input),
+      analyzeCurrency(result.currency_results[0], input),
+      dayDiff(input.horizon.start_date, input.horizon.end_date),
+    );
+    return { kind, status: "ok", input, result, comparison };
+  }, []);
+
   const runNow = useCallback(async (b: BookInputs, c: NonNullable<RateChoice>, rows: RateRow[], title: string) => {
     setRunning(true);
     setRunError(null);
     const input = inputFor(b, rows, c);
     const { result, error } = await postRun(input);
-    if (result) setRun({ input, result, title }); else { setRun(null); setRunError(error ?? null); }
+    if (result) {
+      const baseline = await runBaseline(baselineKind, b, rows, c, { input, result });
+      setRun({ input, result, title, book: b, rows, choice: c, baseline });
+    } else { setRun(null); setRunError(error ?? null); }
     setRunning(false);
-  }, [inputFor]);
+  }, [inputFor, runBaseline, baselineKind]);
+
+  async function changeBaseline(kind: BaselineKind) {
+    setBaselineKind(kind);
+    if (!run) return;
+    setRun({ ...run, baseline: null });
+    const baseline = await runBaseline(kind, run.book, run.rows, run.choice, run);
+    setRun((current) => (current && current.result.run.run_id === run.result.run.run_id ? { ...current, baseline } : current));
+  }
 
   async function selectScenario(id: string) {
     const scenario = MMKT_SCENARIOS.find((s) => s.id === id)!;
@@ -119,14 +147,18 @@ export default function MoneyMarket() {
     const rows: CompareRow[] = [];
     for (const scenario of MMKT_SCENARIOS) {
       const snap = await fetch(`/api/econ/mmkt-rate-snapshot?source=sim&sim_set_id=${scenario.simSetId}`, { cache: "no-store" }).then((r) => r.json()).catch(() => null);
-      if (!snap?.ok) { rows.push({ id: scenario.id, title: scenario.title, analytics: null, error: "Rate set unavailable", hash: null, simSetId: scenario.simSetId }); continue; }
-      const input = inputFor(scenario.apply(demoBook()), snap.rate_snapshot.rows, { source: "sim", simSetId: scenario.simSetId });
+      if (!snap?.ok) { rows.push({ id: scenario.id, title: scenario.title, analytics: null, error: "Rate set unavailable", hash: null, simSetId: scenario.simSetId, baseline: null }); continue; }
+      const scenarioBook = scenario.apply(demoBook());
+      const scenarioChoice = { source: "sim" as const, simSetId: scenario.simSetId };
+      const input = inputFor(scenarioBook, snap.rate_snapshot.rows, scenarioChoice);
       const { result, error } = await postRun(input);
+      const baseline = result ? await runBaseline(baselineKind, scenarioBook, snap.rate_snapshot.rows, scenarioChoice, { input, result }) : null;
       rows.push({
         id: scenario.id, title: scenario.title, simSetId: scenario.simSetId,
         analytics: result ? analyzeCurrency(result.currency_results[0], input) : null,
         error: error ? explainRunError(error).title : null,
         hash: result?.run.request_hash ?? null,
+        baseline: baseline?.status === "ok" ? { upliftMm: baseline.comparison.upliftMm, upliftBps: baseline.comparison.upliftBps } : baseline ? { reason: baseline.reason } : null,
       });
       setCompare([...rows]);
     }
@@ -221,6 +253,14 @@ export default function MoneyMarket() {
           <Panel title="Policy" code="POLICY" className="rounded-lg">
             <div className="space-y-3 p-3">
               <PolicyEditor book={book} onChange={(b) => { setBook(b); setScenarioId(null); }} />
+              <div className="text-[10px]">
+                <label htmlFor="mmkt-baseline" className="mb-1 block text-term-text-dim">Baseline for comparison</label>
+                <select id="mmkt-baseline" value={baselineKind} onChange={(e) => void changeBaseline(e.target.value as BaselineKind)}
+                  className="w-full rounded border border-term-border bg-term-panel-2 px-2 py-1 text-[11px] text-term-text outline-none focus:border-term-amber/60">
+                  {BASELINES.map((b) => <option key={b.id} value={b.id}>{b.label}{b.id === DEFAULT_BASELINE ? " (default)" : ""}{b.id === "current_allocation" ? " — needs positions feed" : ""}</option>)}
+                </select>
+                <p className="mt-1 text-term-text-mute">{BASELINES.find((b) => b.id === baselineKind)!.description}</p>
+              </div>
               <div className="flex flex-wrap items-center gap-2 border-t border-term-border pt-3">
                 <button type="button" disabled={!canRun} onClick={() => choice && snapshot && void runNow(book, choice, snapshot.rows, scenarioId ? MMKT_SCENARIOS.find((s) => s.id === scenarioId)!.title : "Custom inputs")}
                   className="flex items-center gap-1.5 rounded-md bg-term-amber px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-[#ffa329] disabled:cursor-not-allowed disabled:opacity-40">
@@ -244,7 +284,10 @@ export default function MoneyMarket() {
             <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
               <Kpi label="Modeled net return" value={`$${fmt(primary.objective * 1000, 1)}k`} sub="over the horizon (10 business days)" tone="amber" />
               <Kpi label="Annualized on invested" value={`${primary.annualizedReturnPct.toFixed(3)}%`} sub={`avg invested $${fmt(primary.avgInvested, 0)}mm`} />
-              <Kpi label="Gross purchases" value={`$${fmt(primary.grossPurchases, 0)}mm`} sub={`${primary.lines} LP lines`} />
+              <Kpi label="Uplift vs baseline"
+                value={run.baseline?.status === "ok" ? `${run.baseline.comparison.upliftMm >= 0 ? "+" : "−"}$${fmt(Math.abs(run.baseline.comparison.upliftMm) * 1000, 1)}k` : run.baseline ? "—" : "…"}
+                sub={run.baseline?.status === "ok" ? `${run.baseline.comparison.upliftBps.toFixed(1)}bp · ${BASELINES.find((b) => b.id === run.baseline!.kind)!.label}` : run.baseline ? "baseline not computed" : "running baseline"}
+                tone={run.baseline?.status === "ok" ? "up" : undefined} />
               <Kpi label="Held past horizon" value={`$${fmt(primary.heldAtEnd, 0)}mm`} sub="see maturity ladder" />
               <Kpi label="Min floor headroom" value={primary.minHeadroom === null ? "—" : `$${fmt(primary.minHeadroom, 1)}mm`} sub={`${primary.floorHeadroom.filter((f) => f.headroom < 1e-6).length} entity-days at floor`} tone={primary.minHeadroom !== null && primary.minHeadroom < -1e-6 ? "down" : undefined} />
               <Kpi label="Verification" value="Passed" sub={`row Δ ${run.result.currency_results[0].verification.max_row_violation.toExponential(1)}`} tone="up" icon={<ShieldCheck size={13} />} />
@@ -272,6 +315,10 @@ export default function MoneyMarket() {
                 <Panel title="Lineage" code="RUN" className="rounded-lg"><div className="p-3"><Lineage result={run.result} /></div></Panel>
               </div>
             </div>
+
+            <Panel title="Baseline comparison" code="BASE" className="rounded-lg" subtitle="each side is its own verified run">
+              <div className="p-3"><BaselinePanel optimized={primary} baseline={run.baseline} optimizedHash={run.result.run.request_hash} /></div>
+            </Panel>
 
             <Panel title="Model assumptions (returned with this run)" code="ASSUME" className="rounded-lg">
               <ul className="grid gap-x-6 gap-y-1 p-3 text-[10px] leading-relaxed text-term-text-dim md:grid-cols-2">

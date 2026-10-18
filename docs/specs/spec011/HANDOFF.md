@@ -4,8 +4,10 @@
 
 **Branch:** `claude/synthetic-snu-poc-27n9hu`. The MMKT module merged into `main` in
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
-follow-up [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) records the owner approval and refreshes the handoffs. The same PRs carry the
-spec012 SU-SIM work; see `docs/specs/spec012/HANDOFF.md`.
+follow-up [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) (also merged) records
+the owner approval and refreshes the handoffs. The selectable baseline (question 1) is in the next
+PR from the same branch. The same PRs carry the spec012 SU-SIM work; see
+`docs/specs/spec012/HANDOFF.md`.
 
 **State:** the terminal module `/money-market` drives the existing `services/money_market_api`
 continuous LP end to end, on explicitly selected SIM rate sets. Results are verified by the
@@ -59,6 +61,19 @@ is missing.
   regression, the capabilities-from-source regression, and the rating-floor exclusion. CI job
   `mmkt-service`.
 
+**Baseline (owner decision 2026-10-18, `SPEC.md` decision log):**
+- Choose it in the **Policy** panel: government MMF sweep (default), uninvested cash, overnight
+  repo + RRP roll, or current allocation.
+- `buildBaselineInput` (`src/data/mmkt.ts`) builds a separate request with the same forecast,
+  floors and policy but a restricted instrument set. The service solves and verifies it like
+  any run.
+- `compareToBaseline` reports the uplift in $ and in bp, annualized on the optimized run's
+  average total balance.
+- Shown in a KPI tile, a **Baseline comparison** panel (both request hashes and mixes), and an
+  uplift column in the scenario comparison.
+- Uplift on the base book: +$456.5k / 51.2bp vs the government MMF sweep, +$1,173.6k / 131.7bp vs
+  the overnight roll, and +$2,732.8k / 306.7bp vs uninvested cash.
+
 **Terminal routes:**
 
 | Route | Purpose |
@@ -104,7 +119,8 @@ headroom) and the CSV export.
 - **Execution blotter and cutoff timeline.** These need the MIP rules (MM-006): minimum tickets,
   lot sizes, ticket counts and cutoffs. Until then the UI labels output as an LP allocation, not
   a blotter.
-- **Baseline comparison.** The baseline definition is owner question 1, so do not invent one.
+- **Current-allocation baseline.** It is listed, but fails closed until a current-positions
+  feed exists (MM-011).
 - **Shadow prices.** The service does not return duals. HiGHS exposes row marginals through
   SciPy, so add them to the contract with the convention disclosed (MM-006, AC-006).
 - **Yield/liquidity frontier.** This would be a run series over a liquidity parameter, each run
@@ -119,10 +135,12 @@ headroom) and the CSV export.
 
 ## Verification evidence (2026-10-18, branch head)
 
-- **Terminal unit tests:** `mmkt` 11, `mmktSimRateSets` 8, `mmkt-runs` route 4, `fetchProxy` 2.
-  All pass.
-- **Full `npm test`:** 626 passed, 1 failed. The failure is the badge-coverage test, which also
-  fails on `main` (MMFO and SXU pages). The MMKT page passes it.
+- **Terminal unit tests:** `mmkt` 18 (including 7 baseline tests), `mmktSimRateSets` 8,
+  `mmkt-runs` route 4, `fetchProxy` 2. All pass.
+- **Full `npm test`:** everything passes except the badge-coverage test. That fails only for the
+  MMFO page (spec015), which also fails on `main`. The MMKT page passes it.
+- **Baselines end to end:** all four options checked live in the browser against the service,
+  for every scenario.
 - **Service:** `pytest` in `services/money_market_api` passed 4.
 - **`npm run typecheck` and `npm run build:client`:** passed.
 - **Playwright smoke** (`test/smoke.spec.ts -g MMKT`): passed.
@@ -131,9 +149,9 @@ headroom) and the CSV export.
 
 ## Next steps (in order)
 
-1. Merge PR #167 (approval records and handoff refresh).
-2. Owner decisions: questions 1–3 in `SPEC.md`, then approve the spec, plan, tasks and white
-   paper (MM-001).
+1. Merge the baseline PR (follow-up to #167).
+2. Owner decisions: questions 2–3 in `SPEC.md` (question 1 is resolved), then approve the spec,
+   plan, tasks and white paper (MM-001).
 3. **MM-006 MIP slice.** Add ticket, lot, count and cutoff rules with formulation disclosure,
    and verify integrality. Only after this can the UI present an execution blotter and cutoff
    timeline (MM-007).
@@ -141,8 +159,9 @@ headroom) and the CSV export.
    label shadow prices in the UI (MM-006, MM-007).
 5. **OPT run history (MM-008).** Persist run envelopes (request hash, snapshot hash, SIM set,
    forecast case) and show them in `/optimization`.
-6. **Gold path.** When EcoMedallion XR-1 to XR-3 land, reconcile the instrument IDs and verify
+6. **Positions feed (MM-011).** This enables the current-allocation baseline.
+7. **Gold path.** When EcoMedallion XR-1 to XR-3 land, reconcile the instrument IDs and verify
    the Gold option end to end. The route already supports it.
-7. **Contract parity and hardening.** Generate TS types from the Pydantic contracts or check
+8. **Contract parity and hardening.** Generate TS types from the Pydantic contracts or check
    parity (MM-002), enforce idempotency durably, and add telemetry (MM-009).
-8. **Model card and as-built white paper (MM-010).**
+9. **Model card and as-built white paper (MM-010).**

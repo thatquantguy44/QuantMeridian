@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { CheckCircle2, CircleAlert, Download, Terminal, XCircle } from "lucide-react";
 import {
-  ENTITY_LABELS, FAMILY_META, FAMILY_OF, type BookInputs, type ForecastCase, type InstrumentCandidate,
+  BASELINES, ENTITY_LABELS, FAMILY_META, FAMILY_OF, type BaselineOutcome, type BookInputs, type ForecastCase, type InstrumentCandidate,
   type MmktRunResult, type RateRow, type RunAnalytics,
 } from "@/data/mmkt";
 
@@ -361,7 +361,10 @@ export function CsvButton({ csv, filename }: { csv: string; filename: string }) 
   );
 }
 
-export interface CompareRow { id: string; title: string; analytics: RunAnalytics | null; error: string | null; hash: string | null; simSetId: string }
+export interface CompareRow {
+  id: string; title: string; analytics: RunAnalytics | null; error: string | null; hash: string | null; simSetId: string;
+  baseline: { upliftMm: number; upliftBps: number } | { reason: string } | null;
+}
 
 /** Scenario comparison on separate scales: modeled return, avg invested, held at end. */
 export function ScenarioCompare({ rows, activeId }: { rows: CompareRow[]; activeId: string | null }) {
@@ -378,6 +381,7 @@ export function ScenarioCompare({ rows, activeId }: { rows: CompareRow[]; active
             <th scope="col" className="pb-1.5 text-left font-semibold">Modeled net return ($k, horizon)</th>
             <th scope="col" className="pb-1.5 text-left font-semibold">Avg invested ($mm)</th>
             <th scope="col" className="pb-1.5 text-right font-semibold">Annualized</th>
+            <th scope="col" className="pb-1.5 text-right font-semibold">Uplift vs baseline</th>
             <th scope="col" className="pb-1.5 text-left font-semibold pl-3">Mix</th>
           </tr>
         </thead>
@@ -393,10 +397,15 @@ export function ScenarioCompare({ rows, activeId }: { rows: CompareRow[]; active
                   <td className="w-[28%] py-1.5 pr-3"><Bar value={r.analytics.objective * 1000} max={maxObj * 1000} color="bg-term-amber" label={fmt(r.analytics.objective * 1000, 1)} /></td>
                   <td className="w-[24%] py-1.5 pr-3"><Bar value={r.analytics.avgInvested} max={maxInv} color="bg-term-text/70" label={fmt(r.analytics.avgInvested, 0)} /></td>
                   <td className="py-1.5 text-right font-mono text-[10px] text-term-text-dim">{r.analytics.annualizedReturnPct.toFixed(3)}%</td>
+                  <td className="py-1.5 text-right font-mono text-[10px]" title={r.baseline && "reason" in r.baseline ? r.baseline.reason : undefined}>
+                    {r.baseline && "upliftMm" in r.baseline
+                      ? <span className="text-term-up">+${fmt(r.baseline.upliftMm * 1000, 1)}k · {r.baseline.upliftBps.toFixed(1)}bp</span>
+                      : <span className="text-term-text-mute">—</span>}
+                  </td>
                   <td className="py-1.5 pl-3"><MixBar analytics={r.analytics} /></td>
                 </>
               ) : (
-                <td colSpan={4} className="py-1.5 text-[10px] text-term-down"><span className="inline-flex items-center gap-1"><CircleAlert size={11} />{r.error ?? "Not run"}</span></td>
+                <td colSpan={5} className="py-1.5 text-[10px] text-term-down"><span className="inline-flex items-center gap-1"><CircleAlert size={11} />{r.error ?? "Not run"}</span></td>
               )}
             </tr>
           ))}
@@ -421,6 +430,71 @@ export function MixBar({ analytics }: { analytics: RunAnalytics }) {
   return (
     <div className="flex h-2.5 w-36 gap-[2px] overflow-hidden rounded-[3px]" role="img" aria-label={fams.map((f) => `${FAMILY_META[f].label} ${Math.round((analytics.byFamilyPurchases[f] / total) * 100)}%`).join(", ")}>
       {fams.map((f) => analytics.byFamilyPurchases[f] > 1e-6 && <div key={f} style={{ width: `${(analytics.byFamilyPurchases[f] / total) * 100}%`, background: FAMILY_META[f].color }} title={`${FAMILY_META[f].label}: ${fmt(analytics.byFamilyPurchases[f], 0)} gross purchases`} />)}
+    </div>
+  );
+}
+
+/** Optimized vs the selected baseline, each a separate verified service run. */
+export function BaselinePanel({ optimized, baseline, optimizedHash }: { optimized: RunAnalytics; baseline: BaselineOutcome | null; optimizedHash: string }) {
+  if (!baseline) return <p className="text-[11px] text-term-text-mute">Running the baseline…</p>;
+  const meta = BASELINES.find((b) => b.id === baseline.kind)!;
+  if (baseline.status !== "ok") {
+    return (
+      <div className="flex gap-2 text-[11px]">
+        <CircleAlert size={14} className="mt-px shrink-0 text-term-amber" />
+        <div><div className="font-semibold text-term-text">{meta.label}: not computed</div><div className="text-term-text-dim">{baseline.reason}</div></div>
+      </div>
+    );
+  }
+  const b = baseline;
+  const types = new Map(b.input.instrument_candidates.map((c) => [c.candidate_id, c.instrument_type]));
+  const fams = Object.keys(FAMILY_META) as (keyof typeof FAMILY_META)[];
+  const famOf = (id: string) => FAMILY_OF[types.get(id) ?? "bank_deposit"];
+  const baselineMix = Object.fromEntries(fams.map((f) => [f, 0])) as Record<keyof typeof FAMILY_META, number>;
+  for (const a of b.result.currency_results[0].allocations) baselineMix[famOf(a.candidate_id)] += a.amount;
+  const baselineObjective = b.comparison.baselineObjective;
+  const max = Math.max(optimized.objective, baselineObjective, 1e-9);
+  const rows: { label: string; objective: number; hash: string; mix: Record<keyof typeof FAMILY_META, number> }[] = [
+    { label: "Optimized", objective: optimized.objective, hash: optimizedHash, mix: optimized.byFamilyPurchases },
+    { label: `Baseline · ${meta.label}`, objective: baselineObjective, hash: b.result.run.request_hash, mix: baselineMix },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-term-border pb-2 text-[11px]">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-term-text-mute">Uplift vs {meta.label}</span>
+        <span className={`font-mono text-xl font-semibold ${b.comparison.upliftMm >= 0 ? "text-term-up" : "text-term-down"}`}>{b.comparison.upliftMm >= 0 ? "+" : "−"}${fmt(Math.abs(b.comparison.upliftMm) * 1000, 1)}k</span>
+        <span className="font-mono text-[11px] text-term-text-dim">{b.comparison.upliftBps.toFixed(1)}bp annualized on the average total balance</span>
+      </div>
+      <table className="w-full text-[11px]">
+        <caption className="sr-only">Optimized run versus baseline run</caption>
+        <thead><tr className="text-[9px] uppercase tracking-[0.12em] text-term-text-mute">
+          <th scope="col" className="pb-1.5 text-left font-semibold">Run</th>
+          <th scope="col" className="pb-1.5 text-left font-semibold">Modeled net return ($k, horizon)</th>
+          <th scope="col" className="pb-1.5 text-left font-semibold pl-3">Mix (gross purchases)</th>
+        </tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-t border-term-border">
+              <th scope="row" className="py-1.5 pr-2 text-left font-normal">
+                <div className="text-term-text">{r.label}</div>
+                <div className="font-mono text-[9px] text-term-text-mute">request {r.hash.slice(0, 12)}…</div>
+              </th>
+              <td className="w-[45%] py-1.5 pr-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-[8px] flex-1"><div className={`h-full rounded-r-[3px] ${r.label === "Optimized" ? "bg-term-amber" : "bg-term-text/60"}`} style={{ width: `${(r.objective / max) * 100}%` }} /></div>
+                  <span className="w-16 text-right font-mono text-[10px] text-term-text-dim">{fmt(r.objective * 1000, 1)}</span>
+                </div>
+              </td>
+              <td className="py-1.5 pl-3">
+                {Object.values(r.mix).some((v) => v > 1e-6)
+                  ? <div className="flex h-2.5 w-40 gap-[2px] overflow-hidden rounded-[3px]">{fams.map((f) => r.mix[f] > 1e-6 && <div key={f} style={{ width: `${(r.mix[f] / Object.values(r.mix).reduce((s, v) => s + v, 0)) * 100}%`, background: FAMILY_META[f].color }} title={`${FAMILY_META[f].label}: ${fmt(r.mix[f], 0)}`} />)}</div>
+                  : <span className="text-[10px] text-term-text-mute">all cash</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="text-[10px] leading-relaxed text-term-text-mute">{meta.description} Same forecast, floors and policy; only the instrument set is restricted. Both runs passed the service verifier.</p>
     </div>
   );
 }
