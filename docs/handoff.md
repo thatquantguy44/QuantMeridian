@@ -1,8 +1,10 @@
 # Market Terminal Handoff
 
 **Updated:** 2026-10-18. The top-priority section was updated for PR #166 (merged: spec012
-SU-SIM, the spec011 MMKT module, demo books) and its follow-ups PR #167 and PR #168. The rest of this file was last updated 2026-09-16 and is
-retained as context.
+SU-SIM, the spec011 MMKT module, demo books) and its follow-ups PR #167, PR #168 and PR #170, then
+re-checked against `main` at PR #170 (merge `7ef36f5`): statements about already-merged branches
+and PRs were corrected; nothing new was built after PR #170. The rest of this file was last updated
+2026-09-16 and is retained as context.
 **Default branch:** `main` (0018 was merged in PR #148; subsequent follow-up docs were merged in PR #150)
 
 ## Collateral model binding spec — 2026-10-18
@@ -24,7 +26,7 @@ Focus" and "Next Work" below; those stay as context.
 [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) and [PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) are **merged into `main`**.
 Between them they bring the SU-SIM showcase, the MMKT module, the SXU module SIM switch, the
 MMKT selectable baseline (default government MMF sweep), these handoffs and the owner decisions.
-The full-spec approval records follow in a later PR from `claude/synthetic-snu-poc-27n9hu`.
+The full-spec approval records landed in [PR #170](https://github.com/thatquantguy44/QuantMeridian/pull/170) (merged).
 On 2026-10-18 the owner
 explicitly approved the spec012 SU-SIM showcase, the SXU module SIM switch and the spec011 MMKT
 module slice. Each is recorded in the decision log of its `SPEC.md`. Later the same day the owner
@@ -46,7 +48,8 @@ Separately, `main` now has the spec015 MMFO local PoC (PRs #163–#165). It is S
 independently verified. It is not the MMKT service.
 
 **Known red test:** `src/tests/badge-coverage.test.ts` fails on `main` because the MMFO page has
-no provenance badge (spec015). PR #167 fixes the SXU half: the SXU page now has a module SIM
+no provenance badge (spec015). Still true at PR #170: `src/app/money-market-fund-optimizer/page.tsx`
+imports no badge and is not in the test's exempt list. PR #167 fixes the SXU half: the SXU page now has a module SIM
 switch and badge (spec012 SU-013).
 
 **Source of truth:** `thatquantguy44/InventoryBallast`, `specs/0018-live-poc-showcase/`
@@ -55,13 +58,13 @@ switch and badge (spec012 SU-013).
 **What lands in this repo** (four of the five workstreams; Workstream A is engine work in
 InventoryBallast):
 
-| Workstream | Child spec (drafts in PR #151) | Code |
+| Workstream | Child spec (PR #151, merged; status as of 2026-10-18) | Code |
 | --- | --- | --- |
-| B — IBAL showcase: engine re-pin (merged InventoryBallast `main` `e84801b`), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
-| C — Money market execution optimizer (`MMKT` module; terminal module and SIM path merged in PR #166) | `spec011` | `services/money_market_api/` (port 8014), `src/app/money-market/` |
-| D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only and SU-SIM showcase in `main`, service not started) | `spec012` | `services/sources_uses_api/` (port 8015, not yet created), `src/app/sources-uses/` |
-| E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` | `services/liquidity_api/` (port 8016), `src/app/liquidity/` |
-| Shared — model library: sparse builder, HiGHS adapter, verifier, elastic relaxation | — | `services/optimization_core/` (a library, not a service) |
+| B — IBAL showcase: engine re-pin (merged InventoryBallast `main` `e84801b`), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` (approved 2026-10-17) | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
+| C — Money market execution optimizer (`MMKT` module; terminal module and SIM path merged in PR #166) | `spec011` (approved 2026-10-18) | `services/money_market_api/` (port 8014), `src/app/money-market/` |
+| D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only and SU-SIM showcase in `main`, service not started) | `spec012` (approved 2026-10-18) | `services/sources_uses_api/` (port 8015, not yet created), `src/app/sources-uses/` |
+| E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` (draft, not approved) | `services/liquidity_api/` (port 8016), `src/app/liquidity/` |
+| Shared — model library: sparse builder, HiGHS adapter, verifier, elastic relaxation | — | `services/optimization_core/` (a library, not a service; in `main`, elastic follow-ups PRs #152–#153) |
 | White papers, one per model (mechanics, theory, application) | — | `docs/whitepapers/` |
 
 The OPT page's fabricated "Gurobi"/"OR-Tools" runs are replaced by real run history from all
@@ -80,13 +83,18 @@ four services (REQ-029). Every number shown must come from a verified solve or a
    user-selected `SIM` set and **no silent fallback**. See "Cross-repo follow-up: EcoMedallion" below —
    that work is **not finished and nothing in it is live-verified**.
 
-Still open: the ML stack (scikit-learn recommended), and whether the liquidity cockpit replaces
-`/liquidity` with `/cash-optimizer` as its lever view (recommended).
+Still open (spec014 Q6 and Q7; spec014 is still a draft): the ML stack (scikit-learn recommended),
+and whether the liquidity cockpit replaces `/liquidity` with `/cash-optimizer` as its lever view
+(recommended).
 
 **Pick up here on the terminal side:**
 
-1. Review the draft packs in PR #151 for `spec011`–`spec014`, resolve the listed owner decisions, and approve the child specs before code.
+1. ~~Review the draft packs in PR #151 for `spec011`–`spec014`~~ PR #151 is merged. `spec011`,
+   `spec012` and `spec013` are approved; **`spec014` is still a draft** awaiting owner review
+   (Q6 ML stack, Q7 placement) before liquidity code.
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
+   `optimization_core` and `money_market_api` exist in `main`; **`sources_uses_api` (8015) and
+   `liquidity_api` (8016) do not exist yet.**
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
 4. **As of 2026-10-18:** follow the ordered next steps in the spec011 and
@@ -94,11 +102,14 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
    1–4 and spec011 questions 1–3) and both specs were approved; the highest-value items are the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.
 
-**Current IBAL integration status (2026-10-17):** InventoryBallast PR #34 is merged to `main`.
-QuantMeridian branch `codex/inventoryballast-scenario-integration` pins the merged engine, exposes
-its scenario catalog and stress runner, and surfaces driver deltas/reconciliations in Scenario
-Studio. The branch is not yet merged; continue the remaining `spec013` diagnostic-tab and presenter
-work after reviewing this integration.
+**Current IBAL integration status (re-checked 2026-10-18):** InventoryBallast PR #34 is merged to
+`main`. The scenario integration (`codex/inventoryballast-scenario-integration`) is **merged in
+PR #154**: it pins engine commit `e84801b`, exposes the scenario catalog and stress runner, and
+surfaces driver deltas/reconciliations in Scenario Studio. The `spec013` owner decisions (IBAL-001,
+PR #158) and manifest gating plus contract parity (IBAL-003, PR #162) are also merged. Remaining
+`spec013` tasks: IBAL-002 (still `todo` in `TASKS.md`: the pin was bumped inside PR #154, but
+decision 1 requires a reviewed pin-only PR and the pin exposed through health), and IBAL-004–008
+(diagnostic tabs, Scenario Studio golden paths, presenter mode, provenance audit, white paper).
 
 ## Cross-repo follow-up: EcoMedallion (MMKT rate feed) — tracked 2026-10-17
 
