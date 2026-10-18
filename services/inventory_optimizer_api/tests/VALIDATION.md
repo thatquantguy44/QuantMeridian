@@ -36,6 +36,7 @@ source layout first.
 | `test_health.py` | 19 | `engine_identity()`'s full mismatch matrix (wrong package version, package not found, solver-backend fallback/missing, wrong commit), `/health`'s ready/unready + `error_category` reflect it exactly, `/v1/capabilities`' `engine_compatible` and formulation list track it too, and `solve()`/`require_compatible_engine()` actually route or refuse through real service code instead of monkeypatching solve itself. |
 | `test_dataset_summary_integrity.py` | 11 | Regression suite for a real gap this file found: a tampered `DatasetEnvelope.summary` (left `request`/`request_hash` untouched) was previously accepted by `solve()`/`export_bundle()` unnoticed. See "Bugs found" below. |
 | `test_capability_manifest.py` | 8 | `/v1/capabilities` reports the manifest's `input_features`/`output_sections` exactly, advertised limits equal the enforced upload/row limits, and every input feature the manifest disables is rejected at upload (and admitted once enabled) -- see "Bugs found" below. |
+| `test_ts_contract_shape.py` | 2 | `contracts/ibal/run-response.shape.json` equals the field shape derived from the pinned engine's `OptimizationResult` schema, and a real `/v1/runs` response fits it. The frontend's `src/lib/inventoryOptimizer.contract.test.ts` holds the TypeScript types to the same file -- see "Bugs found" below. |
 
 Shared infrastructure (not test files themselves, collected as 0 tests):
 
@@ -203,6 +204,17 @@ immediately against real data, or worse, silently encode the wrong formula as "p
    fact (what the engine supports) is written down in two places -- one that is advertised and one
    that is enforced -- they drift; derive both from one source, and test that the enforced side
    covers everything the advertised side denies.**
+6. **The TypeScript result types had drifted from the service response** (found while building
+   `test_ts_contract_shape.py`, spec013 IBAL-003, 2026-10-18). Ten result sections the service
+   returns (`formulation`, `pricing`, `concentration`, `expected_economics`,
+   `availability_buffers`, `agency`, `prime`, `schedules`, `collateral`, `sources`) and
+   `platform.as_of` were missing from `IbalResult`, and the first typing of
+   `formulation.stability_linearization` as a string was wrong -- it is an object. Earlier manual
+   comparisons against one live solve kept missing fields that were empty in that solve. Fixed by
+   generating the shape from the engine's schema rather than a sample and checking the
+   TypeScript field maps against it both ways. Pattern: **a contract checked by eye against one
+   example only covers the fields that example happened to fill; derive the contract from the
+   schema, and make each side's test fail on a field the other side lacks.**
 
 ## Acceptance-criteria coverage map
 

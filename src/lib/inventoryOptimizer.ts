@@ -276,6 +276,16 @@ export interface IbalResult {
     relative_gap?: number | null;
     termination_reason: string;
   };
+  formulation?: {
+    variant: string;
+    objective_exact: boolean;
+    optimality_basis: string;
+    variable_count: number;
+    row_count: number;
+    integer_variable_count: number;
+    // Piecewise-linear stability penalty detail; not rendered yet (see the contract shape file).
+    stability_linearization: unknown | null;
+  };
   verification?: {
     passed: boolean;
     has_primal: boolean;
@@ -296,12 +306,24 @@ export interface IbalResult {
     correlation_id: string;
     idempotency_key: string;
     problem_family: string;
+    as_of: string;
     schema_version: string;
     authorization_reference: string;
     platform_tenant_id: string | null;
     actor_reference: string | null;
   } | null;
   warnings?: string[];
+  // Returned by the pinned engine but not yet rendered; typed in detail when a view consumes them
+  // (spec013 IBAL-004). contracts/ibal/run-response.shape.json lists their fields.
+  pricing?: unknown[];
+  concentration?: unknown[];
+  expected_economics?: unknown | null;
+  availability_buffers?: unknown[];
+  agency?: unknown | null;
+  prime?: unknown | null;
+  schedules?: unknown | null;
+  collateral?: unknown | null;
+  sources?: unknown | null;
 }
 
 export interface IbalScenarioCatalogItem {

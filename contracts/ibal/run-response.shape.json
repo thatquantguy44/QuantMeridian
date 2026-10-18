@@ -1,0 +1,330 @@
+{
+  "api_schema_version": null,
+  "source": {
+    "mode": null,
+    "label": null,
+    "seed": null,
+    "generator_version": null,
+    "upload_hash": null,
+    "filename": null
+  },
+  "request_hash": null,
+  "result": {
+    "request_id": null,
+    "run_id": null,
+    "created_at": null,
+    "config_hash": null,
+    "input_hash": null,
+    "package_version": null,
+    "backend_version": null,
+    "status": null,
+    "native_status": null,
+    "strict": null,
+    "termination_reason": null,
+    "allocations": [
+      {
+        "route_id": null,
+        "inventory_id": null,
+        "demand_group_id": null,
+        "current_quantity_shares": null,
+        "post_quantity_shares": null,
+        "increase_shares": null,
+        "decrease_shares": null,
+        "fee_rate": null,
+        "demand_cap_shares": null,
+        "eligible": null,
+        "reason_codes": [
+          null
+        ],
+        "explanation_evidence": "*"
+      }
+    ],
+    "balances": [
+      {
+        "inventory_id": null,
+        "pre_total_lendable_shares": null,
+        "pre_reserved_shares": null,
+        "pre_committed_out_shares": null,
+        "pre_on_loan_shares": null,
+        "pre_available_to_lend_shares": null,
+        "post_available_shares": null,
+        "post_on_loan_shares": null,
+        "utilization": null
+      }
+    ],
+    "economics": {
+      "components": [
+        {
+          "component_name": null,
+          "component_version": null,
+          "unscaled_value_usd": null,
+          "baseline_value_usd": null,
+          "delta_usd": null
+        }
+      ],
+      "total_value_usd": null,
+      "total_delta_usd": null
+    },
+    "demand": [
+      {
+        "demand_group_id": null,
+        "reference_quantity_shares": null,
+        "raw_demand_shares": null,
+        "effective_cap_shares": null,
+        "filled_shares": null,
+        "unfilled_shares": null,
+        "fill_ratio": null,
+        "reason_code": null
+      }
+    ],
+    "pricing": [
+      {
+        "demand_group_id": null,
+        "reference_fee_rate": null,
+        "candidate_fee_rates": [
+          null
+        ],
+        "selected_fee_rate": null,
+        "selected_tier_index": null,
+        "filled_shares": null
+      }
+    ],
+    "concentration": [
+      {
+        "scope": null,
+        "group_id": null,
+        "route_count": null,
+        "baseline_notional_usd": null,
+        "post_notional_usd": null,
+        "baseline_penalty_usd": null,
+        "post_penalty_usd": null
+      }
+    ],
+    "expected_economics": {
+      "mode": null,
+      "routes": [
+        {
+          "route_id": null,
+          "model_version": null,
+          "calibration_date": null,
+          "uncertainty": null,
+          "expected_active_fraction": null
+        }
+      ],
+      "shadow": {
+        "contractual_fee_revenue_usd": null,
+        "expected_fee_revenue_usd": null,
+        "expected_cost_usd": null,
+        "delta_usd": null
+      }
+    },
+    "availability_buffers": [
+      {
+        "inventory_id": null,
+        "required_buffer_shares": null,
+        "binding_component": null
+      }
+    ],
+    "agency": {
+      "owners": [
+        {
+          "owner_id": null,
+          "gross_fee_revenue_usd": null,
+          "agent_fee_share": null,
+          "agent_revenue_usd": null,
+          "owner_net_revenue_usd": null,
+          "indemnification_cost_usd": null,
+          "transition_cost_usd": null,
+          "available_shares": null
+        }
+      ],
+      "bound_mandates": [
+        null
+      ],
+      "categorical_exclusions": [
+        {
+          "route_id": null,
+          "mandate_id": null,
+          "dimension": null
+        }
+      ],
+      "allocation_rules": [
+        {
+          "rule_id": null,
+          "rule_type": null,
+          "binding": null
+        }
+      ],
+      "indemnification": [
+        {
+          "policy_id": null,
+          "covered_risk": null,
+          "exposure_usd": null,
+          "limit_usd": null,
+          "capital_cost_usd": null
+        }
+      ]
+    },
+    "prime": {
+      "sources": [
+        {
+          "source_id": null,
+          "source_type": null,
+          "legal_entity_id": null,
+          "inventory_id": null,
+          "capacity_shares": null,
+          "allocated_shares": null,
+          "available_shares": null,
+          "cost_rate": null,
+          "excluded_cause": null
+        }
+      ],
+      "coverage": [
+        {
+          "demand_id": null,
+          "demand_group_id": null,
+          "client_id": null,
+          "classification": null,
+          "required_shares": null,
+          "covered_shares": null,
+          "unfilled_shares": null,
+          "reason_code": null
+        }
+      ],
+      "internalized_shares": null,
+      "external_shares": null,
+      "internalization_fraction": null,
+      "external_borrows": [
+        {
+          "route_id": null,
+          "source_id": null,
+          "quote_id": null,
+          "lender_id": null,
+          "agreement_reference": null,
+          "quantity_shares": null,
+          "cost_usd": null
+        }
+      ],
+      "excluded_sources": [
+        {
+          "source_id": null,
+          "source_type": null,
+          "cause": null,
+          "reason_code": null
+        }
+      ],
+      "matched_book": [
+        {
+          "client_id": null,
+          "source_id": null,
+          "legal_entity_id": null,
+          "quantity_shares": null,
+          "revenue_usd": null,
+          "cost_usd": null,
+          "net_usd": null
+        }
+      ],
+      "budgets": [
+        {
+          "budget_id": null,
+          "legal_entity_id": null,
+          "exposure_measure": null,
+          "maximum_exposure_usd": null,
+          "exposure_usd": null,
+          "headroom_usd": null,
+          "binding": null
+        }
+      ]
+    },
+    "schedules": null,
+    "collateral": null,
+    "desk": {
+      "problem_family": null,
+      "legal_entity_id": null,
+      "platform_tenant_id": null,
+      "attribution_scope": null,
+      "enabled_components": [
+        null
+      ]
+    },
+    "sources": null,
+    "constraints": [
+      {
+        "row": {
+          "kind": null,
+          "scope_id": null
+        },
+        "lower": null,
+        "upper": null,
+        "activity": null,
+        "slack": null,
+        "dual_value": null
+      }
+    ],
+    "solver": {
+      "backend_name": null,
+      "backend_version": null,
+      "runtime_seconds": null,
+      "iterations": null,
+      "nodes": null,
+      "best_bound": null,
+      "relative_gap": null,
+      "termination_reason": null
+    },
+    "formulation": {
+      "variant": null,
+      "objective_exact": null,
+      "optimality_basis": null,
+      "variable_count": null,
+      "row_count": null,
+      "integer_variable_count": null,
+      "stability_linearization": {
+        "penalty_coefficient": null,
+        "segments_per_side": null,
+        "approximation": null,
+        "introduces_integer_variables": null,
+        "max_interpolation_error_bound_usd": null,
+        "surrogate_penalty_usd": null,
+        "quadratic_penalty_usd": null,
+        "max_quadratic_underestimate_usd": null,
+        "true_objective_usd": null,
+        "true_objective_gap_bound_usd": null,
+        "routes": [
+          {
+            "route_id": null,
+            "deviation_lower_shares": null,
+            "deviation_upper_shares": null,
+            "segments_below": null,
+            "segments_above": null,
+            "max_interpolation_error_usd": null,
+            "solved_deviation_shares": null,
+            "surrogate_penalty_usd": null,
+            "quadratic_penalty_usd": null
+          }
+        ]
+      }
+    },
+    "verification": {
+      "has_primal": null,
+      "max_variable_bound_violation": null,
+      "max_row_violation": null,
+      "max_integrality_violation": null,
+      "objective_reconstruction_delta": null,
+      "passed": null
+    },
+    "warnings": [
+      null
+    ],
+    "platform": {
+      "request_id": null,
+      "correlation_id": null,
+      "idempotency_key": null,
+      "problem_family": null,
+      "as_of": null,
+      "authorization_reference": null,
+      "schema_version": null,
+      "platform_tenant_id": null,
+      "actor_reference": null
+    }
+  }
+}

@@ -51,17 +51,23 @@ import {
   uploadBlockReason,
 } from "@/lib/ibalCapabilityGate";
 
+// The service's SyntheticConfig bound (contracts.py `parent_group_count le=50`); above it the
+// synthetic request is rejected, so the input stops there.
+const MAX_SYNTHETIC_PARENT_GROUPS = 50;
+
 type PendingAction = { kind: "synthetic" } | { kind: "upload"; file: File };
 
 type ResultTab = "allocations" | "balances" | "demand" | "economics" | "constraints" | "diagnostics" | "raw";
 
-const RESULT_TABS: { value: ResultTab; label: string }[] = [
-  { value: "allocations", label: "Allocations" },
-  { value: "balances", label: "Balances" },
-  { value: "demand", label: "Demand" },
-  { value: "economics", label: "Economics" },
-  { value: "constraints", label: "Constraints" },
-  { value: "diagnostics", label: "Diagnostics" },
+// `section` is the capability-manifest output section a tab renders; the tab shows only when the
+// pinned service advertises it (spec013 IBAL-002). Raw always shows the returned payload.
+const RESULT_TABS: { value: ResultTab; label: string; section?: string }[] = [
+  { value: "allocations", label: "Allocations", section: "allocations" },
+  { value: "balances", label: "Balances", section: "balances" },
+  { value: "demand", label: "Demand", section: "demand" },
+  { value: "economics", label: "Economics", section: "economics" },
+  { value: "constraints", label: "Constraints", section: "constraints" },
+  { value: "diagnostics", label: "Diagnostics", section: "solver" },
   { value: "raw", label: "Raw" },
 ];
 
@@ -362,7 +368,19 @@ function DevelopmentBadge() {
 }
 
 /** Engine identity and readiness as the service reports them (spec013 IBAL-001/007). */
-function EngineStatusStrip({ health, capabilities, blockReason }: { health: IbalHealth | null; capabilities: IbalCapabilities | null; blockReason: string | null }) {
+function EngineStatusStrip({
+  health,
+  capabilities,
+  blockReason,
+  checking,
+  onRecheck,
+}: {
+  health: IbalHealth | null;
+  capabilities: IbalCapabilities | null;
+  blockReason: string | null;
+  checking: boolean;
+  onRecheck: () => void;
+}) {
   const backend = capabilities?.backend ?? health?.backend;
   const formulations = capabilities?.formulations ?? health?.formulations ?? [];
   const items = [
@@ -383,6 +401,9 @@ function EngineStatusStrip({ health, capabilities, blockReason }: { health: Ibal
       <Tag tone={!health ? "neutral" : blockReason ? "down" : "up"}>{!health ? "CHECKING" : blockReason ? "NOT READY" : "PIN VERIFIED"}</Tag>
       {items.length > 0 && <span className="min-w-0 truncate font-mono text-term-text-dim" title={items.join(" · ")}>{items.join(" · ")}</span>}
       {blockReason && health && <span className="min-w-0 text-term-down">{blockReason}</span>}
+      <button className="term-btn ml-auto px-1.5 py-0 text-3xs" disabled={checking} title="Re-read service health and capabilities" onClick={onRecheck}>
+        <RefreshCw size={11} className={checking ? "animate-spin" : undefined} /> {checking ? "Checking" : "Recheck"}
+      </button>
     </div>
   );
 }
@@ -632,15 +653,34 @@ export default function InventoryOptimizerPage() {
           max={opts.max}
           step={1}
           value={Number(synthetic[field])}
-          onChange={(event) => updateNumber(setSynthetic, synthetic, field, event.target.value)}
+          onChange={(event) => updateNumber(setSynthetic, synthetic, field, String(Math.min(opts.max, Math.max(opts.min, Number(event.target.value)))))}
         />
       </label>
     );
   }
 
+  // Health and capabilities are re-read whenever they may have changed: on load, when the tab
+  // regains focus, after any failed action, and on demand -- so a restarted or stopped service is
+  // reflected without a page reload.
+  const [engineChecking, setEngineChecking] = useState(false);
+  function refreshEngineStatus() {
+    setEngineChecking(true);
+    return Promise.all([
+      getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message })),
+      getIbalCapabilities().then(setCapabilities).catch(() => setCapabilities(null)),
+    ]).finally(() => setEngineChecking(false));
+  }
+
   useEffect(() => {
-    getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
-    getIbalCapabilities().then(setCapabilities).catch(() => setCapabilities(null));
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshEngineStatus();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  useEffect(() => {
+    void refreshEngineStatus();
     getIbalScenarioCatalog().then((response) => setEngineScenarioCatalog(response.scenarios)).catch(() => setEngineScenarioCatalog([]));
   }, []);
 
@@ -730,6 +770,12 @@ export default function InventoryOptimizerPage() {
   }, [beforeAfterAnalytics]);
   const datasetReady = Boolean(dataset?.validation.valid);
   const engineBlock = engineBlockReason(health, capabilities);
+  // Before capabilities load (or if they fail) every tab stays available; Raw is always last.
+  const visibleResultTabs = useMemo(
+    () => (capabilities ? RESULT_TABS.filter((tab) => !tab.section || hasOutputSection(capabilities, tab.section)) : RESULT_TABS),
+    [capabilities]
+  );
+  const shownResultTab = visibleResultTabs.some((tab) => tab.value === resultTab) ? resultTab : visibleResultTabs[0].value;
   const discreteRouteBlock = formulationBlockReason(capabilities, "mip") ?? featureBlockReason(capabilities, "all_or_none_routes");
   const engineScenarioBlock =
     engineBlock ??
@@ -983,6 +1029,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Prepared ${next.source.mode} dataset ${next.request_hash.slice(0, 12)}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Synthetic dataset failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -998,6 +1045,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Uploaded ${next.source.filename ?? file.name}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Upload failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -1050,6 +1098,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Run ${response.result.run_id} returned ${response.result.status}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Run failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -1074,6 +1123,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Export bundle created for ${viewLabel}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Export failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -1199,6 +1249,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Completed ${response.stress_report.scenario_count} InventoryBallast engine scenario${response.stress_report.scenario_count === 1 ? "" : "s"}.`);
     } catch (error) {
       setEngineScenarioError(error instanceof Error ? error.message : "Scenario stress run failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError && error.issues.length) setActionIssues(error.issues);
     } finally {
       setEngineScenarioBusy(false);
@@ -1276,7 +1327,7 @@ export default function InventoryOptimizerPage() {
         <Stat label="Avg Utilization" value={pctFromDecimal(totals.avgUtilization)} sub={`${fmtInt(totals.bindingConstraints)} binding rows`} />
       </KpiStrip>
 
-      <EngineStatusStrip health={health} capabilities={capabilities} blockReason={engineBlock} />
+      <EngineStatusStrip health={health} capabilities={capabilities} blockReason={engineBlock} checking={engineChecking} onRecheck={() => void refreshEngineStatus()} />
 
       {message && (
         <div className="border-b border-term-border bg-term-panel-2 px-3 py-1 text-2xs text-term-text-dim">
@@ -1336,7 +1387,7 @@ export default function InventoryOptimizerPage() {
                   {syntheticCountField("Securities", "security_count", { min: 1, max: 100 })}
                   {syntheticCountField("Inventory pools", "inventory_pool_count", { min: 1, max: 20 })}
                   {syntheticCountField("Borrowers", "borrower_count", { min: 1, max: 100 })}
-                  {syntheticCountField("Parent groups", "parent_group_count", { min: 1, max: synthetic.borrower_count })}
+                  {syntheticCountField("Parent groups", "parent_group_count", { min: 1, max: Math.min(synthetic.borrower_count, MAX_SYNTHETIC_PARENT_GROUPS) })}
                   {syntheticCountField("Routes per security", "routes_per_security", { min: 1, max: 20 })}
                 </div>
               )}
@@ -1888,13 +1939,13 @@ export default function InventoryOptimizerPage() {
           <Panel
             title={`${viewLabel} Results`}
             code={viewResult?.run_id.slice(0, 12) ?? "NOT RUN"}
-            toolbar={<TermToggleGroup value={resultTab} onChange={setResultTab} options={RESULT_TABS} size="sm" />}
+            toolbar={<TermToggleGroup value={shownResultTab} onChange={setResultTab} options={visibleResultTabs} size="sm" />}
             right={
               <span className="flex items-center gap-1">
                 {whatIfResults.length > 0 && <Tag tone={activeView?.isBase ? "neutral" : "blue"}>{activeView?.isBase ? "BASE CASE" : "SCENARIO"}</Tag>}
-                {resultTab === "allocations" ? (
+                {shownResultTab === "allocations" ? (
                   <Tag tone={viewResult ? "up" : "neutral"}>{fmtAbbr(totals.allocationIncrease - totals.allocationDecrease)} net</Tag>
-                ) : resultTab === "diagnostics" ? (
+                ) : shownResultTab === "diagnostics" ? (
                   <Tag tone={viewResult?.verification?.passed ? "up" : viewResult ? "down" : "neutral"}>
                     {viewResult?.verification?.passed ? "VERIFIED" : viewResult ? "FAILED" : "-"}
                   </Tag>
@@ -1902,7 +1953,7 @@ export default function InventoryOptimizerPage() {
               </span>
             }
           >
-            {resultTab === "allocations" && (
+            {shownResultTab === "allocations" && (
               <>
                 <DataGrid
                   columns={allocationColumns}
@@ -1941,15 +1992,15 @@ export default function InventoryOptimizerPage() {
               </>
             )}
 
-            {resultTab === "balances" && (
+            {shownResultTab === "balances" && (
               <DataGrid columns={balanceColumns} rows={viewResult?.balances ?? []} rowKey={(row) => row.inventory_id} maxHeight="400px" initialSort={{ key: "utilization", dir: "desc" }} zebra />
             )}
 
-            {resultTab === "demand" && (
+            {shownResultTab === "demand" && (
               <DataGrid columns={demandColumns} rows={viewResult?.demand ?? []} rowKey={(row) => row.demand_group_id} maxHeight="400px" initialSort={{ key: "fill_ratio", dir: "asc" }} zebra />
             )}
 
-            {resultTab === "economics" && (
+            {shownResultTab === "economics" && (
               <div className="grid gap-2 p-2">
                 <div className="grid grid-cols-2 divide-x divide-term-border border border-term-border">
                   <Stat label="Total Value" value={fmtUsdAbbr(viewResult?.economics?.total_value_usd ?? 0)} />
@@ -1963,11 +2014,11 @@ export default function InventoryOptimizerPage() {
               </div>
             )}
 
-            {resultTab === "constraints" && (
+            {shownResultTab === "constraints" && (
               <DataGrid columns={constraintColumns} rows={viewResult?.constraints ?? []} rowKey={(row, i) => `${row.row.kind}-${row.row.scope_id}-${i}`} maxHeight="400px" initialSort={{ key: "slack", dir: "asc" }} zebra />
             )}
 
-            {resultTab === "diagnostics" && (
+            {shownResultTab === "diagnostics" && (
               <div className="grid gap-2 p-2 text-2xs">
                 <div>
                   <div className="term-label mb-1">Run</div>
@@ -2025,7 +2076,7 @@ export default function InventoryOptimizerPage() {
               </div>
             )}
 
-            {resultTab === "raw" && (
+            {shownResultTab === "raw" && (
               <div className="relative">
                 <button
                   className="term-btn absolute right-2 top-2 z-10"

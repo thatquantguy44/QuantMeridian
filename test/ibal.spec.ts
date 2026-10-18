@@ -133,3 +133,41 @@ test("IBAL rejects a file type the service does not accept before uploading it",
   await expect(page.getByText('Unsupported file type ".csv". Upload XLSX or JSON.')).toBeVisible();
   expect(uploads).toBe(0);
 });
+
+test("IBAL hides result tabs the pinned service does not return", async ({ page }) => {
+  await page.route("**/api/inventory-optimizer/capabilities", async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    route.fulfill({ response, json: { ...body, output_sections: body.output_sections.filter((section: string) => section !== "economics") } });
+  });
+  await page.goto(`${BASE}/inventory-optimizer`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("status", { name: "Optimizer engine status" }).getByText("PIN VERIFIED")).toBeVisible({ timeout: 10_000 });
+
+  await expect(page.getByRole("button", { name: /^Balances$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Raw$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Economics$/ })).toHaveCount(0);
+});
+
+test("IBAL recovers from a service outage without a page reload", async ({ page }) => {
+  await page.route("**/api/inventory-optimizer/health", (route) => route.fulfill({ status: 503, json: { error: "down" } }));
+  await page.goto(`${BASE}/inventory-optimizer`, { waitUntil: "domcontentloaded" });
+  const strip = page.getByRole("status", { name: "Optimizer engine status" });
+  await expect(strip.getByText("NOT READY")).toBeVisible({ timeout: 10_000 });
+  await expect(strip.getByText(/Optimizer service is unavailable/)).toBeVisible();
+
+  await page.unroute("**/api/inventory-optimizer/health");
+  await strip.getByRole("button", { name: /Recheck/ }).click();
+  await expect(strip.getByText("PIN VERIFIED")).toBeVisible({ timeout: 10_000 });
+});
+
+test("IBAL keeps custom synthetic counts within the service's bounds", async ({ page }) => {
+  await page.goto(`${BASE}/inventory-optimizer`, { waitUntil: "domcontentloaded" });
+  await page.getByLabel("Scale").selectOption("custom");
+  await page.getByRole("spinbutton", { name: "Borrowers" }).fill("100");
+  const parentGroups = page.getByRole("spinbutton", { name: "Parent groups" });
+  await parentGroups.fill("60");
+  await expect(parentGroups).toHaveValue("50");
+
+  await page.getByRole("button", { name: /^Synthetic$/i }).click();
+  await expect(page.getByText("Dataset loaded successfully")).toBeVisible({ timeout: 30_000 });
+});
