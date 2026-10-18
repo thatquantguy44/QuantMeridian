@@ -68,6 +68,12 @@ def solve(data: dict) -> tuple[dict, dict]:
 
 
 class ExecutionContracts(unittest.TestCase):
+    def test_identical_snapshot_and_request_reproduce_non_timing_outputs(self) -> None:
+        payload = book()
+        first, _ = solve(payload)
+        second, _ = solve(payload)
+        self.assertEqual(first, second)
+
     def test_lp_shadow_price_rhs_sign_and_preview_disclosure(self) -> None:
         builder = SparseProblemBuilder(objective_sense="maximize")
         buy = builder.add_variable("buy", objective=2)

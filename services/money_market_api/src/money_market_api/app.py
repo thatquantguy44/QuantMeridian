@@ -1,4 +1,4 @@
-"""Authenticated HTTP boundary for the MMKT continuous LP relaxation."""
+"""Authenticated HTTP boundary for MMKT preview and verified ticketed plans."""
 
 from __future__ import annotations
 

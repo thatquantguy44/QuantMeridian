@@ -31,11 +31,11 @@ _RATING_SCORE = {
 
 
 class ModelInputError(ValueError):
-    """An input cannot be represented faithfully by the current continuous LP."""
+    """An input cannot be represented faithfully by the selected model."""
 
 
 class ModelSolveError(RuntimeError):
-    """The shared LP backend did not return a verified optimum."""
+    """The shared backend did not return a verified optimum."""
 
     def __init__(self, status: str, message: str) -> None:
         super().__init__(message)
