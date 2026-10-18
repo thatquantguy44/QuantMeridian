@@ -114,7 +114,7 @@ function combinations<T>(items: T[], count: number): T[][] {
   return output;
 }
 
-/** Small, deterministic vertex-enumeration LP for the illustrative six-fund POC universe. */
+/** Small, deterministic vertex-enumeration LP for the illustrative eight-fund POC universe. */
 export function optimizeFundAllocation(input: PocOptimizerInput) {
   validateInput(input);
   const funds = POC_FUND_UNIVERSE;
