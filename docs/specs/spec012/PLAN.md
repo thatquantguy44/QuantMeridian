@@ -1,14 +1,14 @@
 # Plan: Configurable Sources and Uses Optimizer
 
 - **Spec:** spec012-configurable-sources-uses (`SPEC.md`)
-- **Status:** Setup-only phase (in `main`) and synthetic PoC showcase (SU-SIM, merged in PR #166) approved; full optimizer design remains pending
+- **Status:** Setup-only phase (in `main`) and synthetic PoC showcase (SU-SIM, merged in PR #166) approved; open questions 1–4 resolved 2026-10-18; full optimizer design approval remains pending
 - **Last updated:** 2026-10-18
 
 ## Approach
 
-Treat user configuration as the sole source of supply, demand, costs, and compatibility. Validate and canonicalize it before solving; compute a stable hash for the run envelope. The terminal stores/selects named configurations and composes the service call. The Python service receives all data in the request and has no database dependency.
+Treat user configuration as the sole source of supply, demand, costs, and compatibility. Validate and canonicalize it before solving; compute a stable hash for the run envelope. Validation rejects a run that spans more than one currency (SPEC question 4) and any `allowed` rule on a currency-mismatched pair (question 1). The terminal stores/selects named configurations and composes the service call. The Python service receives all data in the request and has no database dependency.
 
-The LP has flow variables per compatible source/use pair. Capacity and haircut-adjusted coverage constrain flows. Lexicographic stages satisfy higher-priority hard/soft objectives before optimizing economics. Optional MIP variables activate discrete rules. The shared `optimization_core` builds and verifies the formulation.
+The LP has flow variables per compatible source/use pair. Capacity and haircut-adjusted coverage constrain flows. All amounts stay continuous and unrounded; rounding is display-only and the verifier uses tolerances on full-precision values (question 2). The internalization rate is computed from the verified flows as internal haircut-adjusted coverage over total delivered coverage, using each source's explicit `internality` attribute, and is `n/a` when a contributing source is unclassified (question 3). Lexicographic stages satisfy higher-priority hard/soft objectives before optimizing economics. Optional MIP variables activate discrete rules. The shared `optimization_core` builds and verifies the formulation.
 
 ## Components
 
@@ -36,12 +36,12 @@ updating the manifest.
 
 ## Sequence
 
-The owner has approved a bounded setup-only phase: versioned browser configuration, source/use editing, explicit compatibility setup, and validated import/export. This phase does not enable solving or expose recommendations. The remaining model decisions and child-document approval still gate service/model behavior. After those decisions are recorded, scaffold the service contracts, implement the compatibility engine and LP, add optional MIP rules, connect result views and OPT run history, and finish with independent validation and as-built evidence. Follow the pinned Agent Skills throughout.
+The owner has approved a bounded setup-only phase: versioned browser configuration, source/use editing, explicit compatibility setup, and validated import/export. This phase does not enable solving or expose recommendations. The owner resolved the four model questions on 2026-10-18 (SPEC decision log). Child-document approval still gates service/model behavior. After that approval, scaffold the service contracts, implement the compatibility engine and LP, add optional MIP rules, connect result views and OPT run history, and finish with independent validation and as-built evidence. Follow the pinned Agent Skills throughout.
 
 Separately, the owner approved a synthetic proof-of-concept showcase (SPEC § SU-SIM). It runs the
 illustrative penalised, balanced transportation LP in the browser against a fixed SIM book. It is
-clearly labelled and independently verified. It is not the production service, and it does not
-resolve or encode any open decision.
+clearly labelled and independently verified. It is not the production service. It was built to avoid the then-open
+decisions and is consistent with their 2026-10-18 resolutions.
 
 **Production path stays as planned above.** The browser solver
 (`src/lib/optimization/simplex.ts`) is showcase-only. Production solving belongs in
@@ -49,4 +49,4 @@ resolve or encode any open decision.
 `docs/handoff.md`. The showcase's hand-computable cases and verifier checks should be reused as
 golden and acceptance fixtures for that service.
 
-See [HANDOFF.md](HANDOFF.md) for the current branch checkpoint, verified commands, implementation boundary, open decisions, and ordered next steps.
+See [HANDOFF.md](HANDOFF.md) for the current branch checkpoint, verified commands, implementation boundary, recorded decisions, and ordered next steps.

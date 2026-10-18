@@ -264,13 +264,17 @@ early and often.
 
 **Is this the production optimizer?**
 No. It is a bounded proof of concept approved in spec012 (SU-SIM). The production service,
-contract and run history are still gated on open decisions.
+contract and run history are still gated on full spec approval. The model questions themselves
+were all resolved on 2026-10-18.
 
 **How is currency handled? What if a portfolio holds several currencies?**
-Today it isn't normalised: the showcase is deliberately single-currency (USD). Whether one solve
-may mix currencies is **open decision 4** in spec012, so the model doesn't assume an answer. The
-workspace stores a currency on each record but does not convert. See
-[Multi-currency: options for the open decision](#multi-currency-options-for-the-open-decision).
+Today it isn't normalised: the showcase is deliberately single-currency (USD). The owner decided
+on 2026-10-18 that a **currency mismatch is a hard block**: a source can never fund a use in
+another currency. A legal-entity mismatch is allowed through an explicit rule. The owner also decided
+that **every solve is one currency**: a multi-currency run is rejected, and amounts are never
+converted to a base currency to move funding across currencies. The workspace stores a currency
+on each record but does not convert. See
+[Multi-currency: decision and background](#multi-currency-decision-and-background).
 
 **Why an LP and not a MIP?**
 Every penalty here is linear or convex, so an LP solves it exactly and gives true shadow prices.
@@ -303,7 +307,7 @@ configurable.
 - That the Money Market Fund Optimizer (MMFO) runs a verified or production model. Its local
   PoC is SIM-only and unverified (see the note below).
 
-## Multi-currency: options for the open decision
+## Multi-currency: decision and background
 
 There is no FX normalisation anywhere in the Sources & Uses code today. Two related modules
 behave as follows:
@@ -313,16 +317,18 @@ behave as follows:
 - **MMKT LP service (`services/money_market_api`):** optimises **each currency independently**
   (`solve_currency` runs one LP per currency) and never nets across currencies.
 
-When the owner resolves open decision 4, the usual designs are:
+**Decision (spec012 question 4, 2026-10-18): option 1, one currency per run.** Option 2 is never
+used for funding. Option 3 is deferred and needs a new owner decision that keeps the currency hard
+block. The options considered were:
 
-1. **One currency per run (simplest, safest).** Reject mixed configurations and solve each
+1. **One currency per run (chosen).** Reject mixed configurations and solve each
    currency separately, as MMKT does. No FX assumptions are needed, but surplus in one currency
    can't fund a deficit in another.
 2. **Base-currency normalisation.** Convert every amount to a reporting currency with a dated FX
    snapshot carrying provenance and a hash in the run envelope. This is good for reporting
    totals. On its own it is **wrong for funding**, because it treats EUR and USD cash as
    interchangeable.
-3. **FX conversion lanes (recommended if mixing is allowed).** Keep amounts in native currency.
+3. **FX conversion lanes (deferred).** Keep amounts in native currency.
    Add explicit FX lanes from a source in currency A to uses in currency B. Each lane converts at
    the snapshot rate and carries:
    - an FX haircut (the same mechanics as the source haircut);
@@ -333,8 +339,10 @@ When the owner resolves open decision 4, the usual designs are:
    cross-currency funding honestly and fits the existing penalty framework. The FX rate and its
    provenance would become part of the canonical run hash (SU-009).
 
-Whichever option is chosen, rounding and the internalisation definition (open decisions 2 and 3)
-should be settled at the same time, because both interact with converted amounts.
+Rounding and the internalisation definition were settled at the same time (spec012 questions 2
+and 3): the model never rounds, and internalisation is internal haircut-adjusted coverage over
+total delivered coverage, from an explicit per-source `internality` attribute. The showcase does
+not compute an internalisation rate.
 
 ## Note on the money-market modules (MMFO and MMKT)
 

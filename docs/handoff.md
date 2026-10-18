@@ -11,10 +11,12 @@ retained as context.
 Focus" and "Next Work" below; those stay as context.
 
 **Active checkpoint (2026-10-18):**
-[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) is **merged into `main`**
-(merge commit `2b32b7c`). The follow-up [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) on the same branch,
-`claude/synthetic-snu-poc-27n9hu`, adds three things: the SXU module SIM switch, this handoff
-refresh, and the approval records. On 2026-10-18 the owner
+[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) and its follow-up
+[PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) are **merged into `main`**.
+Between them they bring the SU-SIM showcase, the MMKT module, the SXU module SIM switch, these
+handoffs and the approval records. The next PR from `claude/synthetic-snu-poc-27n9hu` adds the
+MMKT selectable baseline: spec011 question 1, resolved 2026-10-18, default government MMF sweep.
+On 2026-10-18 the owner
 explicitly approved the spec012 SU-SIM showcase, the SXU module SIM switch and the spec011 MMKT
 module slice. Each is recorded in the decision log of its `SPEC.md`. Full spec approvals and the
 listed open questions remain pending.
@@ -77,8 +79,8 @@ Still open: the ML stack (scikit-learn recommended), and whether the liquidity c
 3. M1: sources and uses, then money market, then OPT run history. M1b: liquidity. IBAL work
    (M2 onward) follows the engine child specs; see `0018`'s `plan.md` milestones.
 4. **As of 2026-10-18:** merge PR #167, then follow the ordered next steps in the spec011 and
-   spec012 handoffs. The highest-value items are owner decisions (spec012 open decisions 1–4,
-   spec011 questions 1–3), the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
+   spec012 handoffs. All listed owner questions were resolved on 2026-10-18 (spec012 questions
+   1–4 and spec011 questions 1–3); the highest-value items are full spec approvals, the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.
 
 **Current IBAL integration status (2026-10-17):** InventoryBallast PR #34 is merged to `main`.
