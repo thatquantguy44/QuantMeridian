@@ -1,47 +1,54 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { CircleAlert, Copy, RotateCcw, ShieldCheck, Sigma, Table2 } from "lucide-react";
+import { CircleAlert, Copy, MousePointerClick, RotateCcw, ShieldCheck, Sigma } from "lucide-react";
 import { Panel } from "@/components/ui/Panel";
 import {
-  FAMILY_META, NEUTRAL_KNOBS, SCENARIOS, applyKnobs, solveSim, verifySim,
-  type SimProblem, type SourceFamily, type StressKnobs,
+  DEFAULT_PENALTIES, FAMILY_META, NEUTRAL_KNOBS, SCENARIOS, applyKnobs, laneKey, solveSim, verifySim,
+  type PenaltyConfig, type SimProblem, type SolveStats, type SourceFamily, type StressKnobs,
 } from "@/data/sourcesUsesSynthetic";
 import { bps, mm, num, pct, signed } from "./format";
+import { CostBreakdownChart, LaneInspector, PenaltyControls } from "./PenaltyControls";
 import { FamilyMix, ScenarioComparison, SourceUtilization, TierLadder, UseCoverage, VerificationList } from "./ShowcaseCharts";
 import { TransportNetwork } from "./TransportNetwork";
 import { TransportTableau } from "./TransportTableau";
 
-export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (problem: SimProblem, scenarioTitle: string) => void }) {
+export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (problem: SimProblem, scenarioTitle: string, config: PenaltyConfig) => void }) {
   const [scenarioId, setScenarioId] = useState(SCENARIOS[0].id);
   const [knobs, setKnobs] = useState<StressKnobs>(NEUTRAL_KNOBS);
+  const [config, setConfig] = useState<PenaltyConfig>(DEFAULT_PENALTIES);
+  const [selectedLane, setSelectedLane] = useState<string | null>(null);
   const scenario = SCENARIOS.find((s) => s.id === scenarioId)!;
 
   const scenarioProblem = useMemo(() => scenario.build(), [scenario]);
   const problem = useMemo(() => applyKnobs(scenarioProblem, knobs), [scenarioProblem, knobs]);
-  const result = useMemo(() => solveSim(problem), [problem]);
+  const result = useMemo(() => solveSim(problem, config), [problem, config]);
   const checks = useMemo(() => (result.status === "optimal" ? verifySim(result) : []), [result]);
   const certified = result.status === "optimal" && checks.every((c) => c.passed);
 
-  const baseline = useMemo(() => solveSim(SCENARIOS[0].build()), []);
-  const scenarioResults = useMemo(() => Object.fromEntries(SCENARIOS.map((s) => [s.id, solveSim(s.build())])), []);
+  const scenarioResults = useMemo(() => Object.fromEntries(SCENARIOS.map((s) => [s.id, solveSim(s.build(), config)])), [config]);
+  const baseline = scenarioResults[SCENARIOS[0].id];
   const knobsActive = JSON.stringify(knobs) !== JSON.stringify(NEUTRAL_KNOBS);
 
-  const selectScenario = (id: string) => { setScenarioId(id); setKnobs(NEUTRAL_KNOBS); };
+  const selectScenario = (id: string) => { setScenarioId(id); setKnobs(NEUTRAL_KNOBS); setSelectedLane(null); };
   const toggleLane = (key: string) => setKnobs((k) => ({
     ...k, deniedLanes: k.deniedLanes.includes(key) ? k.deniedLanes.filter((x) => x !== key) : [...k.deniedLanes, key],
   }));
+  const setLanePenalty = (key: string, bp: number | null) => setConfig((c) => {
+    const lanePenaltyOverrides = { ...c.lanePenaltyOverrides };
+    if (bp === null) delete lanePenaltyOverrides[key]; else lanePenaltyOverrides[key] = bp;
+    return { ...c, lanePenaltyOverrides };
+  });
+  const selectedBaseLane = selectedLane ? scenarioProblem.lanes.find((l) => laneKey(l.sourceId, l.useId) === selectedLane) ?? null : null;
 
-  const baseCost = baseline.status === "optimal" ? baseline.totals.annualCostMm : 0;
+  const baseCost = baseline.status === "optimal" ? baseline.totals.totalCostMm : 0;
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-3 p-3 lg:p-5">
-      {/* SIM banner */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-term-cyan/25 bg-term-cyan/5 px-3 py-2 text-[11px] text-term-text-dim" role="note">
         <span className="rounded-sm border border-term-cyan/40 px-1.5 py-px font-mono text-[9px] font-bold tracking-[0.2em] text-term-cyan">SIM</span>
-        <span>A synthetic, hand-built broker-dealer funding book (USD, $mm). It shows how the model behaves. It is not a funding recommendation and uses no live or customer data.</span>
+        <span>A synthetic, hand-built broker-dealer funding book (USD, $mm), solved as a penalised transportation problem. It shows how the model behaves. It is not a funding recommendation and uses no live or customer data.</span>
         <span className="ml-auto text-[10px] text-term-text-mute">spec012 · SU-SIM</span>
       </div>
 
-      {/* Scenario rail */}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6" role="radiogroup" aria-label="Scenario">
         {SCENARIOS.map((s) => {
           const r = scenarioResults[s.id];
@@ -62,14 +69,13 @@ export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (p
         })}
       </div>
 
-      {/* KPI strip */}
       {result.status === "optimal" ? (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-          <Kpi label="Annual carry" value={mm(result.totals.annualCostMm, 2)} sub={scenarioId === "base" && !knobsActive ? "baseline" : `${signed(result.totals.annualCostMm - baseCost, (v) => mm(v, 2))} vs base`} tone="amber" />
-          <Kpi label="Weighted cost" value={bps(result.totals.weightedCostBps, 1)} sub={`on ${mm(result.totals.nominal, 0)} nominal`} />
-          <Kpi label="Coverage" value={pct(result.totals.coveragePct)} sub={`${mm(result.totals.coverage, 0)} of ${mm(result.totals.demand, 0)}`} tone={result.totals.shortfall > 1e-6 ? undefined : "up"} />
-          <Kpi label="Soft shortfall" value={mm(result.totals.shortfall, 1)} sub={result.totals.shortfall > 1e-6 ? "priced at use penalty" : "every use whole"} tone={result.totals.shortfall > 1e-6 ? "down" : undefined} />
-          <Kpi label="Haircut drag" value={mm(result.totals.haircutDrag, 1)} sub="nominal − coverage" />
+          <Kpi label="Objective" value={mm(result.totals.totalCostMm, 2)} sub={scenarioId === "base" && !knobsActive ? "baseline · $/yr" : `${signed(result.totals.totalCostMm - baseCost, (v) => mm(v, 2))} vs base`} tone="amber" />
+          <Kpi label="Funding cost" value={mm(result.totals.fundingCostMm, 2)} sub={`${bps(result.totals.weightedCostBps, 1)} on ${mm(result.totals.nominal, 0)}`} />
+          <Kpi label="Penalties" value={mm(result.totals.penaltyCostMm, 2)} sub={`${pct(result.totals.penaltyCostMm / Math.max(result.totals.totalCostMm, 1e-9), 0)} of objective`} />
+          <Kpi label="Coverage" value={pct(result.totals.coveragePct)} sub={result.totals.shortfall > 1e-6 ? `${mm(result.totals.shortfall, 0)} unmet` : "every use whole"} tone={result.totals.shortfall > 1e-6 ? "down" : "up"} />
+          <Kpi label="Idle capacity" value={mm(result.totals.idle, 0)} sub={`haircut drag ${mm(result.totals.haircutDrag, 0)}`} />
           <Kpi label="Optimality" value={certified ? "Certified" : "Check failed"} sub={`${result.stats.pivots} pivots · ${num(result.stats.millis, 1)}ms`} tone={certified ? "up" : "down"} icon={<ShieldCheck size={13} />} />
         </div>
       ) : (
@@ -85,20 +91,16 @@ export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (p
         </div>
       )}
 
-      {/* Network + controls */}
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Panel title="Transport network" code="FLOW" accent className="rounded-lg" subtitle="ribbon width = $; taper = haircut"
-          right={<Legend />}>
-          <div className="p-2 md:p-3">
-            <TransportNetwork problem={problem} result={result} />
-          </div>
+        <Panel title="Transport network" code="FLOW" accent className="rounded-lg" subtitle="ribbon width = $; taper = haircut; hatched = dummy nodes" right={<Legend />}>
+          <div className="p-2 md:p-3"><TransportNetwork problem={problem} result={result} /></div>
         </Panel>
 
         <div className="flex flex-col gap-3">
           <Panel title="Stress controls" code="LIVE" className="rounded-lg"
             right={knobsActive ? <button type="button" onClick={() => setKnobs(NEUTRAL_KNOBS)} className="flex items-center gap-1 rounded border border-term-border px-1.5 py-0.5 text-[10px] text-term-text-dim hover:text-term-amber"><RotateCcw size={11} /> Reset</button> : undefined}>
             <div className="space-y-3 p-3">
-              <p className="text-[10px] leading-relaxed text-term-text-mute">Layered on “{scenario.title}”. Every change re-solves all {result.stats.stages} stages in the browser.</p>
+              <p className="text-[10px] leading-relaxed text-term-text-mute">Layered on “{scenario.title}”. Every change re-solves the full model in the browser.</p>
               {(Object.keys(FAMILY_META) as SourceFamily[]).map((family) => (
                 <Slider key={family} id={`cap-${family}`} label={`${FAMILY_META[family].label} capacity`} swatch={FAMILY_META[family].color}
                   min={0} max={1.5} step={0.05} value={knobs.capacity[family]} format={(v) => `${num(v * 100, 0)}%`}
@@ -112,7 +114,7 @@ export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (p
                 onChange={(v) => setKnobs((k) => ({ ...k, unsecuredCostShiftBps: v }))} />
               {knobs.deniedLanes.length > 0 && (
                 <div className="rounded-md border border-term-border bg-term-panel-2 px-2 py-1.5 text-[10px] text-term-text-dim">
-                  {knobs.deniedLanes.length} lane{knobs.deniedLanes.length === 1 ? "" : "s"} switched off in the tableau: <span className="font-mono text-term-text">{knobs.deniedLanes.join(", ").replace(/>/g, "→")}</span>
+                  {knobs.deniedLanes.length} lane{knobs.deniedLanes.length === 1 ? "" : "s"} denied: <span className="font-mono text-term-text">{knobs.deniedLanes.join(", ").replace(/>/g, "→")}</span>
                 </div>
               )}
             </div>
@@ -120,8 +122,12 @@ export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (p
 
           <Panel title="Solve sequence" code="LEX" className="rounded-lg">
             <div className="p-3">
-              {result.status === "optimal" ? <TierLadder result={result} /> : <p className="text-[11px] text-term-down">Stage 1 is infeasible. The hard coverage rows cannot all hold.</p>}
-              <p className="mt-2 text-[10px] leading-relaxed text-term-text-mute">Tiers are solved in order and each optimum is then fixed. A lower tier can never outbid a higher one, however large its penalty.</p>
+              {result.status === "optimal" ? <TierLadder result={result} /> : <p className="text-[11px] text-term-down">The hard demand rows cannot all hold.</p>}
+              <p className="mt-2 text-[10px] leading-relaxed text-term-text-mute">
+                {config.priorityMode === "lexicographic"
+                  ? "Tiers are solved in order and each optimum is then fixed. A lower tier can never outbid a higher one, however large its penalty."
+                  : "Weighted mode prices shortfall directly against cost in one solve. Cheap-to-shed uses are dropped when funding is dearer than their penalty."}
+              </p>
             </div>
           </Panel>
 
@@ -133,21 +139,32 @@ export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (p
         </div>
       </div>
 
-      {/* Tableau */}
-      <Panel title="Transportation tableau" code="MODI" className="rounded-lg" subtitle="flows $mm · duals bp" right={<span className="flex items-center gap-1 text-[10px] text-term-text-mute"><Table2 size={12} /> click a cell to deny / allow</span>}>
+      <Panel title="Penalty configuration" code="PEN" className="rounded-lg" subtitle="every term in cᵢⱼ and the dummy nodes is configurable">
+        <PenaltyControls problem={problem} config={config} onChange={setConfig} />
+      </Panel>
+
+      <Panel title="Transportation tableau" code="MODI" className="rounded-lg" subtitle="flows $mm · costs & duals bp" right={<span className="flex items-center gap-1 text-[10px] text-term-text-mute"><MousePointerClick size={12} /> select a cell to edit the lane</span>}>
         <div className="p-3">
-          <TransportTableau problem={problem} baseLanes={scenarioProblem.lanes} deniedLanes={knobs.deniedLanes} result={result} onToggle={toggleLane} />
+          <TransportTableau problem={problem} baseLanes={scenarioProblem.lanes} deniedLanes={knobs.deniedLanes} config={config} result={result}
+            selected={selectedLane} onSelect={(key) => setSelectedLane((cur) => (cur === key ? null : key))} />
+          {selectedBaseLane && (
+            <LaneInspector problem={problem} baseLane={selectedBaseLane} config={config} result={result.status === "optimal" ? result : null}
+              denied={knobs.deniedLanes.includes(selectedLane!)} onToggle={() => toggleLane(selectedLane!)}
+              onPenalty={(bp) => setLanePenalty(selectedLane!, bp)} onClose={() => setSelectedLane(null)} />
+          )}
         </div>
       </Panel>
 
-      {/* Diagnostics */}
       {result.status === "optimal" && (
-        <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-4">
+          <Panel title="Objective decomposition" code="OBJ" className="rounded-lg">
+            <div className="p-3"><CostBreakdownChart result={result} /></div>
+          </Panel>
           <Panel title="Source utilisation & shadow price" code="CAP" className="rounded-lg" right={<span className="text-[9px] text-term-text-mute">uᵢ bp</span>}>
             <div className="p-3">
               <SourceUtilization result={result} />
               <p className="mt-3 border-t border-term-border pt-2 text-[10px] leading-relaxed text-term-text-mute">
-                The shadow price is the annual saving, in bp, from one more dollar of that source. Exhausted cheap sources carry the highest price. These are final-stage LP duals, conditional on the fixed tier levels (SIM-006).
+                uᵢ is the saving, in bp a year, from one more dollar of a source. It is negative when spare capacity only adds idle penalty. These are final-stage LP duals, conditional on the fixed tier levels (SIM-006).
               </p>
             </div>
           </Panel>
@@ -161,7 +178,7 @@ export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (p
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <Panel title="Scenario comparison" code="CMP" className="rounded-lg" subtitle="preset scenarios, no stress controls">
+        <Panel title="Scenario comparison" code="CMP" className="rounded-lg" subtitle="current penalties, no stress controls">
           <div className="p-3"><ScenarioComparison scenarios={SCENARIOS} results={scenarioResults} activeId={scenarioId} onSelect={selectScenario} /></div>
         </Panel>
         <Panel title="Independent verification" code="CERT" className="rounded-lg" right={result.status === "optimal" ? <span className={`text-[10px] font-semibold ${certified ? "text-term-up" : "text-term-down"}`}>{checks.filter((c) => c.passed).length}/{checks.length}</span> : undefined}>
@@ -170,13 +187,13 @@ export function SyntheticShowcase({ onCopyToWorkspace }: { onCopyToWorkspace: (p
           </div>
         </Panel>
         <Panel title="Formulation disclosure" code="LP" className="rounded-lg">
-          <Formulation problem={problem} stats={result.stats} infeasible={result.status === "infeasible"} />
+          <Formulation problem={problem} config={config} stats={result.stats} infeasible={result.status === "infeasible"} />
         </Panel>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-term-border bg-term-panel px-3 py-2.5">
-        <p className="text-[10px] text-term-text-mute">Copy this book, including your stress settings, into the workspace as an editable configuration. Copying does not enable solving there.</p>
-        <button type="button" onClick={() => onCopyToWorkspace(problem, `${scenario.title}${knobsActive ? " (stressed)" : ""}`)}
+        <p className="text-[10px] text-term-text-mute">Copy this book into the workspace as an editable configuration. Your stress settings, shortfall penalties and pair penalties are included. Copying does not enable solving there.</p>
+        <button type="button" onClick={() => onCopyToWorkspace(problem, `${scenario.title}${knobsActive ? " (stressed)" : ""}`, config)}
           className="flex items-center gap-1.5 rounded-md border border-term-border bg-term-panel-2 px-3 py-1.5 text-xs text-term-text transition hover:border-term-amber/60 hover:text-term-amber">
           <Copy size={13} /> Copy to workspace
         </button>
@@ -239,35 +256,40 @@ function MarginalCost({ problem, useDual }: { problem: SimProblem; useDual: Reco
         ))}
       </ul>
       <p className="mt-3 border-t border-term-border pt-2 text-[10px] leading-relaxed text-term-text-mute">
-        vⱼ is the cost in bp of covering one more dollar of a use at the optimum. Uses that compete for the same exhausted lanes share a price. A use that can be shed is capped by its penalty.
+        vⱼ is the cost in bp of covering one more dollar of a use at the optimum. It includes each lane's penalties. A shed use is capped at its shortfall penalty.
       </p>
     </div>
   );
 }
 
-function Formulation({ problem, stats, infeasible }: { problem: SimProblem; stats: { variables: number; rows: number; stages: number; pivots: number; millis: number }; infeasible: boolean }) {
+function Formulation({ problem, config, stats, infeasible }: { problem: SimProblem; config: PenaltyConfig; stats: SolveStats; infeasible: boolean }) {
   const hard = problem.uses.filter((u) => u.policy === "hard").length;
   return (
     <div className="space-y-2.5 p-3 text-[10px] leading-relaxed text-term-text-dim">
       <div className="space-y-1 rounded-md border border-term-border bg-term-panel-2 p-2.5 font-mono text-[10.5px] text-term-text">
-        <div><span className="text-term-amber">min</span> Σ (cᵢ + fᵢⱼ)·xᵢⱼ + Σ pⱼ·sⱼ</div>
-        <div><span className="text-term-text-mute">s.t.</span> Σⱼ xᵢⱼ ≤ Aᵢ <span className="text-term-text-mute">∀ source</span></div>
-        <div className="pl-6">Σᵢ (1−hᵢ)·xᵢⱼ + sⱼ = Dⱼ <span className="text-term-text-mute">∀ use</span></div>
-        <div className="pl-6">Σ_{"{j∈t}"} pⱼsⱼ ≤ z*ₜ <span className="text-term-text-mute">∀ tier t</span></div>
-        <div className="pl-6">x, s ≥ 0; sⱼ ≡ 0 for hard uses</div>
+        <div><span className="text-term-amber">min</span> Σ cᵢⱼ·xᵢⱼ + κ·Σ x̂ᵢⱼ + Σ πⱼ·sⱼ + Σ ιᵢ·eᵢ + Σ μᵢ·mᵢ</div>
+        <div className="pl-2 text-term-text-mute">cᵢⱼ = cᵢ + pᵢⱼ + χ·[entityᵢ≠entityⱼ] + τ·(Tⱼ−Tᵢ)⁺/30 + η·hᵢ</div>
+        <div><span className="text-term-text-mute">s.t.</span> Σⱼ (xᵢⱼ+x̂ᵢⱼ) + eᵢ = Aᵢ <span className="text-term-text-mute">supply, dummy sink e</span></div>
+        <div className="pl-6">Σᵢ (1−hᵢ)(xᵢⱼ+x̂ᵢⱼ) + sⱼ = Dⱼ <span className="text-term-text-mute">demand, dummy source s</span></div>
+        <div className="pl-6">xᵢⱼ ≤ θ·Dⱼ/(1−hᵢ) <span className="text-term-text-mute">concentration split</span></div>
+        <div className="pl-6">Σⱼ (xᵢⱼ+x̂ᵢⱼ) + mᵢ ≥ floorᵢ <span className="text-term-text-mute">min draw</span></div>
+        {config.priorityMode === "lexicographic" && <div className="pl-6">Σ_{"{j∈t}"} πⱼsⱼ ≤ z*ₜ <span className="text-term-text-mute">∀ tier t</span></div>}
+        <div className="pl-6">all ≥ 0; sⱼ ≡ 0 for hard uses</div>
       </div>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
-        <Item k="Problem class" v="LP · generalised transport" />
+        <Item k="Problem class" v="balanced generalised transport LP" />
+        <Item k="Priority" v={config.priorityMode} />
         <Item k="Algorithm" v="2-phase simplex, Bland" />
-        <Item k="Variables" v={`${stats.variables}`} />
-        <Item k="Rows (final)" v={`${stats.rows}`} />
-        <Item k="Stages" v={infeasible ? "elastic diagnostic" : `${stats.stages - 1} tier + 1 econ`} />
+        <Item k="Variables · rows" v={`${stats.variables} · ${stats.rows}`} />
+        <Item k="Stages" v={infeasible ? "elastic diagnostic" : config.priorityMode === "weighted" ? "1 (weighted)" : `${stats.stages - 1} tier + 1 econ`} />
         <Item k="Pivots" v={`${stats.pivots}`} />
         <Item k="Lanes allowed" v={`${problem.lanes.length} / ${problem.sources.length * problem.uses.length}`} />
         <Item k="Hard uses" v={`${hard} of ${problem.uses.length}`} />
+        <Item k="χ · τ · η" v={`${config.crossEntityBps} · ${config.tenorMismatchBpsPer30d} · ${config.haircutChargeBps}bp`} />
+        <Item k="θ · κ" v={config.concentration.enabled ? `${config.concentration.thresholdPct}% · ${config.concentration.penaltyBps}bp` : "off"} />
       </dl>
       <p className="flex gap-1.5 border-t border-term-border pt-2 text-[9px] text-term-text-mute">
-        <Sigma size={11} className="mt-px shrink-0" /> Lane friction fᵢⱼ is illustrative SIM economics, not the production objective. The solve is single-currency and continuous. Values are rounded for display only.
+        <Sigma size={11} className="mt-px shrink-0" /> Penalty values are illustrative SIM economics, not the production objective. The solve is single-currency and continuous. Values are rounded for display only.
       </p>
     </div>
   );

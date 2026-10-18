@@ -44,9 +44,20 @@ from the setup-only workspace and does not unlock the production optimizer.
   transportation tableau with uᵢ/vⱼ duals and click-to-deny lanes, live stress controls, a tier
   ladder, utilisation, coverage, marginal cost, scenario comparison, verification, and
   formulation disclosure.
-- Tests: `src/lib/optimization/simplex.test.ts` (5) and `src/data/sourcesUsesSynthetic.test.ts`
-  (18). The 18 include hand-derived duals, the tier-dominance case, a tamper failure, the
-  infeasible cascade, and a 216-corner stress grid that must verify or report a hard gap.
+- The model is a balanced, penalised classic transportation problem. Dummy unmet-demand and
+  idle-capacity nodes balance it. Each lane cost `c_ij` sums the source cost, the pair penalty,
+  cross-entity, tenor mismatch and the haircut charge. A convex concentration penalty, minimum-draw
+  penalties and lexicographic or weighted priority complete it. Everything is configurable in the
+  Penalty configuration panel and the tableau's lane inspector. See `SPEC.md` § SU-SIM for the
+  penalty catalogue.
+- Verification: business checks are recomputed from configuration. `certifyLp` in `simplex.ts`
+  then certifies optimality on the exact final-stage LP (primal and dual feasibility,
+  complementary slackness, duality gap).
+- Tests:
+  - `src/lib/optimization/simplex.test.ts` (6).
+  - `src/data/sourcesUsesSynthetic.test.ts` (34): a hand-computable case per penalty, both
+    priority modes, dual and flow tamper failures, the infeasible cascade, and a 432-corner
+    stress/penalty grid that must verify or report a hard gap.
 
 The showcase does not touch the open decisions. It uses one currency, explicit lanes only, a
 continuous solve with display-only rounding, and computes no internalization rate.

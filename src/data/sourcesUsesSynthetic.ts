@@ -1,11 +1,19 @@
 /**
- * Spec012 SU-SIM — synthetic proof-of-concept book, scenarios, lexicographic
- * transport model, and independent verifier.
+ * Spec012 SU-SIM — synthetic proof-of-concept book, scenarios, configurable
+ * penalised transportation model, and independent verifier.
+ *
+ * The model is the classic balanced transportation problem:
+ *   supply nodes (sources) ─ cᵢⱼ ─▶ demand nodes (uses)
+ * balanced with a dummy supply node (unmet demand, priced at each use's
+ * shortfall penalty) and a dummy demand node (idle capacity, priced at each
+ * source's idle penalty). Every lane cost is a transparent sum of configurable
+ * penalty components. Haircuts make it a generalised transport problem: a
+ * nominal dollar from source i covers (1 − hᵢ) of use j.
  *
  * Everything here is SIM data: handwritten, deterministic, single-currency
  * (USD, $mm). It is a showcase of model behaviour, never a recommendation.
  */
-import { solveLp, type LpRow } from "@/lib/optimization/simplex";
+import { certifyLp, solveLp, type LpProblem, type LpRow } from "@/lib/optimization/simplex";
 import {
   SOURCES_USES_SCHEMA_VERSION,
   type ConfigurableSource, type ConfigurableUse, type SourcesUsesConfiguration,
@@ -22,6 +30,13 @@ export interface SimSource {
   amount: number;
   costBps: number;
   haircutPct: number;
+  /** Contractual / behavioural tenor of the funding, in days. */
+  tenorDays: number;
+  /** Cost of leaving a dollar of this source unused (negative carry, reserve lock-up). */
+  idlePenaltyBps: number;
+  /** Minimum draw before a penalty applies (program floor, balance commitment), $mm. */
+  minDraw: number;
+  minDrawPenaltyBps: number;
 }
 
 export interface SimUse {
@@ -32,13 +47,17 @@ export interface SimUse {
   amount: number;
   tier: number;
   policy: "hard" | "soft";
+  /** Shortfall penalty per $ of unmet coverage (soft uses only). */
   penaltyBps: number;
+  /** Required funding tenor, in days. */
+  tenorDays: number;
 }
 
 export interface SimLane {
   sourceId: string;
   useId: string;
-  frictionBps: number;
+  /** Pair-specific penalty (operational transfer, reuse restriction, wrong-way risk). */
+  penaltyBps: number;
   note: string;
 }
 
@@ -65,41 +84,43 @@ const QMS = "QM Securities LLC";
 const QMP = "QM Prime Services";
 const QMH = "QM Holdings Inc";
 
+type SourceSeed = Omit<SimSource, "idlePenaltyBps" | "minDraw" | "minDrawPenaltyBps"> & Partial<SimSource>;
+const src = (s: SourceSeed): SimSource => ({ idlePenaltyBps: 0, minDraw: 0, minDrawPenaltyBps: 0, ...s });
+
 const BASE_SOURCES: SimSource[] = [
-  { id: "S1", label: "Firm cash pool", short: "Cash pool", family: "internal", legalEntity: QMS, amount: 1400, costBps: 8, haircutPct: 0 },
-  { id: "S2", label: "Prime free credits", short: "Free credits", family: "internal", legalEntity: QMP, amount: 820, costBps: 18, haircutPct: 0 },
-  { id: "S3", label: "Sec-lending cash collateral", short: "SBL cash", family: "internal", legalEntity: QMS, amount: 640, costBps: 34, haircutPct: 1 },
-  { id: "S4", label: "Tri-party repo · UST", short: "TP repo UST", family: "secured", legalEntity: QMS, amount: 1700, costBps: 26, haircutPct: 2 },
-  { id: "S5", label: "Tri-party repo · Agency MBS", short: "TP repo MBS", family: "secured", legalEntity: QMS, amount: 900, costBps: 38, haircutPct: 5 },
-  { id: "S6", label: "Bilateral repo · IG credit", short: "Bilat repo IG", family: "secured", legalEntity: QMS, amount: 620, costBps: 64, haircutPct: 8 },
-  { id: "S7", label: "Commercial paper", short: "CP", family: "unsecured", legalEntity: QMH, amount: 850, costBps: 88, haircutPct: 0 },
-  { id: "S8", label: "Committed revolver", short: "Revolver", family: "unsecured", legalEntity: QMH, amount: 1000, costBps: 135, haircutPct: 0 },
+  src({ id: "S1", label: "Firm cash pool", short: "Cash pool", family: "internal", legalEntity: QMS, amount: 1400, costBps: 8, haircutPct: 0, tenorDays: 1, idlePenaltyBps: 5 }),
+  src({ id: "S2", label: "Prime free credits", short: "Free credits", family: "internal", legalEntity: QMP, amount: 820, costBps: 18, haircutPct: 0, tenorDays: 1, idlePenaltyBps: 8 }),
+  src({ id: "S3", label: "Sec-lending cash collateral", short: "SBL cash", family: "internal", legalEntity: QMS, amount: 640, costBps: 34, haircutPct: 1, tenorDays: 1, idlePenaltyBps: 10 }),
+  src({ id: "S4", label: "Tri-party repo · UST", short: "TP repo UST", family: "secured", legalEntity: QMS, amount: 1700, costBps: 26, haircutPct: 2, tenorDays: 1, minDraw: 600, minDrawPenaltyBps: 15 }),
+  src({ id: "S5", label: "Tri-party repo · Agency MBS", short: "TP repo MBS", family: "secured", legalEntity: QMS, amount: 900, costBps: 38, haircutPct: 5, tenorDays: 30 }),
+  src({ id: "S6", label: "Bilateral repo · IG credit", short: "Bilat repo IG", family: "secured", legalEntity: QMS, amount: 620, costBps: 64, haircutPct: 8, tenorDays: 90 }),
+  src({ id: "S7", label: "Commercial paper", short: "CP", family: "unsecured", legalEntity: QMH, amount: 850, costBps: 88, haircutPct: 0, tenorDays: 60, minDraw: 350, minDrawPenaltyBps: 25 }),
+  src({ id: "S8", label: "Committed revolver", short: "Revolver", family: "unsecured", legalEntity: QMH, amount: 1000, costBps: 135, haircutPct: 0, tenorDays: 365 }),
 ];
 
 const BASE_USES: SimUse[] = [
-  { id: "U1", label: "CCP initial margin", short: "CCP IM", legalEntity: QMS, amount: 880, tier: 1, policy: "hard", penaltyBps: 0 },
-  { id: "U2", label: "Liquidity buffer top-up", short: "Liq buffer", legalEntity: QMS, amount: 520, tier: 1, policy: "hard", penaltyBps: 0 },
-  { id: "U3", label: "Intraday settlement buffer", short: "Intraday", legalEntity: QMS, amount: 300, tier: 1, policy: "hard", penaltyBps: 0 },
-  { id: "U4", label: "Govt & agency inventory", short: "Govt inv", legalEntity: QMS, amount: 1350, tier: 2, policy: "hard", penaltyBps: 0 },
-  { id: "U5", label: "Prime margin lending", short: "Prime margin", legalEntity: QMP, amount: 1050, tier: 2, policy: "soft", penaltyBps: 320 },
-  { id: "U6", label: "Equity inventory", short: "Equity inv", legalEntity: QMS, amount: 640, tier: 2, policy: "soft", penaltyBps: 260 },
-  { id: "U7", label: "Credit inventory", short: "Credit inv", legalEntity: QMS, amount: 520, tier: 3, policy: "soft", penaltyBps: 210 },
-  { id: "U8", label: "Securities borrow collateral", short: "Sec borrow", legalEntity: QMS, amount: 430, tier: 3, policy: "soft", penaltyBps: 180 },
-  { id: "U9", label: "Structured note hedges", short: "SN hedges", legalEntity: QMS, amount: 330, tier: 3, policy: "soft", penaltyBps: 150 },
-  { id: "U10", label: "Matched-book reverse repo", short: "Matched book", legalEntity: QMS, amount: 600, tier: 4, policy: "soft", penaltyBps: 45 },
+  { id: "U1", label: "CCP initial margin", short: "CCP IM", legalEntity: QMS, amount: 880, tier: 1, policy: "hard", penaltyBps: 0, tenorDays: 90 },
+  { id: "U2", label: "Liquidity buffer top-up", short: "Liq buffer", legalEntity: QMS, amount: 520, tier: 1, policy: "hard", penaltyBps: 0, tenorDays: 365 },
+  { id: "U3", label: "Intraday settlement buffer", short: "Intraday", legalEntity: QMS, amount: 300, tier: 1, policy: "hard", penaltyBps: 0, tenorDays: 1 },
+  { id: "U4", label: "Govt & agency inventory", short: "Govt inv", legalEntity: QMS, amount: 1350, tier: 2, policy: "hard", penaltyBps: 0, tenorDays: 1 },
+  { id: "U5", label: "Prime margin lending", short: "Prime margin", legalEntity: QMP, amount: 1050, tier: 2, policy: "soft", penaltyBps: 320, tenorDays: 30 },
+  { id: "U6", label: "Equity inventory", short: "Equity inv", legalEntity: QMS, amount: 640, tier: 2, policy: "soft", penaltyBps: 260, tenorDays: 30 },
+  { id: "U7", label: "Credit inventory", short: "Credit inv", legalEntity: QMS, amount: 520, tier: 3, policy: "soft", penaltyBps: 210, tenorDays: 90 },
+  { id: "U8", label: "Securities borrow collateral", short: "Sec borrow", legalEntity: QMS, amount: 430, tier: 3, policy: "soft", penaltyBps: 180, tenorDays: 30 },
+  { id: "U9", label: "Structured note hedges", short: "SN hedges", legalEntity: QMS, amount: 330, tier: 3, policy: "soft", penaltyBps: 150, tenorDays: 180 },
+  { id: "U10", label: "Matched-book reverse repo", short: "Matched book", legalEntity: QMS, amount: 600, tier: 4, policy: "soft", penaltyBps: 45, tenorDays: 1 },
 ];
 
-const lane = (sourceId: string, useId: string, frictionBps: number, note: string): SimLane => ({ sourceId, useId, frictionBps, note });
+const lane = (sourceId: string, useId: string, penaltyBps: number, note: string): SimLane => ({ sourceId, useId, penaltyBps, note });
 
 const BASE_LANES: SimLane[] = [
-  ...["U1", "U2", "U3", "U4", "U6", "U7", "U8", "U9", "U10"].map((u) => lane("S1", u, 0, "Fungible firm cash")),
-  lane("S1", "U5", 6, "Intercompany transfer to Prime"),
+  ...["U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "U10"].map((u) => lane("S1", u, 0, "Fungible firm cash")),
   lane("S2", "U5", 0, "Customer credits fund customer debits"),
   lane("S2", "U8", 4, "Reuse limited to customer short coverage"),
-  lane("S3", "U5", 6, "Reinvestment into Prime via intercompany"),
+  lane("S3", "U5", 0, "Reinvestment into Prime"),
   lane("S3", "U6", 0, "Cash collateral reinvestment"),
   lane("S3", "U8", 0, "Recycled into borrows"),
-  lane("S3", "U10", 0, "Reinvested in matched book"),
+  lane("S3", "U10", 8, "Reinvestment risk in matched book"),
   lane("S4", "U4", 0, "Collateral-matched financing"),
   lane("S4", "U10", 0, "Matched-book funding leg"),
   lane("S4", "U1", 3, "Cash posted after repo settlement"),
@@ -108,9 +129,9 @@ const BASE_LANES: SimLane[] = [
   lane("S5", "U10", 0, "Matched-book funding leg"),
   lane("S6", "U7", 0, "Collateral-matched financing"),
   lane("S6", "U9", 5, "Hedge collateral substitution"),
-  ...["U2", "U6", "U7", "U9"].map((u) => lane("S7", u, 12, "Downstreamed from Holdings")),
-  lane("S7", "U5", 18, "Downstreamed from Holdings to Prime"),
-  ...["U1", "U2", "U3", "U6", "U7", "U9"].map((u) => lane("S8", u, 12, "Downstreamed from Holdings")),
+  ...["U2", "U6", "U7", "U9"].map((u) => lane("S7", u, 0, "Downstreamed from Holdings")),
+  lane("S7", "U5", 6, "Two-hop downstream via Securities"),
+  ...["U1", "U2", "U3", "U6", "U7", "U9"].map((u) => lane("S8", u, 0, "Downstreamed from Holdings")),
 ];
 
 /** The base book. Returns a fresh deep copy each call; no randomness. */
@@ -121,6 +142,77 @@ export function baseProblem(): SimProblem {
     lanes: BASE_LANES.map((l) => ({ ...l })),
   };
 }
+
+// ── Penalty configuration ───────────────────────────────────────────────────
+
+export type PriorityMode = "lexicographic" | "weighted";
+
+export interface PenaltyConfig {
+  /**
+   * lexicographic: tiers solved in order before economics (spec012 SU-004, default).
+   * weighted: one penalised transport solve; shown for comparison only.
+   */
+  priorityMode: PriorityMode;
+  /** Added to every lane whose source and use sit in different legal entities. */
+  crossEntityBps: number;
+  /** Per 30 days that the use's tenor exceeds the source's tenor (rollover risk). */
+  tenorMismatchBpsPer30d: number;
+  /** Charge on the haircut portion of nominal (encumbered over-collateral), bp × hᵢ. */
+  haircutChargeBps: number;
+  /** Convex concentration penalty on a single lane above a share of the use's demand. */
+  concentration: { enabled: boolean; thresholdPct: number; penaltyBps: number };
+  /** Price idle source capacity at each source's idle penalty (dummy demand node). */
+  idleEnabled: boolean;
+  /** Penalise draws below each source's minimum draw. */
+  minDrawEnabled: boolean;
+  /** Per-pair penalty overrides keyed by laneKey. */
+  lanePenaltyOverrides: Record<string, number>;
+  /** Per-use shortfall penalty overrides (soft uses). */
+  shortfallOverrides: Record<string, number>;
+  /** Per-source idle penalty overrides. */
+  idleOverrides: Record<string, number>;
+}
+
+export const DEFAULT_PENALTIES: PenaltyConfig = {
+  priorityMode: "lexicographic",
+  crossEntityBps: 10,
+  tenorMismatchBpsPer30d: 1.5,
+  haircutChargeBps: 40,
+  concentration: { enabled: true, thresholdPct: 70, penaltyBps: 12 },
+  idleEnabled: true,
+  minDrawEnabled: true,
+  lanePenaltyOverrides: {},
+  shortfallOverrides: {},
+  idleOverrides: {},
+};
+
+export interface LaneCost {
+  base: number;
+  pair: number;
+  crossEntity: number;
+  tenor: number;
+  haircut: number;
+  /** Unit cost per nominal $ below the concentration threshold. */
+  total: number;
+}
+
+export function laneCost(problem: SimProblem, config: PenaltyConfig, l: SimLane): LaneCost {
+  const s = problem.sources.find((x) => x.id === l.sourceId)!;
+  const u = problem.uses.find((x) => x.id === l.useId)!;
+  const base = s.costBps;
+  const pair = config.lanePenaltyOverrides[laneKey(l.sourceId, l.useId)] ?? l.penaltyBps;
+  const crossEntity = s.legalEntity !== u.legalEntity ? config.crossEntityBps : 0;
+  const tenor = config.tenorMismatchBpsPer30d * Math.max(0, u.tenorDays - s.tenorDays) / 30;
+  const haircut = config.haircutChargeBps * s.haircutPct / 100;
+  return { base, pair, crossEntity, tenor, haircut, total: base + pair + crossEntity + tenor + haircut };
+}
+
+export const shortfallPenalty = (config: PenaltyConfig, u: SimUse) => config.shortfallOverrides[u.id] ?? u.penaltyBps;
+export const idlePenalty = (config: PenaltyConfig, s: SimSource) => (config.idleEnabled ? config.idleOverrides[s.id] ?? s.idlePenaltyBps : 0);
+const minDrawActive = (config: PenaltyConfig, s: SimSource) => config.minDrawEnabled && s.minDraw > 0 && s.amount > 0;
+/** Nominal a single lane may carry before the concentration penalty applies. */
+export const concentrationCap = (config: PenaltyConfig, s: SimSource, u: SimUse) =>
+  (config.concentration.thresholdPct / 100) * u.amount / Math.max(1e-9, 1 - s.haircutPct / 100);
 
 // ── Stress controls & scenarios ─────────────────────────────────────────────
 
@@ -176,21 +268,21 @@ export const SCENARIOS: Scenario[] = [
     id: "base",
     title: "Balanced book",
     kicker: "Base case",
-    narrative: "A normal funding day. Internal cash and collateral-matched repo clear every obligation. CP covers the remainder and the committed revolver stays undrawn.",
+    narrative: "A normal funding day. Internal cash and collateral-matched repo clear every obligation, term uses lean on term funding, and the committed revolver stays undrawn.",
     build: baseProblem,
   },
   {
     id: "repo-squeeze",
     title: "Repo market squeeze",
     kicker: "Liquidity",
-    narrative: "Tri-party and bilateral repo capacity falls 45%. Government inventory is a hard obligation, so it pulls firm cash away from lower tiers, and the matched book is shed first.",
+    narrative: "Repo capacity falls 45%. Government inventory is a hard obligation, so it pulls firm cash away from lower tiers. The matched book is shed first, at its low shortfall penalty.",
     build: () => scale(baseProblem(), ["S4", "S5", "S6"], 0.55),
   },
   {
     id: "haircut-shock",
     title: "Haircut shock",
     kicker: "Collateral",
-    narrative: "Secured haircuts widen by 8pp and sec-lending by 4pp. Every nominal dollar of repo now buys less coverage. The gap is the haircut drag that the model must refinance.",
+    narrative: "Secured haircuts widen by 8pp and sec-lending by 4pp. Each repo dollar now covers less and carries a larger haircut charge, so the model refinances the drag.",
     build: () => {
       const p = baseProblem();
       return { ...p, sources: p.sources.map((s) => ({ ...s, haircutPct: s.family === "secured" ? s.haircutPct + 8 : s.id === "S3" ? s.haircutPct + 4 : s.haircutPct })) };
@@ -200,14 +292,14 @@ export const SCENARIOS: Scenario[] = [
     id: "margin-surge",
     title: "Margin-call surge",
     kicker: "Priority",
-    narrative: "CCP initial margin rises 2.6×. Tier 1 is solved first, so the call is met in full even though the expensive revolver must be drawn. Lower tiers absorb the displacement.",
+    narrative: "CCP initial margin rises 2.6×. Tier 1 is solved first, so the call is met in full even though the revolver must be drawn. Lower tiers absorb the displacement.",
     build: () => scale(baseProblem(), ["U1"], 2.6),
   },
   {
     id: "rate-shock",
     title: "Unsecured rate shock",
     kicker: "Economics",
-    narrative: "CP and revolver costs rise 150bp. Tier outcomes are locked and the allocation does not move. Total carry and every shadow price reprice, which shows the cost of staying whole.",
+    narrative: "CP and revolver costs rise 150bp. With tiers locked, the allocation holds and only cost and shadow prices reprice. Switch to weighted priority to see the penalties shed demand and breach the CP floor instead.",
     build: () => {
       const p = baseProblem();
       return { ...p, sources: p.sources.map((s) => (s.family === "unsecured" ? { ...s, costBps: s.costBps + 150 } : s)) };
@@ -217,7 +309,7 @@ export const SCENARIOS: Scenario[] = [
     id: "cascade",
     title: "Funding cascade",
     kicker: "Infeasible",
-    narrative: "The bank pulls the revolver, CP rolls only 20%, and initial margin jumps 2.5×. Hard obligations exceed every eligible dollar. The elastic diagnostic names the gap instead of inventing a plan.",
+    narrative: "The bank pulls the revolver, CP rolls only 20%, and initial margin jumps 2.5×. Hard obligations exceed every eligible dollar, so the elastic diagnostic names the gap instead of inventing a plan.",
     build: () => scale(scale(scale(baseProblem(), ["S8"], 0), ["S7"], 0.2), ["U1"], 2.5),
   },
 ];
@@ -229,7 +321,10 @@ export interface FlowResult {
   useId: string;
   nominal: number;
   coverage: number;
-  unitCostBps: number;
+  /** Nominal above the concentration threshold (carries the concentration penalty). */
+  excess: number;
+  cost: LaneCost;
+  /** Reduced cost of the below-threshold segment (0 when basic). */
   reducedCostBps: number;
 }
 
@@ -248,26 +343,44 @@ export interface SolveStats {
   millis: number;
 }
 
+export interface CostBreakdown {
+  funding: number;
+  pair: number;
+  crossEntity: number;
+  tenor: number;
+  haircut: number;
+  concentration: number;
+  idle: number;
+  minDraw: number;
+  shortfall: number;
+}
+
 export interface FeasibleResult {
   status: "optimal";
   problem: SimProblem;
+  config: PenaltyConfig;
   flows: FlowResult[];
   shortfall: Record<string, number>;
+  idle: Record<string, number>;
+  minDrawGap: Record<string, number>;
   sourceUsed: Record<string, number>;
-  capacityDualBps: Record<string, number>; // ≥ 0: saving per extra $ capacity
-  useDualBps: Record<string, number>; // marginal cost per extra $ coverage
-  tierDuals: Record<number, number>; // ≤ 0 multipliers on fixed tier rows
-  tierBounds: Record<number, number>;
-  shortfallReducedBps: Record<string, number>;
+  /** Objective change per extra $ of capacity (bp). Negative when idle capacity is penalised. */
+  capacityDualBps: Record<string, number>;
+  useDualBps: Record<string, number>;
   stages: TierStage[];
+  /** Annual $mm per component (bps·$mm / 10,000). */
+  breakdown: CostBreakdown;
   objectiveBpsMm: number;
   totals: Totals;
   stats: SolveStats;
+  /** The exact final-stage LP and its primal/dual solution, for certification. */
+  lp: { problem: LpProblem; x: number[]; duals: number[] };
 }
 
 export interface InfeasibleResult {
   status: "infeasible";
   problem: SimProblem;
+  config: PenaltyConfig;
   shortUses: { useId: string; gap: number }[];
   exhaustedSources: string[];
   totalGap: number;
@@ -282,7 +395,10 @@ export interface Totals {
   coverage: number;
   haircutDrag: number;
   shortfall: number;
-  annualCostMm: number;
+  idle: number;
+  fundingCostMm: number;
+  penaltyCostMm: number;
+  totalCostMm: number;
   weightedCostBps: number;
   coveragePct: number;
   bindingSources: number;
@@ -294,135 +410,177 @@ const TIER_TOL_REL = 1e-9;
 
 interface Layout {
   lanes: SimLane[];
-  softUses: SimUse[];
-  nX: number;
+  costs: LaneCost[];
+  /** Column of the below-threshold segment of lane k. */
+  x1: number[];
+  /** Column of the above-threshold segment of lane k (−1 when concentration is off). */
+  x2: number[];
+  s: Map<string, number>;
+  u: Map<string, number>;
+  m: Map<string, number>;
   n: number;
-  sIndex: Map<string, number>;
-  unitCost: number[];
+  cost: number[];
+  shortWeight: Map<string, number>;
 }
 
-function layout(problem: SimProblem): Layout {
+function layout(problem: SimProblem, config: PenaltyConfig): Layout {
   const sourceIds = new Set(problem.sources.map((s) => s.id));
   const useIds = new Set(problem.uses.map((u) => u.id));
   const lanes = problem.lanes.filter((l) => sourceIds.has(l.sourceId) && useIds.has(l.useId));
-  const softUses = problem.uses.filter((u) => u.policy === "soft");
-  const nX = lanes.length;
-  const sIndex = new Map(softUses.map((u, k) => [u.id, nX + k]));
-  const source = (id: string) => problem.sources.find((s) => s.id === id)!;
-  const unitCost = [
-    ...lanes.map((l) => source(l.sourceId).costBps + l.frictionBps),
-    ...softUses.map((u) => u.penaltyBps),
-  ];
-  return { lanes, softUses, nX, n: nX + softUses.length, sIndex, unitCost };
-}
-
-function baseRows(problem: SimProblem, lay: Layout, extraHardSlack?: Map<string, number>): LpRow[] {
-  const caps: LpRow[] = problem.sources.map((s) => ({
-    name: `cap:${s.id}`, sense: "<=", rhs: s.amount,
-    coeffs: lay.lanes.flatMap((l, k) => (l.sourceId === s.id ? [[k, 1] as [number, number]] : [])),
-  }));
-  const covs: LpRow[] = problem.uses.map((u) => {
-    const coeffs: [number, number][] = lay.lanes.flatMap((l, k) => {
-      if (l.useId !== u.id) return [];
-      const h = problem.sources.find((s) => s.id === l.sourceId)!.haircutPct / 100;
-      return [[k, 1 - h] as [number, number]];
-    });
-    const s = lay.sIndex.get(u.id);
-    if (s !== undefined) coeffs.push([s, 1]);
-    const e = extraHardSlack?.get(u.id);
-    if (e !== undefined) coeffs.push([e, 1]);
-    return { name: `cov:${u.id}`, sense: "=", rhs: u.amount, coeffs };
+  const costs = lanes.map((l) => laneCost(problem, config, l));
+  const cost: number[] = [];
+  const x1: number[] = [];
+  const x2: number[] = [];
+  lanes.forEach((_, k) => {
+    x1.push(cost.length); cost.push(costs[k].total);
+    if (config.concentration.enabled) { x2.push(cost.length); cost.push(costs[k].total + config.concentration.penaltyBps); }
+    else x2.push(-1);
   });
-  return [...caps, ...covs];
+  const s = new Map<string, number>();
+  const shortWeight = new Map<string, number>();
+  problem.uses.filter((u) => u.policy === "soft").forEach((u) => {
+    s.set(u.id, cost.length); cost.push(shortfallPenalty(config, u)); shortWeight.set(u.id, shortfallPenalty(config, u));
+  });
+  const u = new Map<string, number>();
+  problem.sources.forEach((source) => { u.set(source.id, cost.length); cost.push(idlePenalty(config, source)); });
+  const m = new Map<string, number>();
+  problem.sources.filter((source) => minDrawActive(config, source)).forEach((source) => { m.set(source.id, cost.length); cost.push(source.minDrawPenaltyBps); });
+  return { lanes, costs, x1, x2, s, u, m, n: cost.length, cost, shortWeight };
 }
 
-export function solveSim(problem: SimProblem): SimResult {
-  const started = now();
-  const lay = layout(problem);
-  const tiers = [...new Set(problem.uses.map((u) => u.tier))].sort((a, b) => a - b);
-  const rows = baseRows(problem, lay);
-  const stages: TierStage[] = [];
-  const tierBounds: Record<number, number> = {};
-  const tierRowIndex: Record<number, number> = {};
-  let pivots = 0;
+function laneColumns(lay: Layout, k: number): number[] {
+  return lay.x2[k] >= 0 ? [lay.x1[k], lay.x2[k]] : [lay.x1[k]];
+}
 
-  for (const tier of tiers) {
-    const tierSoft = lay.softUses.filter((u) => u.tier === tier);
-    if (!tierSoft.length) continue;
-    const cost = new Array<number>(lay.n).fill(0);
-    const coeffs: [number, number][] = tierSoft.map((u) => [lay.sIndex.get(u.id)!, u.penaltyBps]);
-    for (const [col, v] of coeffs) cost[col] = v;
-    const stage = solveLp({ cost, rows });
-    pivots += stage.pivots;
-    if (stage.status !== "optimal") return diagnose(problem, lay, started, pivots);
-    const bound = stage.objective + Math.max(TIER_TOL_ABS, Math.abs(stage.objective) * TIER_TOL_REL);
-    tierBounds[tier] = bound;
-    tierRowIndex[tier] = rows.length;
-    rows.push({ name: `tier:${tier}`, sense: "<=", rhs: bound, coeffs });
-    stages.push({
-      tier,
-      weightedShortfall: stage.objective,
-      shortfall: tierSoft.reduce((sum, u) => sum + stage.x[lay.sIndex.get(u.id)!], 0),
-      softUses: tierSoft.length,
+/** Balanced transport rows: supply (with dummy idle sink), demand (with dummy shortfall source). */
+function baseRows(problem: SimProblem, config: PenaltyConfig, lay: Layout, hardSlack?: Map<string, number>): LpRow[] {
+  const rows: LpRow[] = [];
+  problem.sources.forEach((s) => {
+    const coeffs: [number, number][] = [];
+    lay.lanes.forEach((l, k) => { if (l.sourceId === s.id) laneColumns(lay, k).forEach((c) => coeffs.push([c, 1])); });
+    coeffs.push([lay.u.get(s.id)!, 1]);
+    rows.push({ name: `supply:${s.id}`, sense: "=", rhs: Math.max(0, s.amount), coeffs });
+  });
+  problem.uses.forEach((u) => {
+    const coeffs: [number, number][] = [];
+    lay.lanes.forEach((l, k) => {
+      if (l.useId !== u.id) return;
+      const h = problem.sources.find((s) => s.id === l.sourceId)!.haircutPct / 100;
+      laneColumns(lay, k).forEach((c) => coeffs.push([c, 1 - h]));
+    });
+    const sc = lay.s.get(u.id);
+    if (sc !== undefined) coeffs.push([sc, 1]);
+    const e = hardSlack?.get(u.id);
+    if (e !== undefined) coeffs.push([e, 1]);
+    rows.push({ name: `demand:${u.id}`, sense: "=", rhs: u.amount, coeffs });
+  });
+  if (config.concentration.enabled) {
+    lay.lanes.forEach((l, k) => {
+      const s = problem.sources.find((x) => x.id === l.sourceId)!;
+      const u = problem.uses.find((x) => x.id === l.useId)!;
+      rows.push({ name: `conc:${laneKey(l.sourceId, l.useId)}`, sense: "<=", rhs: concentrationCap(config, s, u), coeffs: [[lay.x1[k], 1]] });
     });
   }
+  problem.sources.forEach((s) => {
+    const mc = lay.m.get(s.id);
+    if (mc === undefined) return;
+    const coeffs: [number, number][] = [];
+    lay.lanes.forEach((l, k) => { if (l.sourceId === s.id) laneColumns(lay, k).forEach((c) => coeffs.push([c, 1])); });
+    coeffs.push([mc, 1]);
+    rows.push({ name: `mindraw:${s.id}`, sense: ">=", rhs: Math.min(s.minDraw, s.amount), coeffs });
+  });
+  return rows;
+}
 
-  const final = solveLp({ cost: lay.unitCost, rows });
+export function solveSim(problem: SimProblem, config: PenaltyConfig = DEFAULT_PENALTIES): SimResult {
+  const started = now();
+  const lay = layout(problem, config);
+  const rows = baseRows(problem, config, lay);
+  const stages: TierStage[] = [];
+  let pivots = 0;
+
+  if (config.priorityMode === "lexicographic") {
+    const tiers = [...new Set(problem.uses.map((u) => u.tier))].sort((a, b) => a - b);
+    for (const tier of tiers) {
+      const tierSoft = problem.uses.filter((u) => u.tier === tier && u.policy === "soft");
+      if (!tierSoft.length) continue;
+      const cost = new Array<number>(lay.n).fill(0);
+      const coeffs: [number, number][] = tierSoft.map((u) => [lay.s.get(u.id)!, lay.shortWeight.get(u.id)!]);
+      for (const [col, v] of coeffs) cost[col] = v;
+      const stage = solveLp({ cost, rows });
+      pivots += stage.pivots;
+      if (stage.status !== "optimal") return diagnose(problem, config, lay, started, pivots);
+      rows.push({ name: `tier:${tier}`, sense: "<=", rhs: stage.objective + Math.max(TIER_TOL_ABS, Math.abs(stage.objective) * TIER_TOL_REL), coeffs });
+      stages.push({
+        tier,
+        weightedShortfall: stage.objective,
+        shortfall: tierSoft.reduce((sum, u) => sum + stage.x[lay.s.get(u.id)!], 0),
+        softUses: tierSoft.length,
+      });
+    }
+  }
+
+  const finalLp: LpProblem = { cost: lay.cost, rows };
+  const final = solveLp(finalLp);
   pivots += final.pivots;
-  if (final.status !== "optimal") return diagnose(problem, lay, started, pivots);
+  if (final.status !== "optimal") return diagnose(problem, config, lay, started, pivots);
+  const x = final.x;
 
-  const nSources = problem.sources.length;
-  const capDual = (i: number) => final.duals[i];
-  const useDual = (j: number) => final.duals[nSources + j];
+  const rowIndex = new Map(rows.map((r, i) => [r.name, i]));
+  const dual = (name: string) => clean(final.duals[rowIndex.get(name) ?? -1] ?? 0);
   const capacityDualBps: Record<string, number> = {};
   const useDualBps: Record<string, number> = {};
-  problem.sources.forEach((s, i) => { capacityDualBps[s.id] = clean(-capDual(i)); });
-  problem.uses.forEach((u, j) => { useDualBps[u.id] = clean(useDual(j)); });
-  const tierDuals: Record<number, number> = {};
-  for (const [tier, idx] of Object.entries(tierRowIndex)) tierDuals[Number(tier)] = clean(final.duals[idx]);
+  problem.sources.forEach((s) => { capacityDualBps[s.id] = clean(-dual(`supply:${s.id}`)); });
+  problem.uses.forEach((u) => { useDualBps[u.id] = dual(`demand:${u.id}`); });
 
   const flows: FlowResult[] = lay.lanes.map((l, k) => {
-    const src = problem.sources.find((s) => s.id === l.sourceId)!;
-    const h = src.haircutPct / 100;
-    const nominal = clean(final.x[k]);
-    const reduced = lay.unitCost[k] + capacityDualBps[l.sourceId] - (1 - h) * useDualBps[l.useId];
-    return { sourceId: l.sourceId, useId: l.useId, nominal, coverage: nominal * (1 - h), unitCostBps: lay.unitCost[k], reducedCostBps: clean(reduced) };
+    const s = problem.sources.find((v) => v.id === l.sourceId)!;
+    const h = s.haircutPct / 100;
+    const a = clean(x[lay.x1[k]]);
+    const b = lay.x2[k] >= 0 ? clean(x[lay.x2[k]]) : 0;
+    const concDual = config.concentration.enabled ? -dual(`conc:${laneKey(l.sourceId, l.useId)}`) : 0;
+    const minDual = lay.m.has(s.id) ? dual(`mindraw:${s.id}`) : 0;
+    const reduced = lay.costs[k].total + capacityDualBps[s.id] - minDual - (1 - h) * useDualBps[l.useId] + concDual;
+    return { sourceId: l.sourceId, useId: l.useId, nominal: a + b, coverage: (a + b) * (1 - h), excess: b, cost: lay.costs[k], reducedCostBps: clean(reduced) };
   });
 
   const shortfall: Record<string, number> = {};
-  const shortfallReducedBps: Record<string, number> = {};
-  problem.uses.forEach((u) => { shortfall[u.id] = 0; });
-  lay.softUses.forEach((u) => {
-    shortfall[u.id] = clean(final.x[lay.sIndex.get(u.id)!]);
-    const mu = tierDuals[u.tier] ?? 0;
-    shortfallReducedBps[u.id] = clean(u.penaltyBps - useDualBps[u.id] - mu * u.penaltyBps);
+  problem.uses.forEach((u) => { const c = lay.s.get(u.id); shortfall[u.id] = c === undefined ? 0 : clean(x[c]); });
+  const idle: Record<string, number> = {};
+  const minDrawGap: Record<string, number> = {};
+  problem.sources.forEach((s) => {
+    idle[s.id] = clean(x[lay.u.get(s.id)!]);
+    const mc = lay.m.get(s.id);
+    minDrawGap[s.id] = mc === undefined ? 0 : clean(x[mc]);
   });
-
   const sourceUsed: Record<string, number> = {};
   problem.sources.forEach((s) => { sourceUsed[s.id] = flows.filter((f) => f.sourceId === s.id).reduce((a, f) => a + f.nominal, 0); });
 
+  const breakdown = computeBreakdown(problem, config, flows, shortfall, idle, minDrawGap);
   return {
     status: "optimal",
     problem,
+    config,
     flows,
     shortfall,
+    idle,
+    minDrawGap,
     sourceUsed,
     capacityDualBps,
     useDualBps,
-    tierDuals,
-    tierBounds,
-    shortfallReducedBps,
     stages,
+    breakdown,
     objectiveBpsMm: final.objective,
-    totals: computeTotals(problem, flows, shortfall, sourceUsed),
+    totals: computeTotals(problem, flows, shortfall, idle, sourceUsed, breakdown),
     stats: { variables: lay.n, rows: rows.length, stages: stages.length + 1, pivots, millis: now() - started },
+    lp: { problem: finalLp, x, duals: final.duals },
   };
 }
 
-function diagnose(problem: SimProblem, lay: Layout, started: number, pivotsSoFar: number): InfeasibleResult {
+function diagnose(problem: SimProblem, config: PenaltyConfig, lay: Layout, started: number, pivotsSoFar: number): InfeasibleResult {
   const hard = problem.uses.filter((u) => u.policy === "hard");
   const eIndex = new Map(hard.map((u, k) => [u.id, lay.n + k]));
-  const rows = baseRows(problem, lay, eIndex);
+  const rows = baseRows(problem, config, lay, eIndex);
   const cost = new Array<number>(lay.n + hard.length).fill(0);
   for (const idx of eIndex.values()) cost[idx] = 1;
   const elastic = solveLp({ cost, rows });
@@ -431,12 +589,12 @@ function diagnose(problem: SimProblem, lay: Layout, started: number, pivotsSoFar
     .map((u) => ({ useId: u.id, gap: clean(elastic.x[eIndex.get(u.id)!] ?? 0) }))
     .filter((item) => item.gap > 1e-6)
     .sort((a, b) => b.gap - a.gap);
-  const exhaustedSources = problem.sources
-    .filter((s, i) => s.amount > 0 && elastic.duals[i] < -1e-9)
-    .map((s) => s.id);
+  // Supply rows come first; a negative equality dual means more capacity would shrink the gap.
+  const exhaustedSources = problem.sources.filter((s, i) => s.amount > 0 && elastic.duals[i] < -1e-9).map((s) => s.id);
   return {
     status: "infeasible",
     problem,
+    config,
     shortUses,
     exhaustedSources,
     totalGap: shortUses.reduce((a, u) => a + u.gap, 0),
@@ -444,22 +602,46 @@ function diagnose(problem: SimProblem, lay: Layout, started: number, pivotsSoFar
   };
 }
 
-function computeTotals(problem: SimProblem, flows: FlowResult[], shortfall: Record<string, number>, used: Record<string, number>): Totals {
+function computeBreakdown(
+  problem: SimProblem, config: PenaltyConfig, flows: FlowResult[],
+  shortfall: Record<string, number>, idle: Record<string, number>, minDrawGap: Record<string, number>,
+): CostBreakdown {
+  const sum = (f: (fl: FlowResult) => number) => flows.reduce((a, fl) => a + f(fl), 0) / 10_000;
+  return {
+    funding: sum((f) => f.cost.base * f.nominal),
+    pair: sum((f) => f.cost.pair * f.nominal),
+    crossEntity: sum((f) => f.cost.crossEntity * f.nominal),
+    tenor: sum((f) => f.cost.tenor * f.nominal),
+    haircut: sum((f) => f.cost.haircut * f.nominal),
+    concentration: config.concentration.enabled ? sum((f) => config.concentration.penaltyBps * f.excess) : 0,
+    idle: problem.sources.reduce((a, s) => a + idlePenalty(config, s) * idle[s.id], 0) / 10_000,
+    minDraw: problem.sources.reduce((a, s) => a + (minDrawActive(config, s) ? s.minDrawPenaltyBps * minDrawGap[s.id] : 0), 0) / 10_000,
+    shortfall: problem.uses.reduce((a, u) => a + (u.policy === "soft" ? shortfallPenalty(config, u) * shortfall[u.id] : 0), 0) / 10_000,
+  };
+}
+
+function computeTotals(
+  problem: SimProblem, flows: FlowResult[], shortfall: Record<string, number>, idle: Record<string, number>,
+  used: Record<string, number>, breakdown: CostBreakdown,
+): Totals {
   const demand = problem.uses.reduce((a, u) => a + u.amount, 0);
   const nominal = flows.reduce((a, f) => a + f.nominal, 0);
   const coverage = flows.reduce((a, f) => a + f.coverage, 0);
-  const costBpsMm = flows.reduce((a, f) => a + f.nominal * f.unitCostBps, 0);
   const totalShort = Object.values(shortfall).reduce((a, v) => a + v, 0);
   const byFamily: Record<SourceFamily, number> = { internal: 0, secured: 0, unsecured: 0 };
   problem.sources.forEach((s) => { byFamily[s.family] += used[s.id]; });
+  const totalCostMm = Object.values(breakdown).reduce((a, v) => a + v, 0);
   return {
     demand,
     nominal,
     coverage,
     haircutDrag: nominal - coverage,
     shortfall: totalShort,
-    annualCostMm: costBpsMm / 10_000,
-    weightedCostBps: nominal > 0 ? costBpsMm / nominal : 0,
+    idle: Object.values(idle).reduce((a, v) => a + v, 0),
+    fundingCostMm: breakdown.funding,
+    penaltyCostMm: totalCostMm - breakdown.funding,
+    totalCostMm,
+    weightedCostBps: nominal > 0 ? (breakdown.funding * 10_000) / nominal : 0,
     coveragePct: demand > 0 ? coverage / demand : 1,
     bindingSources: problem.sources.filter((s) => s.amount > 0 && s.amount - used[s.id] < 1e-6 * Math.max(1, s.amount)).length,
     byFamily,
@@ -476,11 +658,12 @@ export interface VerificationCheck {
 }
 
 /**
- * Re-derives every check from problem data and the reported primal/dual values.
- * Duals certify optimality of the final (economics) stage with tier rows fixed.
+ * Business checks are recomputed from problem data and the reported flows.
+ * Optimality is certified on the exact final-stage LP (tier rows fixed) with
+ * a generic primal/dual certificate that does not use solver internals.
  */
 export function verifySim(result: FeasibleResult): VerificationCheck[] {
-  const { problem, flows, shortfall } = result;
+  const { problem, config, flows, shortfall } = result;
   const tol = (ref: number) => 1e-6 * Math.max(1, Math.abs(ref));
   const laneSet = new Map(problem.lanes.map((l) => [laneKey(l.sourceId, l.useId), l]));
   const source = new Map(problem.sources.map((s) => [s.id, s]));
@@ -488,17 +671,18 @@ export function verifySim(result: FeasibleResult): VerificationCheck[] {
   const push = (id: string, label: string, failures: string[], ok: string) =>
     checks.push({ id, label, passed: failures.length === 0, detail: failures.length ? failures.slice(0, 3).join("; ") : ok });
 
-  push("nonneg", "Non-negative flows", flows.filter((f) => f.nominal < -1e-9).map((f) => `${f.sourceId}→${f.useId} = ${f.nominal}`), `${flows.length} lane flows ≥ 0`);
+  push("nonneg", "Non-negative flows", flows.filter((f) => f.nominal < -1e-9 || f.excess < -1e-9).map((f) => `${f.sourceId}→${f.useId} = ${f.nominal}`), `${flows.length} lane flows ≥ 0`);
 
-  push("lanes", "Denied lanes carry zero flow", flows.filter((f) => !laneSet.has(laneKey(f.sourceId, f.useId)) && Math.abs(f.nominal) > 1e-9)
+  push("lanes", "Only allowed lanes carry flow", flows.filter((f) => !laneSet.has(laneKey(f.sourceId, f.useId)) && Math.abs(f.nominal) > 1e-9)
     .map((f) => `${f.sourceId}→${f.useId} not allowed`), `${problem.lanes.length} allowed lanes; all others denied`);
 
   const capFail: string[] = [];
   problem.sources.forEach((s) => {
     const used = flows.filter((f) => f.sourceId === s.id).reduce((a, f) => a + f.nominal, 0);
     if (used > s.amount + tol(s.amount)) capFail.push(`${s.id} uses ${used.toFixed(4)} of ${s.amount.toFixed(4)}`);
+    if (Math.abs(used + result.idle[s.id] - Math.max(0, s.amount)) > tol(s.amount)) capFail.push(`${s.id}: used + idle ≠ capacity`);
   });
-  push("capacity", "Source capacity respected", capFail, `${problem.sources.length} capacity rows hold`);
+  push("capacity", "Supply balances (Σx + idle = A)", capFail, `${problem.sources.length} supply rows balance`);
 
   const covFail: string[] = [];
   const hardFail: string[] = [];
@@ -508,74 +692,59 @@ export function verifySim(result: FeasibleResult): VerificationCheck[] {
     if (Math.abs(covered + s - u.amount) > tol(u.amount)) covFail.push(`${u.id}: ${covered.toFixed(4)} + ${s.toFixed(4)} ≠ ${u.amount.toFixed(4)}`);
     if (u.policy === "hard" && s > tol(u.amount)) hardFail.push(`${u.id} short ${s.toFixed(4)}`);
   });
-  push("coverage", "Coverage reconciles (Σ(1−h)x + s = D)", covFail, `${problem.uses.length} uses reconcile after haircuts`);
+  push("coverage", "Demand balances (Σ(1−h)x + s = D)", covFail, `${problem.uses.length} uses reconcile after haircuts`);
   push("hard", "Hard uses fully covered", hardFail, `${problem.uses.filter((u) => u.policy === "hard").length} hard uses at 100%`);
 
+  const concFail: string[] = [];
+  if (config.concentration.enabled) {
+    flows.forEach((f) => {
+      const cap = concentrationCap(config, source.get(f.sourceId)!, problem.uses.find((u) => u.id === f.useId)!);
+      if (f.excess > 1e-6 && f.nominal - f.excess < cap - tol(cap)) concFail.push(`${f.sourceId}→${f.useId} penalised below threshold`);
+    });
+  }
+  push("conc", "Concentration penalty only above threshold", concFail, config.concentration.enabled ? `threshold ${config.concentration.thresholdPct}% of demand per lane` : "concentration penalty off");
+
+  // Objective recomputed from configuration, independent of the solver's cost vector.
   const objective = flows.reduce((a, f) => {
-    const lane = laneSet.get(laneKey(f.sourceId, f.useId));
-    const unit = source.get(f.sourceId)!.costBps + (lane?.frictionBps ?? 0);
-    return a + unit * f.nominal;
-  }, 0) + problem.uses.reduce((a, u) => a + (u.policy === "soft" ? u.penaltyBps * (shortfall[u.id] ?? 0) : 0), 0);
-  push("objective", "Objective recomputes", Math.abs(objective - result.objectiveBpsMm) > tol(objective)
+    const c = laneCost(problem, config, laneSet.get(laneKey(f.sourceId, f.useId))!);
+    return a + c.total * f.nominal + (config.concentration.enabled ? config.concentration.penaltyBps * f.excess : 0);
+  }, 0)
+    + problem.uses.reduce((a, u) => a + (u.policy === "soft" ? shortfallPenalty(config, u) * (shortfall[u.id] ?? 0) : 0), 0)
+    + problem.sources.reduce((a, s) => a + idlePenalty(config, s) * result.idle[s.id] + (minDrawActive(config, s) ? s.minDrawPenaltyBps * result.minDrawGap[s.id] : 0), 0);
+  push("objective", "Objective recomputes from penalties", Math.abs(objective - result.objectiveBpsMm) > tol(objective)
     ? [`recomputed ${objective.toFixed(4)} vs reported ${result.objectiveBpsMm.toFixed(4)}`] : [], `${(objective / 10_000).toFixed(3)} $mm/yr incl. penalties`);
 
-  // Dual feasibility: reduced costs from problem data, not from the solver's reported values.
-  const dualTol = 1e-6;
-  const reduced = (sourceId: string, useId: string) => {
-    const s = source.get(sourceId)!;
-    const lane = laneSet.get(laneKey(sourceId, useId))!;
-    return s.costBps + lane.frictionBps + result.capacityDualBps[sourceId] - (1 - s.haircutPct / 100) * result.useDualBps[useId];
-  };
-  const shortReduced = (u: SimUse) => u.penaltyBps - result.useDualBps[u.id] - (result.tierDuals[u.tier] ?? 0) * u.penaltyBps;
-  const dualFail: string[] = [];
-  problem.lanes.forEach((l) => { const d = reduced(l.sourceId, l.useId); if (d < -dualTol) dualFail.push(`${l.sourceId}→${l.useId} reduced ${d.toFixed(6)}`); });
-  problem.uses.filter((u) => u.policy === "soft").forEach((u) => { const d = shortReduced(u); if (d < -dualTol) dualFail.push(`s:${u.id} reduced ${d.toFixed(6)}`); });
-  problem.sources.forEach((s) => { if (result.capacityDualBps[s.id] < -dualTol) dualFail.push(`${s.id} capacity price < 0`); });
-  Object.entries(result.tierDuals).forEach(([t, mu]) => { if (mu > dualTol) dualFail.push(`tier ${t} multiplier > 0`); });
-  push("dual", "Dual feasibility (reduced costs ≥ 0)", dualFail, `${problem.lanes.length + result.problem.uses.filter((u) => u.policy === "soft").length} columns priced out`);
-
-  const csFail: string[] = [];
-  flows.forEach((f) => {
-    if (f.nominal > 1e-6 && Math.abs(reduced(f.sourceId, f.useId)) > 1e-5) csFail.push(`${f.sourceId}→${f.useId} basic with reduced ${reduced(f.sourceId, f.useId).toFixed(6)}`);
-  });
-  problem.sources.forEach((s) => {
-    const slack = s.amount - flows.filter((f) => f.sourceId === s.id).reduce((a, f) => a + f.nominal, 0);
-    if (slack > 1e-5 * Math.max(1, s.amount) && result.capacityDualBps[s.id] > 1e-5) csFail.push(`${s.id} slack ${slack.toFixed(4)} but priced`);
-  });
-  problem.uses.filter((u) => u.policy === "soft").forEach((u) => {
-    if ((shortfall[u.id] ?? 0) > 1e-6 && Math.abs(shortReduced(u)) > 1e-5) csFail.push(`s:${u.id} short with reduced ${shortReduced(u).toFixed(6)}`);
-  });
-  push("cs", "Complementary slackness", csFail, "Every funded lane and shortfall prices to zero; slack capacity is free");
-
-  const dualObjective =
-    problem.sources.reduce((a, s) => a - result.capacityDualBps[s.id] * s.amount, 0) +
-    problem.uses.reduce((a, u) => a + result.useDualBps[u.id] * u.amount, 0) +
-    Object.entries(result.tierDuals).reduce((a, [t, mu]) => a + mu * (result.tierBounds[Number(t)] ?? 0), 0);
-  const gap = Math.abs(objective - dualObjective);
-  push("gap", "Strong duality (gap = 0)", gap > 1e-4 * Math.max(1, Math.abs(objective)) ? [`primal ${objective.toFixed(4)} vs dual ${dualObjective.toFixed(4)}`] : [],
-    `gap ${gap.toExponential(1)} bps·$mm`);
+  const cert = certifyLp(result.lp.problem, result.lp.x, result.lp.duals);
+  const scale = Math.max(1, Math.abs(cert.primalObjective));
+  push("primal", "LP primal feasibility", cert.primalViolation > 1e-6 * scale ? [`max violation ${cert.primalViolation.toExponential(2)}`] : [], `${result.lp.problem.rows.length} rows hold`);
+  push("dual", "Dual feasibility (reduced costs ≥ 0)", cert.dualViolation > 1e-6 ? [`max violation ${cert.dualViolation.toExponential(2)}`] : [], `${result.lp.problem.cost.length} columns priced out`);
+  push("cs", "Complementary slackness", cert.complementarity > 1e-5 * scale ? [`max product ${cert.complementarity.toExponential(2)}`] : [], "Basic columns price to zero; slack rows are free");
+  const gap = Math.abs(cert.primalObjective - cert.dualObjective);
+  push("gap", "Strong duality (gap = 0)", gap > 1e-6 * scale ? [`primal ${cert.primalObjective.toFixed(4)} vs dual ${cert.dualObjective.toFixed(4)}`] : [], `gap ${gap.toExponential(1)} bps·$mm`);
+  push("bind", "Certificate matches reported flows", Math.abs(cert.primalObjective - objective) > tol(objective) ? ["LP solution differs from reported flows"] : [], "LP primal equals reported allocation");
 
   return checks;
 }
 
 // ── Workspace bridge (SIM-008) ──────────────────────────────────────────────
 
-export function toWorkspaceConfiguration(problem: SimProblem, name: string, id: string): SourcesUsesConfiguration {
+export function toWorkspaceConfiguration(problem: SimProblem, name: string, id: string, config: PenaltyConfig = DEFAULT_PENALTIES): SourcesUsesConfiguration {
   const allowed = new Map(problem.lanes.map((l) => [laneKey(l.sourceId, l.useId), l]));
   const sources: ConfigurableSource[] = problem.sources.map((s) => ({
     id: s.id, label: s.label, category: FAMILY_META[s.family].label, amount: round(s.amount, 6), costBps: s.costBps,
-    currency: "USD", legalEntity: s.legalEntity, assetClass: s.family === "secured" ? "Secured funding" : "Cash", tenorDays: null,
-    priorityTier: 1, minimum: null, maximum: null, lotSize: null, haircutPct: s.haircutPct,
+    currency: "USD", legalEntity: s.legalEntity, assetClass: s.family === "secured" ? "Secured funding" : "Cash", tenorDays: s.tenorDays,
+    priorityTier: 1, minimum: s.minDraw > 0 ? s.minDraw : null, maximum: null, lotSize: null, haircutPct: s.haircutPct,
     internality: s.family === "internal" ? "internal" : "external", tags: ["SIM"],
   }));
   const uses: ConfigurableUse[] = problem.uses.map((u) => ({
     id: u.id, label: u.label, category: TIER_LABELS[u.tier] ?? `Tier ${u.tier}`, amount: round(u.amount, 6), bidBps: 0,
-    currency: "USD", legalEntity: u.legalEntity, assetClass: "Funding need", tenorDays: null, priorityTier: u.tier,
-    minimum: null, maximum: null, lotSize: null, policy: u.policy, shortfallPenaltyBps: u.penaltyBps, tags: ["SIM"],
+    currency: "USD", legalEntity: u.legalEntity, assetClass: "Funding need", tenorDays: u.tenorDays, priorityTier: u.tier,
+    minimum: null, maximum: null, lotSize: null, policy: u.policy, shortfallPenaltyBps: shortfallPenalty(config, u), tags: ["SIM"],
   }));
   const compatibility = problem.sources.flatMap((s) => problem.uses.map((u) => {
     const l = allowed.get(laneKey(s.id, u.id));
-    return { sourceId: s.id, useId: u.id, status: l ? "allowed" as const : "denied" as const, note: l ? `${l.note} · friction ${l.frictionBps}bp` : "Not eligible in SIM book" };
+    const pair = l ? config.lanePenaltyOverrides[laneKey(s.id, u.id)] ?? l.penaltyBps : 0;
+    return { sourceId: s.id, useId: u.id, status: l ? "allowed" as const : "denied" as const, note: l ? `${l.note} · pair penalty ${pair}bp` : "Not eligible in SIM book" };
   }));
   return {
     schemaVersion: SOURCES_USES_SCHEMA_VERSION,

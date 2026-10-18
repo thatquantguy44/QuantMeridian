@@ -175,3 +175,43 @@ function solveDense(M: number[][], rhs: number[]): number[] {
   }
   return where.map((r, col) => (r < 0 ? 0 : a[r][size] / a[r][col]));
 }
+
+export interface LpCertificate {
+  /** Largest violation of a row or of x ≥ 0. */
+  primalViolation: number;
+  /** Largest violation of reduced-cost or dual-sign feasibility. */
+  dualViolation: number;
+  /** Largest product of a positive primal/slack value and its non-zero partner. */
+  complementarity: number;
+  primalObjective: number;
+  dualObjective: number;
+}
+
+/**
+ * Independent optimality certificate for a claimed primal/dual pair. It is
+ * recomputed from the problem data only and does not use any solver state.
+ */
+export function certifyLp(problem: LpProblem, x: number[], duals: number[]): LpCertificate {
+  let primalViolation = 0;
+  let dualViolation = 0;
+  let complementarity = 0;
+  x.forEach((v) => { primalViolation = Math.max(primalViolation, -v); });
+  const reduced = [...problem.cost];
+  let dualObjective = 0;
+  problem.rows.forEach((row, i) => {
+    const y = duals[i] ?? 0;
+    const activity = row.coeffs.reduce((sum, [col, value]) => sum + value * (x[col] ?? 0), 0);
+    const slack = row.rhs - activity; // ≥ 0 for ≤ rows, ≤ 0 for ≥ rows
+    if (row.sense === "<=") { primalViolation = Math.max(primalViolation, -slack); dualViolation = Math.max(dualViolation, y); complementarity = Math.max(complementarity, Math.abs(slack * y)); }
+    else if (row.sense === ">=") { primalViolation = Math.max(primalViolation, slack); dualViolation = Math.max(dualViolation, -y); complementarity = Math.max(complementarity, Math.abs(slack * y)); }
+    else primalViolation = Math.max(primalViolation, Math.abs(slack));
+    for (const [col, value] of row.coeffs) reduced[col] -= value * y;
+    dualObjective += row.rhs * y;
+  });
+  reduced.forEach((d, j) => {
+    dualViolation = Math.max(dualViolation, -d);
+    complementarity = Math.max(complementarity, Math.abs((x[j] ?? 0) * d));
+  });
+  const primalObjective = problem.cost.reduce((sum, c, j) => sum + c * (x[j] ?? 0), 0);
+  return { primalViolation, dualViolation, complementarity, primalObjective, dualObjective };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { solveLp, type LpProblem } from "./simplex";
+import { certifyLp, solveLp, type LpProblem } from "./simplex";
 
 describe("two-phase simplex", () => {
   test("solves a classic 2x2 transportation problem with MODI-consistent duals", () => {
@@ -66,5 +66,26 @@ describe("two-phase simplex", () => {
     });
     expect(result.status).toBe("optimal");
     expect(result.objective).toBeCloseTo(3, 9);
+  });
+
+  test("certifies a solver optimum and rejects a perturbed one", () => {
+    const problem: LpProblem = {
+      cost: [4, 6, 5, 3],
+      rows: [
+        { name: "cap:A", sense: "<=", rhs: 35, coeffs: [[0, 1], [1, 1]] },
+        { name: "cap:B", sense: "<=", rhs: 20, coeffs: [[2, 1], [3, 1]] },
+        { name: "dem:1", sense: "=", rhs: 25, coeffs: [[0, 1], [2, 1]] },
+        { name: "dem:2", sense: "=", rhs: 25, coeffs: [[1, 1], [3, 1]] },
+      ],
+    };
+    const r = solveLp(problem);
+    const ok = certifyLp(problem, r.x, r.duals);
+    expect(ok.primalViolation).toBeLessThan(1e-9);
+    expect(ok.dualViolation).toBeLessThan(1e-9);
+    expect(ok.complementarity).toBeLessThan(1e-9);
+    expect(Math.abs(ok.primalObjective - ok.dualObjective)).toBeLessThan(1e-9);
+    // Feasible but suboptimal: route 5 units of demand 2 through B's costlier lane.
+    const bad = certifyLp(problem, [20, 10, 5, 15], r.duals);
+    expect(bad.primalObjective - bad.dualObjective).toBeGreaterThan(1);
   });
 });

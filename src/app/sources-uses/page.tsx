@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel, Tag } from "@/components/ui/Panel";
 import { SyntheticShowcase } from "./synthetic/SyntheticShowcase";
-import { toWorkspaceConfiguration, type SimProblem } from "@/data/sourcesUsesSynthetic";
+import { toWorkspaceConfiguration, type PenaltyConfig, type SimProblem } from "@/data/sourcesUsesSynthetic";
 import {
   CONFIGURATION_STORAGE_KEY, SOURCES_USES_SCHEMA_VERSION, configurationToCsv, createEmptyConfiguration,
   createSource, createUse, newId, parseConfigurationCsv, parseConfigurationJson, ruleFor,
@@ -80,8 +80,8 @@ export default function SourcesUses() {
     try { window.history.replaceState(null, "", next === "synthetic" ? "#synthetic" : window.location.pathname + window.location.search); } catch { /* non-browser */ }
   }
 
-  function copySyntheticToWorkspace(problem: SimProblem, scenarioTitle: string) {
-    const item = toWorkspaceConfiguration(problem, `SIM · ${scenarioTitle}`, newId("cfg"));
+  function copySyntheticToWorkspace(problem: SimProblem, scenarioTitle: string, config: PenaltyConfig) {
+    const item = toWorkspaceConfiguration(problem, `SIM · ${scenarioTitle}`, newId("cfg"), config);
     setConfigurations((current) => [item, ...current]);
     setActiveId(item.id);
     setTab("sources");

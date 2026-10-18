@@ -26,6 +26,7 @@ export function SourceUtilization({ result }: { result: FeasibleResult }) {
             </div>
             <span className="flex items-center justify-end gap-1 font-mono text-[10px]">
               {binding && <span className="rounded-sm bg-term-gold/15 px-1 text-[8px] font-semibold text-term-gold">BIND</span>}
+              {result.minDrawGap[s.id] > 1e-6 && <span className="rounded-sm bg-term-down/15 px-1 text-[8px] font-semibold text-term-down" title={`Below minimum draw by ${mm(result.minDrawGap[s.id])}`}>FLOOR</span>}
               <span className={dual > 0 ? "text-term-amber" : "text-term-text-mute"}>{num(dual, 0)}</span>
             </span>
           </li>
@@ -78,10 +79,18 @@ export function UseCoverage({ result }: { result: FeasibleResult }) {
   );
 }
 
-/** Lexicographic solve sequence: one pill per tier stage, then economics. */
+/** Solve sequence: one pill per lexicographic tier stage, then economics. */
 export function TierLadder({ result }: { result: FeasibleResult }) {
+  const weighted = result.config.priorityMode === "weighted";
   return (
-    <ol className="flex flex-wrap items-stretch gap-1.5" aria-label="Lexicographic solve sequence">
+    <ol className="flex flex-wrap items-stretch gap-1.5" aria-label="Solve sequence">
+      {weighted && (
+        <li className="min-w-[96px] flex-1 rounded-md border border-term-border bg-term-panel-2 px-2 py-1.5">
+          <div className="text-[9px] uppercase tracking-[0.12em] text-term-text-mute">Weighted mode</div>
+          <div className="font-mono text-[12px] font-semibold text-term-text-dim">no tier stages</div>
+          <div className="text-[9px] text-term-text-mute">shortfall priced, not ranked</div>
+        </li>
+      )}
       {result.stages.map((stage, index) => (
         <li key={stage.tier} className={`min-w-[96px] flex-1 rounded-md border px-2 py-1.5 ${stage.shortfall > 1e-6 ? "border-term-down/40 bg-term-down/5" : "border-term-border bg-term-panel-2"}`}>
           <div className="text-[9px] uppercase tracking-[0.12em] text-term-text-mute">Stage {index + 1} · T{stage.tier}</div>
@@ -90,9 +99,9 @@ export function TierLadder({ result }: { result: FeasibleResult }) {
         </li>
       ))}
       <li className="min-w-[96px] flex-1 rounded-md border border-term-amber/40 bg-term-amber/5 px-2 py-1.5">
-        <div className="text-[9px] uppercase tracking-[0.12em] text-term-amber">Final · economics</div>
-        <div className="font-mono text-[12px] font-semibold text-term-text">{mm(result.totals.annualCostMm, 2)}/yr</div>
-        <div className="text-[9px] text-term-text-mute">min Σ (cᵢ+fᵢⱼ)xᵢⱼ</div>
+        <div className="text-[9px] uppercase tracking-[0.12em] text-term-amber">{weighted ? "Single solve" : "Final · economics"}</div>
+        <div className="font-mono text-[12px] font-semibold text-term-text">{mm(result.totals.totalCostMm, 2)}/yr</div>
+        <div className="text-[9px] text-term-text-mute">min Σ cᵢⱼxᵢⱼ + penalties</div>
       </li>
     </ol>
   );
@@ -130,14 +139,14 @@ export function ScenarioComparison({ scenarios, results, activeId, onSelect }: {
   onSelect: (id: string) => void;
 }) {
   const feasible = scenarios.map((s) => results[s.id]).filter((r): r is FeasibleResult => r.status === "optimal");
-  const maxCost = Math.max(...feasible.map((r) => r.totals.annualCostMm), 1);
+  const maxCost = Math.max(...feasible.map((r) => r.totals.totalCostMm), 1);
   return (
     <table className="w-full text-[11px]">
-      <caption className="sr-only">Scenario comparison of annual carry and coverage</caption>
+      <caption className="sr-only">Scenario comparison of total objective and coverage</caption>
       <thead>
         <tr className="text-[9px] uppercase tracking-[0.12em] text-term-text-mute">
           <th scope="col" className="pb-1.5 text-left font-semibold">Scenario</th>
-          <th scope="col" className="pb-1.5 text-left font-semibold">Annual carry ($mm)</th>
+          <th scope="col" className="pb-1.5 text-left font-semibold">Objective ($mm/yr)</th>
           <th scope="col" className="pb-1.5 text-left font-semibold">Coverage</th>
           <th scope="col" className="pb-1.5 text-right font-semibold">Shortfall</th>
         </tr>
@@ -155,8 +164,8 @@ export function ScenarioComparison({ scenarios, results, activeId, onSelect }: {
                 <>
                   <td className="w-[34%] py-1.5 pr-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-[8px] flex-1"><div className="h-full rounded-r-[3px] bg-term-amber" style={{ width: `${(r.totals.annualCostMm / maxCost) * 100}%`, opacity: active ? 1 : 0.55 }} /></div>
-                      <span className="w-10 text-right font-mono text-[10px] text-term-text-dim">{num(r.totals.annualCostMm, 1)}</span>
+                      <div className="h-[8px] flex-1"><div className="h-full rounded-r-[3px] bg-term-amber" style={{ width: `${(r.totals.totalCostMm / maxCost) * 100}%`, opacity: active ? 1 : 0.55 }} /></div>
+                      <span className="w-10 text-right font-mono text-[10px] text-term-text-dim">{num(r.totals.totalCostMm, 1)}</span>
                     </div>
                   </td>
                   <td className="w-[26%] py-1.5 pr-3">
