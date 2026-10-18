@@ -15,6 +15,7 @@ import {
   IbalRequestError,
   exportIbalBundle,
   generateSyntheticDataset,
+  getIbalCapabilities,
   getIbalHealth,
   getIbalScenarioCatalog,
   runIbal,
@@ -23,6 +24,7 @@ import {
   type DatasetEnvelope,
   type IbalAllocation,
   type IbalBalance,
+  type IbalCapabilities,
   type IbalConstraint,
   type IbalCounterpartyLimitRow,
   type IbalDemand,
@@ -40,18 +42,32 @@ import {
   type SyntheticConfig,
 } from "@/lib/inventoryOptimizer";
 import { fmtAbbr, fmtInt, fmtPct, fmtUsdAbbr } from "@/lib/format";
+import {
+  engineBlockReason,
+  featureBlockReason,
+  formulationBlockReason,
+  hasOutputSection,
+  uploadAccept,
+  uploadBlockReason,
+} from "@/lib/ibalCapabilityGate";
+
+// The service's SyntheticConfig bound (contracts.py `parent_group_count le=50`); above it the
+// synthetic request is rejected, so the input stops there.
+const MAX_SYNTHETIC_PARENT_GROUPS = 50;
 
 type PendingAction = { kind: "synthetic" } | { kind: "upload"; file: File };
 
 type ResultTab = "allocations" | "balances" | "demand" | "economics" | "constraints" | "diagnostics" | "raw";
 
-const RESULT_TABS: { value: ResultTab; label: string }[] = [
-  { value: "allocations", label: "Allocations" },
-  { value: "balances", label: "Balances" },
-  { value: "demand", label: "Demand" },
-  { value: "economics", label: "Economics" },
-  { value: "constraints", label: "Constraints" },
-  { value: "diagnostics", label: "Diagnostics" },
+// `section` is the capability-manifest output section a tab renders; the tab shows only when the
+// pinned service advertises it (spec013 IBAL-002). Raw always shows the returned payload.
+const RESULT_TABS: { value: ResultTab; label: string; section?: string }[] = [
+  { value: "allocations", label: "Allocations", section: "allocations" },
+  { value: "balances", label: "Balances", section: "balances" },
+  { value: "demand", label: "Demand", section: "demand" },
+  { value: "economics", label: "Economics", section: "economics" },
+  { value: "constraints", label: "Constraints", section: "constraints" },
+  { value: "diagnostics", label: "Diagnostics", section: "solver" },
   { value: "raw", label: "Raw" },
 ];
 
@@ -351,6 +367,47 @@ function DevelopmentBadge() {
   );
 }
 
+/** Engine identity and readiness as the service reports them (spec013 IBAL-001/007). */
+function EngineStatusStrip({
+  health,
+  capabilities,
+  blockReason,
+  checking,
+  onRecheck,
+}: {
+  health: IbalHealth | null;
+  capabilities: IbalCapabilities | null;
+  blockReason: string | null;
+  checking: boolean;
+  onRecheck: () => void;
+}) {
+  const backend = capabilities?.backend ?? health?.backend;
+  const formulations = capabilities?.formulations ?? health?.formulations ?? [];
+  const items = [
+    capabilities ? `v${capabilities.engine_package_version}` : null,
+    capabilities ? `pin ${capabilities.engine_commit.slice(0, 7)}` : null,
+    capabilities ? `fingerprint ${capabilities.engine_fingerprint.slice(0, 8)}` : null,
+    capabilities?.engine_source ? `source ${capabilities.engine_source}` : null,
+    backend?.name ? `solver ${backend.name}${backend.version ? ` ${backend.version}` : ""}` : null,
+    formulations.length ? formulations.map((item) => item.toUpperCase()).join("/") : null,
+  ].filter(Boolean);
+  return (
+    <div
+      className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-term-border bg-term-panel px-3 py-1 text-2xs"
+      role="status"
+      aria-label="Optimizer engine status"
+    >
+      <span className="term-label">Engine</span>
+      <Tag tone={!health ? "neutral" : blockReason ? "down" : "up"}>{!health ? "CHECKING" : blockReason ? "NOT READY" : "PIN VERIFIED"}</Tag>
+      {items.length > 0 && <span className="min-w-0 truncate font-mono text-term-text-dim" title={items.join(" · ")}>{items.join(" · ")}</span>}
+      {blockReason && health && <span className="min-w-0 text-term-down">{blockReason}</span>}
+      <button className="term-btn ml-auto px-1.5 py-0 text-3xs" disabled={checking} title="Re-read service health and capabilities" onClick={onRecheck}>
+        <RefreshCw size={11} className={checking ? "animate-spin" : undefined} /> {checking ? "Checking" : "Recheck"}
+      </button>
+    </div>
+  );
+}
+
 function updateNumber<T extends object>(setter: (next: T) => void, current: T, key: keyof T, value: string) {
   setter({ ...current, [key]: Number(value) });
 }
@@ -492,6 +549,7 @@ function formatFieldValue(field: keyof SyntheticConfig, value: number): string {
 export default function InventoryOptimizerPage() {
   const [sessionPrefs] = useState<IbalSessionPrefs>(readSessionPrefs);
   const [health, setHealth] = useState<IbalHealth | null>(null);
+  const [capabilities, setCapabilities] = useState<IbalCapabilities | null>(null);
   const [synthetic, setSynthetic] = useState<SyntheticConfig>(() => sessionPrefs.synthetic ?? DEFAULT_SYNTHETIC_CONFIG);
   const [showAdvancedSynthetic, setShowAdvancedSynthetic] = useState(false);
   const [runConfig, setRunConfig] = useState<RunConfig>(() => sessionPrefs.runConfig ?? DEFAULT_RUN_CONFIG);
@@ -549,7 +607,7 @@ export default function InventoryOptimizerPage() {
   function syntheticField(
     label: string,
     field: keyof SyntheticConfig,
-    opts: { min: number; max: number; step: number; integer?: boolean }
+    opts: { min: number; max: number; step: number; integer?: boolean; disabledReason?: string | null }
   ) {
     const value = Number(synthetic[field]);
     const overrideValue = PROFILE_OVERRIDES[synthetic.profile][field];
@@ -575,8 +633,11 @@ export default function InventoryOptimizerPage() {
           max={opts.max}
           step={opts.step}
           value={value}
+          disabled={Boolean(opts.disabledReason)}
+          title={opts.disabledReason ?? undefined}
           onChange={(event) => updateNumber(setSynthetic, synthetic, field, event.target.value)}
         />
+        {opts.disabledReason && <span className="text-3xs text-term-text-mute">{opts.disabledReason}</span>}
       </label>
     );
   }
@@ -592,14 +653,34 @@ export default function InventoryOptimizerPage() {
           max={opts.max}
           step={1}
           value={Number(synthetic[field])}
-          onChange={(event) => updateNumber(setSynthetic, synthetic, field, event.target.value)}
+          onChange={(event) => updateNumber(setSynthetic, synthetic, field, String(Math.min(opts.max, Math.max(opts.min, Number(event.target.value)))))}
         />
       </label>
     );
   }
 
+  // Health and capabilities are re-read whenever they may have changed: on load, when the tab
+  // regains focus, after any failed action, and on demand -- so a restarted or stopped service is
+  // reflected without a page reload.
+  const [engineChecking, setEngineChecking] = useState(false);
+  function refreshEngineStatus() {
+    setEngineChecking(true);
+    return Promise.all([
+      getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message })),
+      getIbalCapabilities().then(setCapabilities).catch(() => setCapabilities(null)),
+    ]).finally(() => setEngineChecking(false));
+  }
+
   useEffect(() => {
-    getIbalHealth().then(setHealth).catch((error) => setHealth({ status: "unavailable", ready: false, error: error.message }));
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshEngineStatus();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  useEffect(() => {
+    void refreshEngineStatus();
     getIbalScenarioCatalog().then((response) => setEngineScenarioCatalog(response.scenarios)).catch(() => setEngineScenarioCatalog([]));
   }, []);
 
@@ -688,14 +769,29 @@ export default function InventoryOptimizerPage() {
     }));
   }, [beforeAfterAnalytics]);
   const datasetReady = Boolean(dataset?.validation.valid);
-  const runDisabledReason = !dataset
+  const engineBlock = engineBlockReason(health, capabilities);
+  // Before capabilities load (or if they fail) every tab stays available; Raw is always last.
+  const visibleResultTabs = useMemo(
+    () => (capabilities ? RESULT_TABS.filter((tab) => !tab.section || hasOutputSection(capabilities, tab.section)) : RESULT_TABS),
+    [capabilities]
+  );
+  const shownResultTab = visibleResultTabs.some((tab) => tab.value === resultTab) ? resultTab : visibleResultTabs[0].value;
+  const discreteRouteBlock = formulationBlockReason(capabilities, "mip") ?? featureBlockReason(capabilities, "all_or_none_routes");
+  const engineScenarioBlock =
+    engineBlock ??
+    featureBlockReason(capabilities, "scenarios") ??
+    (hasOutputSection(capabilities, "scenario_stress") ? null : "The pinned engine service does not return scenario stress results.");
+  const runDisabledReason = engineBlock
+    ? engineBlock
+    : !dataset
     ? "Load synthetic data or upload a dataset before running."
     : !dataset.validation.valid
       ? "Resolve dataset validation issues before running."
       : busy
         ? "Another IBAL action is still running."
         : null;
-  const runButtonLabel = !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
+  const runReady = datasetReady && !busy && !engineBlock;
+  const runButtonLabel = engineBlock ? "Engine Not Ready" : !dataset ? "Load Data First" : !dataset.validation.valid ? "Fix Data Issues" : busy ? "Working..." : "Base Case Run";
   const scenarioSet = useMemo(() => new Set(selectedScenarioIds), [selectedScenarioIds]);
   const allScenarios = useMemo(() => [...WHAT_IF_SCENARIOS, ...customScenarios], [customScenarios]);
   const requestFamily = String((dataset?.request as Record<string, unknown> | undefined)?.problem_family ?? "");
@@ -933,6 +1029,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Prepared ${next.source.mode} dataset ${next.request_hash.slice(0, 12)}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Synthetic dataset failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -948,6 +1045,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Uploaded ${next.source.filename ?? file.name}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Upload failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -966,6 +1064,11 @@ export default function InventoryOptimizerPage() {
 
   function uploadFile(file: File | null) {
     if (!file) return;
+    const blocked = uploadBlockReason(capabilities, file);
+    if (blocked) {
+      setMessage(blocked);
+      return;
+    }
     if (dataset) {
       setPendingAction({ kind: "upload", file });
       return;
@@ -995,6 +1098,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Run ${response.result.run_id} returned ${response.result.status}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Run failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -1019,6 +1123,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Export bundle created for ${viewLabel}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Export failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError) setActionIssues(error.issues);
     } finally {
       dispatchWorkflow({ type: "finish" });
@@ -1144,6 +1249,7 @@ export default function InventoryOptimizerPage() {
       setMessage(`Completed ${response.stress_report.scenario_count} InventoryBallast engine scenario${response.stress_report.scenario_count === 1 ? "" : "s"}.`);
     } catch (error) {
       setEngineScenarioError(error instanceof Error ? error.message : "Scenario stress run failed.");
+      void refreshEngineStatus();
       if (error instanceof IbalRequestError && error.issues.length) setActionIssues(error.issues);
     } finally {
       setEngineScenarioBusy(false);
@@ -1221,6 +1327,8 @@ export default function InventoryOptimizerPage() {
         <Stat label="Avg Utilization" value={pctFromDecimal(totals.avgUtilization)} sub={`${fmtInt(totals.bindingConstraints)} binding rows`} />
       </KpiStrip>
 
+      <EngineStatusStrip health={health} capabilities={capabilities} blockReason={engineBlock} checking={engineChecking} onRecheck={() => void refreshEngineStatus()} />
+
       {message && (
         <div className="border-b border-term-border bg-term-panel-2 px-3 py-1 text-2xs text-term-text-dim">
           {message}
@@ -1279,7 +1387,7 @@ export default function InventoryOptimizerPage() {
                   {syntheticCountField("Securities", "security_count", { min: 1, max: 100 })}
                   {syntheticCountField("Inventory pools", "inventory_pool_count", { min: 1, max: 20 })}
                   {syntheticCountField("Borrowers", "borrower_count", { min: 1, max: 100 })}
-                  {syntheticCountField("Parent groups", "parent_group_count", { min: 1, max: synthetic.borrower_count })}
+                  {syntheticCountField("Parent groups", "parent_group_count", { min: 1, max: Math.min(synthetic.borrower_count, MAX_SYNTHETIC_PARENT_GROUPS) })}
                   {syntheticCountField("Routes per security", "routes_per_security", { min: 1, max: 20 })}
                 </div>
               )}
@@ -1300,7 +1408,7 @@ export default function InventoryOptimizerPage() {
                   {syntheticField("Elasticity mean", "elasticity_mean", { min: 0, max: 5, step: 0.01 })}
                   {syntheticField("Reserve fraction", "reserve_fraction", { min: 0, max: 0.3, step: 0.01 })}
                   {syntheticField("Ineligible fraction", "ineligible_fraction", { min: 0, max: 0.5, step: 0.01 })}
-                  {syntheticField("Discrete route fraction", "discrete_route_fraction", { min: 0, max: 0.5, step: 0.01 })}
+                  {syntheticField("Discrete route fraction", "discrete_route_fraction", { min: 0, max: 0.5, step: 0.01, disabledReason: discreteRouteBlock })}
                 </div>
               )}
 
@@ -1318,7 +1426,7 @@ export default function InventoryOptimizerPage() {
                 </button>
                 <label className="term-btn cursor-pointer justify-center">
                   <Upload size={13} /> Upload
-                  <input className="hidden" type="file" accept=".json,.xlsx" onChange={(event) => uploadFile(event.target.files?.[0] ?? null)} />
+                  <input className="hidden" type="file" accept={uploadAccept(capabilities)} onChange={(event) => uploadFile(event.target.files?.[0] ?? null)} />
                 </label>
               </div>
               <button className="term-btn justify-center" disabled={!dataset || busy} onClick={resetAll}>
@@ -1336,11 +1444,11 @@ export default function InventoryOptimizerPage() {
                     {runDisabledReason ?? "Dataset is valid and ready to run."}
                   </div>
                 </div>
-                <Tag tone={datasetReady && !busy ? "up" : dataset ? "amber" : "neutral"}>{datasetReady && !busy ? "READY" : "WAIT"}</Tag>
+                <Tag tone={runReady ? "up" : engineBlock ? "down" : dataset ? "amber" : "neutral"}>{runReady ? "READY" : engineBlock ? "BLOCKED" : "WAIT"}</Tag>
               </div>
               <label className="grid gap-1 text-term-text-dim">
                 Time limit seconds
-                <input className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" type="number" min={1} max={60} value={runConfig.solver_time_limit_seconds} onChange={(event) => updateNumber(setRunConfig, runConfig, "solver_time_limit_seconds", event.target.value)} />
+                <input className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" type="number" min={1} max={capabilities?.limits.solve_timeout_seconds ?? 60} value={runConfig.solver_time_limit_seconds} onChange={(event) => updateNumber(setRunConfig, runConfig, "solver_time_limit_seconds", event.target.value)} />
               </label>
               <label className="grid gap-1 text-term-text-dim">
                 Minimum entity confidence
@@ -1348,7 +1456,7 @@ export default function InventoryOptimizerPage() {
               </label>
               <button
                 className="term-btn justify-center border-term-amber text-term-amber disabled:border-term-border disabled:text-term-text-mute"
-                disabled={!dataset || !dataset.validation.valid || busy}
+                disabled={!runReady}
                 title={runDisabledReason ?? "Run optimizer"}
                 onClick={solveCurrent}
               >
@@ -1421,7 +1529,12 @@ export default function InventoryOptimizerPage() {
                   Save as Shock
                 </button>
               </div>
-              <button className="term-btn justify-center border-term-blue text-term-blue" disabled={busy || scenarioBusy || selectedScenarioIds.length === 0} onClick={runWhatIfScenarios}>
+              <button
+                className="term-btn justify-center border-term-blue text-term-blue"
+                disabled={busy || scenarioBusy || selectedScenarioIds.length === 0 || Boolean(engineBlock)}
+                title={engineBlock ?? "Run the selected what-if shocks"}
+                onClick={runWhatIfScenarios}
+              >
                 <Play size={13} /> {scenarioBusy ? "Running Scenarios..." : "Run Scenarios"}
               </button>
             </div>
@@ -1469,12 +1582,16 @@ export default function InventoryOptimizerPage() {
                   <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(selectedEngineScenario.parameters_schema, null, 2)}</pre>
                 </details>
               )}
-              {!engineScenarioCatalog.length && <div className="text-term-amber">Scenario registry unavailable. Check that the pinned InventoryBallast engine is ready.</div>}
+              {engineScenarioBlock ? (
+                <div className="text-term-amber">{engineScenarioBlock}</div>
+              ) : (
+                !engineScenarioCatalog.length && <div className="text-term-amber">Scenario registry unavailable. Check that the pinned InventoryBallast engine is ready.</div>
+              )}
               {engineScenarioError && <div className="border border-term-down/40 bg-term-down/10 px-2 py-1.5 text-term-down">{engineScenarioError}</div>}
               <button
                 className="term-btn justify-center border-term-blue text-term-blue disabled:border-term-border disabled:text-term-text-mute"
-                disabled={!dataset || !dataset.validation.valid || !result || !selectedEngineScenario || engineScenarioBusy || busy}
-                title={!result ? "Run and verify a base case first." : "Run the selected registered scenario against the current baseline."}
+                disabled={!dataset || !dataset.validation.valid || !result || !selectedEngineScenario || engineScenarioBusy || busy || Boolean(engineScenarioBlock)}
+                title={engineScenarioBlock ?? (!result ? "Run and verify a base case first." : "Run the selected registered scenario against the current baseline.")}
                 onClick={runEngineScenarioStressTest}
               >
                 <Play size={13} /> {engineScenarioBusy ? "Running Engine Scenario..." : "Run Engine Scenario"}
@@ -1822,13 +1939,13 @@ export default function InventoryOptimizerPage() {
           <Panel
             title={`${viewLabel} Results`}
             code={viewResult?.run_id.slice(0, 12) ?? "NOT RUN"}
-            toolbar={<TermToggleGroup value={resultTab} onChange={setResultTab} options={RESULT_TABS} size="sm" />}
+            toolbar={<TermToggleGroup value={shownResultTab} onChange={setResultTab} options={visibleResultTabs} size="sm" />}
             right={
               <span className="flex items-center gap-1">
                 {whatIfResults.length > 0 && <Tag tone={activeView?.isBase ? "neutral" : "blue"}>{activeView?.isBase ? "BASE CASE" : "SCENARIO"}</Tag>}
-                {resultTab === "allocations" ? (
+                {shownResultTab === "allocations" ? (
                   <Tag tone={viewResult ? "up" : "neutral"}>{fmtAbbr(totals.allocationIncrease - totals.allocationDecrease)} net</Tag>
-                ) : resultTab === "diagnostics" ? (
+                ) : shownResultTab === "diagnostics" ? (
                   <Tag tone={viewResult?.verification?.passed ? "up" : viewResult ? "down" : "neutral"}>
                     {viewResult?.verification?.passed ? "VERIFIED" : viewResult ? "FAILED" : "-"}
                   </Tag>
@@ -1836,7 +1953,7 @@ export default function InventoryOptimizerPage() {
               </span>
             }
           >
-            {resultTab === "allocations" && (
+            {shownResultTab === "allocations" && (
               <>
                 <DataGrid
                   columns={allocationColumns}
@@ -1875,15 +1992,15 @@ export default function InventoryOptimizerPage() {
               </>
             )}
 
-            {resultTab === "balances" && (
+            {shownResultTab === "balances" && (
               <DataGrid columns={balanceColumns} rows={viewResult?.balances ?? []} rowKey={(row) => row.inventory_id} maxHeight="400px" initialSort={{ key: "utilization", dir: "desc" }} zebra />
             )}
 
-            {resultTab === "demand" && (
+            {shownResultTab === "demand" && (
               <DataGrid columns={demandColumns} rows={viewResult?.demand ?? []} rowKey={(row) => row.demand_group_id} maxHeight="400px" initialSort={{ key: "fill_ratio", dir: "asc" }} zebra />
             )}
 
-            {resultTab === "economics" && (
+            {shownResultTab === "economics" && (
               <div className="grid gap-2 p-2">
                 <div className="grid grid-cols-2 divide-x divide-term-border border border-term-border">
                   <Stat label="Total Value" value={fmtUsdAbbr(viewResult?.economics?.total_value_usd ?? 0)} />
@@ -1897,11 +2014,11 @@ export default function InventoryOptimizerPage() {
               </div>
             )}
 
-            {resultTab === "constraints" && (
+            {shownResultTab === "constraints" && (
               <DataGrid columns={constraintColumns} rows={viewResult?.constraints ?? []} rowKey={(row, i) => `${row.row.kind}-${row.row.scope_id}-${i}`} maxHeight="400px" initialSort={{ key: "slack", dir: "asc" }} zebra />
             )}
 
-            {resultTab === "diagnostics" && (
+            {shownResultTab === "diagnostics" && (
               <div className="grid gap-2 p-2 text-2xs">
                 <div>
                   <div className="term-label mb-1">Run</div>
@@ -1959,7 +2076,7 @@ export default function InventoryOptimizerPage() {
               </div>
             )}
 
-            {resultTab === "raw" && (
+            {shownResultTab === "raw" && (
               <div className="relative">
                 <button
                   className="term-btn absolute right-2 top-2 z-10"

@@ -276,6 +276,16 @@ export interface IbalResult {
     relative_gap?: number | null;
     termination_reason: string;
   };
+  formulation?: {
+    variant: string;
+    objective_exact: boolean;
+    optimality_basis: string;
+    variable_count: number;
+    row_count: number;
+    integer_variable_count: number;
+    // Piecewise-linear stability penalty detail; not rendered yet (see the contract shape file).
+    stability_linearization: unknown | null;
+  };
   verification?: {
     passed: boolean;
     has_primal: boolean;
@@ -296,12 +306,24 @@ export interface IbalResult {
     correlation_id: string;
     idempotency_key: string;
     problem_family: string;
+    as_of: string;
     schema_version: string;
     authorization_reference: string;
     platform_tenant_id: string | null;
     actor_reference: string | null;
   } | null;
   warnings?: string[];
+  // Returned by the pinned engine but not yet rendered; typed in detail when a view consumes them
+  // (spec013 IBAL-004). contracts/ibal/run-response.shape.json lists their fields.
+  pricing?: unknown[];
+  concentration?: unknown[];
+  expected_economics?: unknown | null;
+  availability_buffers?: unknown[];
+  agency?: unknown | null;
+  prime?: unknown | null;
+  schedules?: unknown | null;
+  collateral?: unknown | null;
+  sources?: unknown | null;
 }
 
 export interface IbalScenarioCatalogItem {
@@ -370,9 +392,13 @@ export interface RunResponse {
 export interface IbalCapabilities {
   engine_compatible: boolean;
   engine_commit: string;
+  engine_fingerprint: string;
   engine_package_version: string;
-  backend: { name: string; version: string | null; ready: boolean };
+  engine_source: string;
+  backend: { name: string | null; version: string | null; ready: boolean };
+  formulations: string[];
   input_features: Record<string, boolean>;
+  output_sections: string[];
   upload_formats: string[];
   limits: Record<string, number>;
 }
@@ -380,8 +406,13 @@ export interface IbalCapabilities {
 export interface IbalHealth {
   status?: string;
   ready?: boolean;
-  engine_package_version?: string;
-  backend?: { name: string; version: string | null; ready: boolean };
+  engine_package_version?: string | null;
+  engine_commit?: string | null;
+  engine_source?: string;
+  engine_mismatches?: string[];
+  formulations?: string[];
+  error_category?: string | null;
+  backend?: { name: string | null; version: string | null; ready: boolean };
   error?: string;
   code?: string;
   config?: Record<string, unknown>;

@@ -35,6 +35,8 @@ source layout first.
 | `test_benchmark.py` | 10 | Runs the benchmark harness (see below), writes the retained runtime manifest, and asserts every operation's p95 stays under a generous sanity threshold -- catches a severe (10x+) performance regression, not day-to-day machine noise. |
 | `test_health.py` | 19 | `engine_identity()`'s full mismatch matrix (wrong package version, package not found, solver-backend fallback/missing, wrong commit), `/health`'s ready/unready + `error_category` reflect it exactly, `/v1/capabilities`' `engine_compatible` and formulation list track it too, and `solve()`/`require_compatible_engine()` actually route or refuse through real service code instead of monkeypatching solve itself. |
 | `test_dataset_summary_integrity.py` | 11 | Regression suite for a real gap this file found: a tampered `DatasetEnvelope.summary` (left `request`/`request_hash` untouched) was previously accepted by `solve()`/`export_bundle()` unnoticed. See "Bugs found" below. |
+| `test_capability_manifest.py` | 8 | `/v1/capabilities` reports the manifest's `input_features`/`output_sections` exactly, advertised limits equal the enforced upload/row limits, and every input feature the manifest disables is rejected at upload (and admitted once enabled) -- see "Bugs found" below. |
+| `test_ts_contract_shape.py` | 2 | `contracts/ibal/run-response.shape.json` equals the field shape derived from the pinned engine's `OptimizationResult` schema, and a real `/v1/runs` response fits it. The frontend's `src/lib/inventoryOptimizer.contract.test.ts` holds the TypeScript types to the same file -- see "Bugs found" below. |
 
 Shared infrastructure (not test files themselves, collected as 0 tests):
 
@@ -191,6 +193,28 @@ immediately against real data, or worse, silently encode the wrong formula as "p
    derived value (a summary, a total, a count) alongside the source data it was derived from,
    check whether anything actually re-derives and compares it, or whether the disclosure is
    trusted on faith.**
+
+5. **Dynamic buffers were advertised as unsupported but accepted at upload** (found while building
+   `test_capability_manifest.py`, spec013 IBAL-003, 2026-10-17). `/v1/capabilities` hard-coded
+   `dynamic_buffers: false`, but `_unsupported_feature_issues()` (`upload.py`) kept its own list
+   of rejected inputs that omitted `dynamic_buffers`, so an uploaded request carrying them passed
+   validation and reached the engine. Fixed by moving `input_features` and `output_sections` into
+   `capability-manifest.json` and driving the upload rejections from the manifest through one
+   table, with a parity test that every disabled feature has a gate. Pattern: **when the same
+   fact (what the engine supports) is written down in two places -- one that is advertised and one
+   that is enforced -- they drift; derive both from one source, and test that the enforced side
+   covers everything the advertised side denies.**
+6. **The TypeScript result types had drifted from the service response** (found while building
+   `test_ts_contract_shape.py`, spec013 IBAL-003, 2026-10-18). Ten result sections the service
+   returns (`formulation`, `pricing`, `concentration`, `expected_economics`,
+   `availability_buffers`, `agency`, `prime`, `schedules`, `collateral`, `sources`) and
+   `platform.as_of` were missing from `IbalResult`, and the first typing of
+   `formulation.stability_linearization` as a string was wrong -- it is an object. Earlier manual
+   comparisons against one live solve kept missing fields that were empty in that solve. Fixed by
+   generating the shape from the engine's schema rather than a sample and checking the
+   TypeScript field maps against it both ways. Pattern: **a contract checked by eye against one
+   example only covers the fields that example happened to fill; derive the contract from the
+   schema, and make each side's test fail on a field the other side lacks.**
 
 ## Acceptance-criteria coverage map
 
