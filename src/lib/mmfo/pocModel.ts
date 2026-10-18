@@ -6,16 +6,34 @@ export interface FundOption {
   name: string;
   fund_type: FundType;
   liquidity: LiquidityBucket;
+  gross_7day_yield_pct: number;
+  expense_ratio_pct: number;
   net_7day_yield_pct: number;
+  aum_usd_bn: number;
+  wam_days: number;
+  wal_days: number;
+  daily_liquid_assets_pct: number;
+  weekly_liquid_assets_pct: number;
+  treasury_assets_pct: number;
+  repo_assets_pct: number;
+  agency_assets_pct: number;
+  other_assets_pct: number;
+  snapshot_as_of: string;
 }
 
+// Fictional share classes and a fixed illustrative snapshot. Values are internally
+// coherent for demos, but are not sourced from actual funds or market feeds.
+export const POC_DATASET_ID = "mmfo-demo-us-institutional-2026-10-16";
+export const POC_DATASET_AS_OF = "2026-10-16";
 export const POC_FUND_UNIVERSE: FundOption[] = [
-  { id: "GOV-SD-01", name: "Treasury Government Liquidity", fund_type: "GOVERNMENT", liquidity: "SAME_DAY", net_7day_yield_pct: 4.78 },
-  { id: "GOV-SD-02", name: "Government Cash Reserve", fund_type: "GOVERNMENT", liquidity: "SAME_DAY", net_7day_yield_pct: 4.72 },
-  { id: "GOV-ND-01", name: "Treasury Liquidity Portfolio", fund_type: "GOVERNMENT", liquidity: "NEXT_DAY", net_7day_yield_pct: 4.91 },
-  { id: "PRM-SD-01", name: "Institutional Prime Liquidity", fund_type: "PRIME", liquidity: "SAME_DAY", net_7day_yield_pct: 5.12 },
-  { id: "PRM-ND-01", name: "Institutional Prime Cash", fund_type: "PRIME", liquidity: "NEXT_DAY", net_7day_yield_pct: 5.28 },
-  { id: "PRM-ND-02", name: "Prime Treasury Plus", fund_type: "PRIME", liquidity: "NEXT_DAY", net_7day_yield_pct: 5.19 },
+  { id: "GOV-TRE-01", name: "Treasury Select Institutional", fund_type: "GOVERNMENT", liquidity: "SAME_DAY", gross_7day_yield_pct: 4.72, expense_ratio_pct: 0.08, net_7day_yield_pct: 4.64, aum_usd_bn: 38.4, wam_days: 24, wal_days: 41, daily_liquid_assets_pct: 63, weekly_liquid_assets_pct: 82, treasury_assets_pct: 94, repo_assets_pct: 6, agency_assets_pct: 0, other_assets_pct: 0, snapshot_as_of: POC_DATASET_AS_OF },
+  { id: "GOV-INS-02", name: "Government Liquidity Institutional", fund_type: "GOVERNMENT", liquidity: "SAME_DAY", gross_7day_yield_pct: 4.79, expense_ratio_pct: 0.13, net_7day_yield_pct: 4.66, aum_usd_bn: 52.7, wam_days: 31, wal_days: 57, daily_liquid_assets_pct: 58, weekly_liquid_assets_pct: 76, treasury_assets_pct: 71, repo_assets_pct: 25, agency_assets_pct: 4, other_assets_pct: 0, snapshot_as_of: POC_DATASET_AS_OF },
+  { id: "GOV-SD-03", name: "Government Short Duration Institutional", fund_type: "GOVERNMENT", liquidity: "NEXT_DAY", gross_7day_yield_pct: 4.77, expense_ratio_pct: 0.10, net_7day_yield_pct: 4.67, aum_usd_bn: 21.6, wam_days: 39, wal_days: 72, daily_liquid_assets_pct: 45, weekly_liquid_assets_pct: 68, treasury_assets_pct: 64, repo_assets_pct: 28, agency_assets_pct: 8, other_assets_pct: 0, snapshot_as_of: POC_DATASET_AS_OF },
+  { id: "GOV-TRE-04", name: "Treasury Liquidity Portfolio Institutional", fund_type: "GOVERNMENT", liquidity: "NEXT_DAY", gross_7day_yield_pct: 4.73, expense_ratio_pct: 0.07, net_7day_yield_pct: 4.66, aum_usd_bn: 16.9, wam_days: 28, wal_days: 49, daily_liquid_assets_pct: 52, weekly_liquid_assets_pct: 78, treasury_assets_pct: 89, repo_assets_pct: 11, agency_assets_pct: 0, other_assets_pct: 0, snapshot_as_of: POC_DATASET_AS_OF },
+  { id: "PRM-INS-01", name: "Prime Institutional Cash Class A", fund_type: "PRIME", liquidity: "SAME_DAY", gross_7day_yield_pct: 5.08, expense_ratio_pct: 0.18, net_7day_yield_pct: 4.90, aum_usd_bn: 34.2, wam_days: 36, wal_days: 79, daily_liquid_assets_pct: 52, weekly_liquid_assets_pct: 71, treasury_assets_pct: 3, repo_assets_pct: 31, agency_assets_pct: 10, other_assets_pct: 56, snapshot_as_of: POC_DATASET_AS_OF },
+  { id: "PRM-DLY-02", name: "Prime Daily Liquidity Institutional", fund_type: "PRIME", liquidity: "SAME_DAY", gross_7day_yield_pct: 5.13, expense_ratio_pct: 0.20, net_7day_yield_pct: 4.93, aum_usd_bn: 27.8, wam_days: 32, wal_days: 66, daily_liquid_assets_pct: 57, weekly_liquid_assets_pct: 74, treasury_assets_pct: 5, repo_assets_pct: 45, agency_assets_pct: 8, other_assets_pct: 42, snapshot_as_of: POC_DATASET_AS_OF },
+  { id: "PRM-CASH-03", name: "Prime Cash Portfolio Institutional", fund_type: "PRIME", liquidity: "NEXT_DAY", gross_7day_yield_pct: 5.18, expense_ratio_pct: 0.22, net_7day_yield_pct: 4.96, aum_usd_bn: 18.3, wam_days: 43, wal_days: 91, daily_liquid_assets_pct: 39, weekly_liquid_assets_pct: 63, treasury_assets_pct: 0, repo_assets_pct: 36, agency_assets_pct: 12, other_assets_pct: 52, snapshot_as_of: POC_DATASET_AS_OF },
+  { id: "GOV-SWEEP-04", name: "Treasury Government Sweep Institutional", fund_type: "GOVERNMENT", liquidity: "SAME_DAY", gross_7day_yield_pct: 4.74, expense_ratio_pct: 0.08, net_7day_yield_pct: 4.66, aum_usd_bn: 9.8, wam_days: 19, wal_days: 33, daily_liquid_assets_pct: 71, weekly_liquid_assets_pct: 88, treasury_assets_pct: 96, repo_assets_pct: 4, agency_assets_pct: 0, other_assets_pct: 0, snapshot_as_of: POC_DATASET_AS_OF },
 ];
 
 export interface PocOptimizerInput {
@@ -169,6 +187,9 @@ export function optimizeFundAllocation(input: PocOptimizerInput) {
     model_id: "mmfo-synthetic-lp-v1",
     model_status: "POC_OPTIMAL" as const,
     source_mode: "SIM" as const,
+    synthetic_mode: true as const,
+    dataset_id: POC_DATASET_ID,
+    dataset_as_of: POC_DATASET_AS_OF,
     independent_verification: "NOT_PROVIDED" as const,
     total_cash: input.total_cash,
     cash_reserve_amount: reserveAmount,
