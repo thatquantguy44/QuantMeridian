@@ -10,7 +10,7 @@
 ## Implementation status — 2026-10-18
 
 - The operating-shell foundation merged in PR #161: service health is separate from approved model binding state, and seeded Optimization Center results are labeled SIMULATION DATA.
-- PR #163 adds a separate Money Market Fund Optimizer workspace and a local synthetic LP proof of concept. It distributes cash over six illustrative fund options to maximize the supplied net 7-day yield subject to reserve, same-day liquidity, prime exposure, and per-fund concentration limits. The API returns constraint checks; the UI reports estimates and model limitations.
+- PR #163 adds a separate Money Market Fund Optimizer workspace and a local synthetic LP proof of concept. Synthetic Demo Mode is an explicit opt-in and defaults off. When enabled, it uses a fixed eight-share-class fictional snapshot with gross/net 7-day yield, expense ratio, AUM, WAM/WAL, daily/weekly liquid assets, and portfolio mix. The LP distributes cash to maximize supplied net yield subject to reserve, same-day liquidity, prime exposure, and per-fund concentration limits. The API returns constraint checks; the UI reports estimates and model limitations.
 - The POC is an explicit, temporary exception to the non-goal below. It is demo-only, uses synthetic inputs, has no independent verifier, and does not satisfy the approved external model binding, source lineage, or production recommendation requirements. Actual model mathematics will remain in its separate repository when identified and approved.
 - Tracking and detailed implementation sequencing remain in PLAN.md and TASKS.md.
 
@@ -72,6 +72,7 @@ This spec adds the connection and operating layer for actual, separately owned m
 | OC-015 | Input source and as-of state (`DB`, `SIM`, user supplied, stale, missing, error) are visible in each module, `OPT`, comparison, and export. No silent DB-to-SIM fallback is allowed. | must |
 | OC-016 | Existing seeded OPT metrics, duals, and trades, and the collateral client-side savings formula, are removed from connected result paths. An unconnected model presents setup guidance and representative layout without invented run success. | must |
 | OC-017 | Provide a Money Market Fund Optimizer workspace distinct from CASH treasury funding. It may run the explicitly synthetic local POC while unbound; all output stays labeled SIM and is excluded from verified recommendation totals. The approved fund model, eligibility rules, input/result schemas, and independent verifier must be connected before live recommendations are enabled. | must |
+| OC-018 | Synthetic Demo Mode is explicit and defaults off. When on, the module uses a clearly identified, fixed fictional fund dataset and labels all outputs SIM; when off, the POC endpoint refuses to solve and no synthetic values are presented as live. Dataset metadata and assumptions are visible in results. | must |
 
 ## User interface slices
 
