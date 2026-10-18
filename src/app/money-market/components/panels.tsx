@@ -22,8 +22,8 @@ const inputCls = "w-16 rounded border border-term-border bg-term-panel-2 px-1.5 
 export function SetupGuide({ status }: { status: ServiceStatus | null }) {
   const steps = [
     { done: status !== null && status.service_health !== "UNAVAILABLE", label: "Start the MMKT service on port 8014",
-      code: "pip install ./services/optimization_core ./services/money_market_api\nMONEY_MARKET_API_TOKEN=<token> MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1 \\\n  uvicorn money_market_api.app:app --app-dir services/money_market_api/src --port 8014" },
-    { done: status?.model_status === "continuous_lp_relaxation", label: "Enable the local LP binding (MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1)", code: null },
+      code: "pip install ./services/optimization_core ./services/money_market_api\nMONEY_MARKET_API_TOKEN=<token> MONEY_MARKET_MODEL_BINDING=local-mmkt-execution-v2 \\\n  uvicorn money_market_api.app:app --app-dir services/money_market_api/src --port 8014" },
+    { done: status?.model_status === "ticketed_mip_available", label: "Enable the ticketed binding (MONEY_MARKET_MODEL_BINDING=local-mmkt-execution-v2)", code: null },
     { done: Boolean(status?.token_configured), label: "Give the terminal the same token, then restart the dev server", code: "# .env.local\nMONEY_MARKET_API_TOKEN=<token>" },
     { done: Boolean(status?.binding_id), label: "The terminal and service authenticate (capability manifest readable)", code: null },
   ];
@@ -111,6 +111,8 @@ export function CandidateTable({ book, rates, onChange }: { book: BookInputs; ra
             <th scope="col" className="pb-1 text-left font-semibold">Rating · cpty</th>
             <th scope="col" className="pb-1 text-left font-semibold">Settle → mature</th>
             <th scope="col" className="pb-1 text-right font-semibold">Max $mm</th>
+            <th scope="col" className="pb-1 text-right font-semibold">Min ticket</th>
+            <th scope="col" className="pb-1 text-right font-semibold">Lot</th>
             <th scope="col" className="pb-1 text-right font-semibold">Cost bp</th>
             <th scope="col" className="pb-1 text-left font-semibold pl-2">Rate</th>
           </tr>
@@ -142,6 +144,12 @@ export function CandidateTable({ book, rates, onChange }: { book: BookInputs; ra
                     value={c.maximum_amount ?? ""} className={inputCls}
                     onChange={(e) => update(ids, { maximum_amount: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })} />
                 </td>
+                <td className="py-1 text-right"><input type="number" min={0} step={1} aria-label={`${key} minimum ticket`} disabled={!priced}
+                  value={c.minimum_ticket_amount} className={inputCls}
+                  onChange={(e) => update(ids, { minimum_ticket_amount: Math.max(0, Number(e.target.value) || 0) })} /></td>
+                <td className="py-1 text-right"><input type="number" min={0.01} step={1} aria-label={`${key} lot size`} disabled={!priced}
+                  value={c.lot_size_amount} className={inputCls}
+                  onChange={(e) => update(ids, { lot_size_amount: Math.max(0.01, Number(e.target.value) || 1) })} /></td>
                 <td className="py-1 text-right">
                   <input type="number" min={0} step={0.1} aria-label={`${key} explicit cost (bp)`} disabled={!priced}
                     value={c.explicit_cost_bps} className={inputCls}
@@ -175,6 +183,24 @@ export function PolicyEditor({ book, onChange }: { book: BookInputs; onChange: (
   const cases: { id: ForecastCase; label: string }[] = [{ id: "p10", label: "p10 downside" }, { id: "p50", label: "p50 base" }, { id: "p90", label: "p90 upside" }];
   return (
     <div className="space-y-3 text-[10px]">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="text-term-text-dim">Model formulation
+          <select aria-label="Model formulation" value={p.execution_mode ?? "continuous_preview"} onChange={(event) => setPolicy({ execution_mode: event.target.value as "continuous_preview" | "ticketed_plan" })}
+            className="mt-1 w-full rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text">
+            <option value="ticketed_plan">Ticketed MIP plan</option><option value="continuous_preview">Continuous LP preview</option>
+          </select>
+        </label>
+        <label className="text-term-text-dim">Maximum tickets per currency
+          <input type="number" min={1} aria-label="Maximum ticket count" value={p.maximum_ticket_count ?? ""} placeholder="no cap"
+            onChange={(event) => setPolicy({ maximum_ticket_count: event.target.value === "" ? null : Math.max(1, Number(event.target.value)) })}
+            className="mt-1 w-full rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" />
+        </label>
+      </div>
+      {p.execution_mode === "ticketed_plan" && <label className="block text-term-text-dim">Indicative decision time (ISO with offset)
+        <input type="text" aria-label="Indicative decision time" value={p.decision_at ?? ""}
+          onChange={(event) => setPolicy({ decision_at: event.target.value })}
+          className="mt-1 w-full rounded border border-term-border bg-term-panel-2 px-2 py-1 font-mono text-term-text" />
+      </label>}
       <div>
         <div className="mb-1 text-term-text-dim">Cash forecast case</div>
         <div className="flex overflow-hidden rounded-md border border-term-border" role="radiogroup" aria-label="Cash forecast case">
@@ -332,6 +358,7 @@ export function VerificationBlock({ result }: { result: MmktRunResult }) {
           {([
             ["Variable bounds", cr.verification.max_variable_bound_violation],
             ["Constraint rows", cr.verification.max_row_violation],
+            ["Integer tickets and lots", cr.verification.max_integrality_violation ?? 0],
             ["Objective reconstruction", cr.verification.objective_delta],
           ] as [string, number][]).map(([label, v]) => (
             <div key={label} className="flex items-center gap-2">
@@ -343,7 +370,7 @@ export function VerificationBlock({ result }: { result: MmktRunResult }) {
         </li>
       ))}
       <li className="flex gap-2 border-t border-term-border pt-1.5 text-[10px] text-term-text-mute">
-        <CircleAlert size={12} className="mt-px shrink-0 text-term-amber" /><span>The service's independent verifier passed before returning. Results are a continuous LP relaxation: <span className="font-mono">execution_ready = false</span>.</span>
+        <CircleAlert size={12} className="mt-px shrink-0 text-term-amber" /><span>The service's independent verifier passed. <span className="font-mono">execution_ready = {String(result.execution_ready)}</span> means model execution rules were checked; it does not send an order or approve a live recommendation.</span>
       </li>
     </ul>
   );
@@ -364,6 +391,7 @@ export function CsvButton({ csv, filename }: { csv: string; filename: string }) 
 export interface CompareRow {
   id: string; title: string; analytics: RunAnalytics | null; error: string | null; hash: string | null; simSetId: string;
   baseline: { upliftMm: number; upliftBps: number } | { reason: string } | null;
+  result?: MmktRunResult | null;
 }
 
 /** Scenario comparison on separate scales: modeled return, avg invested, held at end. */

@@ -242,7 +242,7 @@ export interface IbalConstraint {
   upper: number | null;
   activity: number;
   slack: number;
-  dual_value: number;
+  dual_value: number | null;
 }
 
 export interface IbalResult {
@@ -363,6 +363,16 @@ export interface IbalStressOutcome {
   driver_reconciliations: IbalDriverDeltaReconciliation[];
 }
 
+/** Preserve the engine's ranks and keep failed or unchecked solves unranked. */
+export function orderedStressOutcomes(outcomes: IbalStressOutcome[]): IbalStressOutcome[] {
+  const rankable = (item: IbalStressOutcome) =>
+    item.verification_passed && (item.status === "optimal" || item.status === "feasible_limit") && item.rank !== null;
+  return [...outcomes].sort((a, b) =>
+    Number(!rankable(a)) - Number(!rankable(b)) ||
+    (rankable(a) ? a.rank! : Number.POSITIVE_INFINITY) - (rankable(b) ? b.rank! : Number.POSITIVE_INFINITY) ||
+    a.scenario_id.localeCompare(b.scenario_id));
+}
+
 export interface IbalScenarioStressResponse {
   api_schema_version: string;
   source: DatasetEnvelope["source"];
@@ -416,6 +426,49 @@ export interface IbalHealth {
   error?: string;
   code?: string;
   config?: Record<string, unknown>;
+}
+
+export interface IbalShowcaseCatalog {
+  data_label: "SIM";
+  provenance: { description: string; source: string; source_version: string };
+  manifest_version: string;
+  engine_commit: string;
+  engine_fingerprint: string;
+  engine_package_version: string;
+  governance_gates_granted: string[];
+  books: { book_id: string; title: string; behavior: string;
+    shock: { scenario_type: string; expected_status: string; parameters: Record<string, unknown> };
+    repair: { repair_id: string; description: string; expected_status: string } }[];
+}
+
+export interface IbalShowcaseStep {
+  book_id: string; step: "base" | "shock" | "diagnose" | "repair" | "compare";
+  outcome: "ok" | "planned_failure" | "failed" | "skipped";
+  headline: string; run_id: string | null; input_hash: string | null;
+  status: string | null; verification_passed: boolean | null;
+  objective_usd: number | null; objective_delta_usd: number | null;
+}
+
+export interface IbalShowcaseComparison {
+  status: string; verification_passed: boolean; objective_delta_usd: number | null;
+  driver_deltas: IbalScenarioDriverDelta[];
+  driver_reconciliations: IbalDriverDeltaReconciliation[];
+  economics_component_deltas: Record<string, number> | Record<string, unknown>[];
+}
+
+export interface IbalShowcaseRun {
+  data_label: "SIM"; engine_commit: string; engine_fingerprint: string;
+  report: { banner: string[]; data_label: "SIM"; passed: boolean; books: string[];
+    governance_gates_granted: string[]; steps: IbalShowcaseStep[]; config_hash: string; solver_backend: string };
+  artifacts: {
+    base_result: IbalResult | null; shock_result: IbalResult | null;
+    shock_comparison: IbalShowcaseComparison | null;
+    diagnosis: { feasible: boolean; binding_constraints: { kind: string; scope_id: string; slack: number; dual_value: number | null }[];
+      reason_codes: Record<string, number>; unfilled_demand: Record<string, unknown>[];
+      excluded_sources: Record<string, unknown>[]; coverage: Record<string, unknown>[];
+      warnings: string[]; not_yet_available: string[] } | null;
+    repair_result: IbalResult | null; repair_comparison: IbalShowcaseComparison | null;
+  };
 }
 
 export const DEFAULT_SYNTHETIC_CONFIG: SyntheticConfig = {
@@ -478,6 +531,17 @@ export async function getIbalHealth(): Promise<IbalHealth> {
 
 export async function getIbalCapabilities(): Promise<IbalCapabilities> {
   return parseJson<IbalCapabilities>(await fetch("/api/inventory-optimizer/capabilities", { cache: "no-store" }));
+}
+
+export async function getIbalShowcaseBooks(): Promise<IbalShowcaseCatalog> {
+  return parseJson<IbalShowcaseCatalog>(await fetch("/api/inventory-optimizer/showcase/books", { cache: "no-store" }));
+}
+
+export async function runIbalShowcase(bookId: string): Promise<IbalShowcaseRun> {
+  return parseJson<IbalShowcaseRun>(await fetch("/api/inventory-optimizer/showcase/runs", {
+    method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
+    body: JSON.stringify({ book_id: bookId }),
+  }));
 }
 
 export async function generateSyntheticDataset(config: SyntheticConfig): Promise<DatasetEnvelope> {

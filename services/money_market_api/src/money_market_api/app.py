@@ -37,8 +37,13 @@ app = FastAPI(
 )
 
 
+def _model_binding() -> str:
+    value = os.getenv("MONEY_MARKET_MODEL_BINDING", "").strip()
+    return value if value in ("local-mmkt-lp-v1", "local-mmkt-execution-v2") else ""
+
+
 def _local_model_binding_enabled() -> bool:
-    return os.getenv("MONEY_MARKET_MODEL_BINDING", "").strip() == "local-mmkt-lp-v1"
+    return bool(_model_binding())
 
 
 def _manifest_text() -> str:
@@ -88,7 +93,8 @@ async def health() -> HealthResponse:
     return HealthResponse(
         status="ready" if enabled else "unconfigured",
         ready=enabled,
-        model_status="continuous_lp_relaxation" if enabled else "not_configured",
+        model_status=("ticketed_mip_available" if _model_binding() == "local-mmkt-execution-v2"
+                      else "continuous_lp_relaxation" if enabled else "not_configured"),
         auth_configured=bool(os.getenv("MONEY_MARKET_API_TOKEN")),
     )
 
@@ -98,9 +104,11 @@ async def capabilities(_: Annotated[UUID, Depends(require_service_auth)]) -> Cap
     raw = json.loads(_manifest_text())
     enabled = _local_model_binding_enabled()
     raw["solver_enabled"] = enabled
-    raw["model_families"] = ["continuous_lp_relaxation"] if enabled else []
+    raw["model_families"] = (["continuous_lp_relaxation", "ticketed_mip"]
+                             if _model_binding() == "local-mmkt-execution-v2"
+                             else ["continuous_lp_relaxation"] if enabled else [])
     raw["readiness"] = "READY" if enabled else "UNCONFIGURED"
-    raw["binding_id"] = "local-mmkt-lp-v1" if enabled else None
+    raw["binding_id"] = _model_binding() or None
     return CapabilityManifest.model_validate(raw)
 
 
@@ -120,6 +128,11 @@ async def create_run(
                 "message": "MMKT has no approved model binding configured.",
             },
         )
+    if payload.policy.execution_mode == "ticketed_plan" and _model_binding() != "local-mmkt-execution-v2":
+        return JSONResponse(status_code=501, content={
+            "api_schema_version": "1.0.0", "code": "EXECUTION_BINDING_NOT_CONFIGURED",
+            "category": "unavailable", "message": "Ticketed execution requires local-mmkt-execution-v2.",
+        })
     request_hash = _canonical_hash(payload.model_dump(mode="json"))
     run_id = uuid4()
     received_at = datetime.now(UTC)
@@ -216,7 +229,7 @@ async def create_run(
             "rate_row_count": len(payload.rate_snapshot.rows),
             "currency_count": len(result["currency_results"]),
             "allocation_count": sum(len(item["allocations"]) for item in result["currency_results"]),
-            "execution_ready": False,
+            "execution_ready": result["execution_ready"],
         },
     )
     return response

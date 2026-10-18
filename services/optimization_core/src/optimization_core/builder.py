@@ -1,4 +1,4 @@
-"""Incremental sparse construction for continuous LPs."""
+"""Incremental sparse construction for LPs and MIPs."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class SparseProblemBuilder:
 
     def __init__(self, *, objective_sense: ObjectiveSense = "minimize") -> None:
         self._objective_sense = objective_sense
-        self._variables: list[tuple[str, float, float, float]] = []
+        self._variables: list[tuple[str, float, float, float, int]] = []
         self._rows: list[tuple[str, dict[int, float], float, float]] = []
         self._variable_names: set[str] = set()
         self._row_names: set[str] = set()
@@ -27,13 +27,14 @@ class SparseProblemBuilder:
         objective: float = 0.0,
         lower: float = 0.0,
         upper: float = np.inf,
+        integer: bool = False,
     ) -> int:
         if not name or name in self._variable_names:
             raise ValueError(f"variable name must be non-empty and unique: {name!r}")
         if not np.isfinite(objective) or np.isnan(lower) or np.isnan(upper) or lower > upper:
             raise ValueError(f"invalid objective or bounds for variable {name!r}")
         index = len(self._variables)
-        self._variables.append((name, objective, lower, upper))
+        self._variables.append((name, objective, lower, upper, int(integer)))
         self._variable_names.add(name)
         return index
 
@@ -85,4 +86,5 @@ class SparseProblemBuilder:
             objective_sense=self._objective_sense,
             variable_names=tuple(v[0] for v in variables),
             row_names=tuple(r[0] for r in rows),
+            variable_integrality=tuple(v[4] for v in variables),
         )

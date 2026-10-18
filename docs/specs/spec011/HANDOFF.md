@@ -1,168 +1,36 @@
-# Spec011 build handoff: Money Market Optimizer (MMKT)
+# Spec011 build handoff: Money Market Optimizer
 
-**Updated:** 2026-10-18
+**Updated:** 2026-10-18. The approved spec is in `SPEC.md`; task evidence is in `TASKS.md`.
 
-**Branch:** `claude/synthetic-snu-poc-27n9hu`. The MMKT module merged into `main` in
-[PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
-follow-ups [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) (module approval, handoffs) and [PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) (selectable
-baseline, owner questions 1–3) are also merged. The full-spec approval record (MM-001) is merged in
-[PR #170](https://github.com/thatquantguy44/QuantMeridian/pull/170). Re-checked against `main` at PR #170: the next steps below
-are still open. The same PRs carry the spec012 work; see
-`docs/specs/spec012/HANDOFF.md`.
+## Current slice
 
-**State:** the terminal module `/money-market` drives the existing `services/money_market_api`
-continuous LP end to end, on explicitly selected SIM rate sets. Results are verified by the
-service before they are shown. They are **not execution-ready** and not recommendations.
+The MMKT local service now has two explicit bindings. `local-mmkt-lp-v1` remains a continuous preview. `local-mmkt-execution-v2` solves the ticketed MIP and returns a verified indicative blotter, cutoff timeline, fixed-integer shadow-price labels, and independently verified floor frontier points. The terminal defaults to the ticketed SIM book, requires the v2 binding for that mode, and shows rate-cut/forecast-miss changes using service results. It does not route orders or claim that SIM results are live recommendations.
 
-**Spec status:** **approved on 2026-10-18.** The owner approved the MMKT module slice and then
-the full spec, plan, tasks and white-paper design (MM-001). Owner questions 1–3 were resolved
-first. All are in the `SPEC.md` decision log. Approval authorizes the remaining tasks; it does
-not mean they are built. See "Next steps" below.
+The SIM book uses dated offers and $25mm lots so its execution plan is operationally legible and responds within the terminal request timeout. The five named scenarios retain explicit SIM rate selection and fail-closed non-OK pricing. Frontiers are computed on the selected run; batch comparison and baselines omit frontier re-solves to keep the demo responsive. Each returned allocation remains independently verified.
 
-## Start here
-
-1. Read `SPEC.md` (requirements MM-001–010, AC-001–008, open questions), then `PLAN.md` and
-   `TASKS.md`.
-2. Read `services/money_market_api/README.md` for the model conventions. Every run also returns
-   them as `assumptions`.
-3. Run it locally (below) and click through the five scenario cards before changing anything.
-
-## Run it locally
+## Local run
 
 ```bash
 pip install ./services/optimization_core -e ./services/money_market_api
-MONEY_MARKET_API_TOKEN=local-dev-token MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1 \
+MONEY_MARKET_API_TOKEN=local-dev-token MONEY_MARKET_MODEL_BINDING=local-mmkt-execution-v2 \
   uvicorn money_market_api.app:app --app-dir services/money_market_api/src --port 8014
-# .env.local (then restart `npm run dev`)
-MONEY_MARKET_API_TOKEN=local-dev-token
+# Set MONEY_MARKET_API_TOKEN=local-dev-token in the terminal .env.local, then restart it.
 ```
 
-Open `/money-market`. The **Model service** panel checks off each setup step and says which one
-is missing.
+Open `/money-market` and select a SIM set. The service must be READY with binding `local-mmkt-execution-v2`. The terminal does not silently fall back to the LP or Gold data.
 
-**Gotchas we hit:**
-- **Port 8014 already in use.** A stale `uvicorn` from an earlier start keeps answering on 8014,
-  and the new one silently fails to bind. Kill the old process first.
-- **Tests import old code.** Install the service with `-e` (editable). Otherwise `pytest` and
-  `uvicorn` import a stale copy from site-packages.
-- **Running behind an outbound proxy.** Server-side `fetch` now honours `NO_PROXY` and always
-  bypasses loopback (`src/lib/server/fetchProxy.ts`). Before that fix, the terminal could not
-  reach `127.0.0.1:8014` when `HTTPS_PROXY` was set.
+## Verified locally in this slice
 
-## What exists
+- `python3 -m unittest discover -s services/money_market_api/tests -p test_execution.py -v`: 6/6 passed. Tests cover min ticket, lots, ticket count, cutoffs, frontier, rate cut, p10 miss, infeasibility, tampered integrality, and the run boundary.
+- The real terminal SIM base request, constructed from `src/data/mmkt.ts` and `src/lib/server/mmktSimRateSets.ts`, returned a verified 12-ticket plan and three verified frontier points with modeled returns of $2.756mm, $2.629mm, and $2.498mm at floor multipliers 0.8, 1.0, and 1.2. Runtime was 22.05s in this workspace.
+- The same SIM book with frontier re-solves disabled for batch comparison produced five verified scenarios: base $2.629mm, rate cut $2.474mm, fee/gate $2.622mm, p10 miss $1.831mm, downgrade $2.627mm. The cut moved the 4-week bill from $225mm to $900mm and reduced government MMF from $1,300mm to $625mm. The p10 miss reduced government MMF to $850mm and prime MMF to $275mm, and increased first-day tri-party repo from $400mm to $775mm. All five used 12 verified tickets.
+- GitHub Actions have no available runner minutes in this session; this workspace has no `pytest`, npm dependencies, or full local repository checkout, so the existing broad suites, typecheck, build, and browser viewports were not run here; an opt-in real-service Playwright path is in `test/optimization-demos.spec.ts`.
 
-**Service (`services/money_market_api`, port 8014; no database or market-data access):**
-- `contracts.py`: strict v1.0.0 request/result contracts.
-- `optimizer.py`: a multi-period cash-continuity LP. It covers liquidity floors, WAM/WAL proxies,
-  exposure limits (amount and fraction), rating floors and the RRP cap, solved with HiGHS through
-  `optimization_core`. The shared verifier checks bounds, rows and the objective.
-- `scenarios.py`: selects the p10/p50/p90 forecast case and rebases opening cash.
-- `app.py`: bearer auth, `/health`, `/v1/capabilities` and `/v1/runs`. The model is off unless
-  `MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1` is set.
-- `tests/test_runs.py`: 4 tests: a hand-computable floor-and-return case, the null-maximum
-  regression, the capabilities-from-source regression, and the rating-floor exclusion. CI job
-  `mmkt-service`.
+## Open integration work
 
-**Baseline (owner decision 2026-10-18, `SPEC.md` decision log):**
-- Choose it in the **Policy** panel: government MMF sweep (default), uninvested cash, overnight
-  repo + RRP roll, or current allocation.
-- `buildBaselineInput` (`src/data/mmkt.ts`) builds a separate request with the same forecast,
-  floors and policy but a restricted instrument set. The service solves and verifies it like
-  any run.
-- `compareToBaseline` reports the uplift in $ and in bp, annualized on the optimized run's
-  average total balance.
-- Shown in a KPI tile, a **Baseline comparison** panel (both request hashes and mixes), and an
-  uplift column in the scenario comparison.
-- Uplift on the base book: +$456.5k / 51.2bp vs the government MMF sweep, +$1,173.6k / 131.7bp vs
-  the overnight roll, and +$2,732.8k / 306.7bp vs uninvested cash.
+1. Connect Gold `gold.mmkt_rate_snapshot` and reconcile instrument IDs once EcoMedallion coverage is available. Until then the Gold option fails closed.
+2. Define a current-positions feed and compute the actual-current-allocation baseline (MM-011).
+3. Persist OPT run history and enforce durable idempotency (MM-008/009).
+4. Generate cross-language contract parity and run full constraint matrix, typecheck/build, and browser viewport checks in a complete environment (MM-002/010).
 
-**Terminal routes:**
-
-| Route | Purpose |
-|---|---|
-| `GET /api/econ/mmkt-service` | Readiness: health, binding and token state. Never reveals the token. |
-| `GET /api/econ/mmkt-rate-snapshot?source=sim&sim_set_id=…` (or `source=gold`, or `sets=1`) | Returns the hashed snapshot with every row's status and pricing eligibility, or lists the SIM sets. |
-| `POST /api/econ/mmkt-runs` | Attaches the server-read snapshot and hash, gates non-OK rates, and proxies to the service. Clients cannot supply a snapshot. |
-
-**SIM rate sets** (`src/lib/server/mmktSimRateSets.ts`):
-- Two sets: `SIM-MMKT-2026-10-BASE` and `SIM-MMKT-2026-10-CUT25`.
-- Each has one stale row and one unavailable row, to exercise fail-closed pricing.
-- Quotes are normalized to an ACT/365 money-market yield by basis (simple ACT/360, discount
-  ACT/360, bond-equivalent, 7-day SEC).
-- Instrument IDs follow FRED naming. They must be reconciled with EcoMedallion's instrument map
-  when its PR #81 merges (handoff XR-2).
-
-**Client** (`src/data/mmkt.ts`): TypeScript contract types, the illustrative two-entity USD book
-(10 business days), five named scenarios, the result analytics (holdings, ladder, floor
-headroom) and the CSV export.
-
-**Page** (`src/app/money-market/`):
-- `page.tsx` holds the state and layout.
-- `components/panels.tsx` holds the setup guide, rate table, candidate and policy editors,
-  allocation table, lineage, verification and scenario comparison.
-- `components/charts.tsx` holds the balance composition, floor charts, maturity ladder and yield
-  bars.
-
-**Registration:** nav code `MMKT` (`src/lib/nav.ts`), the `App.tsx` route, and
-`settings/modules.config.json`. `nav.test.ts` and `test/smoke.spec.ts` include the route.
-
-**Scenario results on the base book** (verified on the real service, 2026-10-18):
-
-| Scenario | Modeled net return | Avg invested | Notes |
-|---|---|---|---|
-| Base | $2,732.8k | $2,380mm | Floors binding on most days |
-| Rate cut (CUT25) | $2,590.8k | $2,398mm | CP enters as overnight rates fall |
-| Prime fund fee & gate | $2,711.1k | $2,380mm | Prime MMF drops out; government MMF picks up |
-| Cash forecast miss (p10) | $2,034.9k | $1,739mm | Less held past the horizon; more overnight repo |
-| Counterparty downgrade | $2,703.8k | $2,280mm | Repo and ACME CP excluded; RRP and government MMF pick up |
-
-## What does not exist yet
-
-- **Execution blotter and cutoff timeline.** These need the MIP rules (MM-006): minimum tickets,
-  lot sizes, ticket counts and cutoffs. Until then the UI labels output as an LP allocation, not
-  a blotter.
-- **Current-allocation baseline.** It is listed, but fails closed until a current-positions
-  feed exists (MM-011).
-- **Shadow prices.** The service does not return duals. HiGHS exposes row marginals through
-  SciPy, so add them to the contract with the convention disclosed (MM-006, AC-006).
-- **Yield/liquidity frontier.** This would be a run series over a liquidity parameter, each run
-  verified (AC-008).
-- **OPT run history** (MM-008). Results and hashes live only in the browser session today.
-- **Gold rates.** `gold.mmkt_rate_snapshot` is not wired upstream (XR-1 to XR-3). The Gold option
-  fails closed with a clear message.
-- **Contract parity and idempotency.** There are no generated TS/Python contract parity checks
-  (MM-002), and the idempotency key is logged but not enforced (MM-009).
-- **Multi-currency demo data.** The service solves each currency independently, and floors are
-  native-currency per entity (decided 2026-10-18). The demo book is USD only.
-
-## Verification evidence (2026-10-18, branch head)
-
-- **Terminal unit tests:** `mmkt` 18 (including 7 baseline tests), `mmktSimRateSets` 8,
-  `mmkt-runs` route 4, `fetchProxy` 2. All pass.
-- **Full `npm test`:** everything passes except the badge-coverage test. That fails only for the
-  MMFO page (spec015), which also fails on `main`. The MMKT page passes it.
-- **Baselines end to end:** all four options checked live in the browser against the service,
-  for every scenario.
-- **Service:** `pytest` in `services/money_market_api` passed 4.
-- **`npm run typecheck` and `npm run build:client`:** passed.
-- **Playwright smoke** (`test/smoke.spec.ts -g MMKT`): passed.
-- **Manual end to end:** all five scenarios ran against a local service and passed the service
-  verifier, with no JavaScript errors in the browser. No horizontal overflow at 390px.
-
-## Next steps (in order)
-
-1. ~~Merge the baseline PR.~~ Merged in PR #168.
-2. ~~Owner approval of the full spec, plan, tasks and white paper (MM-001).~~ Done 2026-10-18.
-3. **MM-006 MIP slice.** Add ticket, lot, count and cutoff rules with formulation disclosure,
-   and verify integrality. Only after this can the UI present an execution blotter and cutoff
-   timeline (MM-007).
-4. **Duals.** Return row marginals from the service with the sign and units disclosed, then
-   label shadow prices in the UI (MM-006, MM-007).
-5. **OPT run history (MM-008).** Persist run envelopes (request hash, snapshot hash, SIM set,
-   forecast case) and show them in `/optimization`.
-6. **Positions feed (MM-011).** This enables the current-allocation baseline.
-7. **Gold path.** When EcoMedallion XR-1 to XR-3 land, reconcile the instrument IDs and verify
-   the Gold option end to end. The route already supports it.
-8. **Contract parity and hardening.** Generate TS types from the Pydantic contracts or check
-   parity (MM-002), enforce idempotency durably, and add telemetry (MM-009).
-9. **Model card and as-built white paper (MM-010).**
+WAM/WAL remain days-to-maturity proxies; fund fee/gate and rate assumptions are illustrative SIM inputs. The as-built execution conventions are in `docs/whitepapers/money_market_execution.md`.

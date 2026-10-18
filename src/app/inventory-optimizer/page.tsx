@@ -8,6 +8,7 @@ import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { TermToggleGroup } from "@/components/ui/TermToggleGroup";
 import { Waterfall } from "@/components/charts/Waterfall";
 import { Treemap } from "@/components/charts/Treemap";
+import { IbalShowcase } from "./Showcase";
 import { Donut } from "@/components/charts/Radial";
 import {
   DEFAULT_RUN_CONFIG,
@@ -18,6 +19,7 @@ import {
   getIbalCapabilities,
   getIbalHealth,
   getIbalScenarioCatalog,
+  orderedStressOutcomes,
   runIbal,
   runIbalScenarioStress,
   uploadIbalDataset,
@@ -1328,6 +1330,7 @@ export default function InventoryOptimizerPage() {
       </KpiStrip>
 
       <EngineStatusStrip health={health} capabilities={capabilities} blockReason={engineBlock} checking={engineChecking} onRecheck={() => void refreshEngineStatus()} />
+      <IbalShowcase health={health} capabilities={capabilities} />
 
       {message && (
         <div className="border-b border-term-border bg-term-panel-2 px-3 py-1 text-2xs text-term-text-dim">
@@ -1643,9 +1646,9 @@ export default function InventoryOptimizerPage() {
               <div className="overflow-auto p-2">
                 <table className="w-full border-collapse text-2xs">
                   <thead><tr className="border-b border-term-border text-left text-term-text-mute"><th className="p-1">Rank</th><th className="p-1">Scenario</th><th className="p-1">Status</th><th className="p-1">Verified</th><th className="p-1 text-right">Objective Δ</th></tr></thead>
-                  <tbody>{engineScenarioResponse.stress_report.outcomes.map((outcome) => (
+                  <tbody>{orderedStressOutcomes(engineScenarioResponse.stress_report.outcomes).map((outcome) => (
                     <tr key={outcome.scenario_id} className="border-b border-term-border/60 text-term-text">
-                      <td className="p-1">{outcome.rank ?? "—"}</td><td className="p-1">{outcome.scenario_name}</td><td className="p-1">{outcome.status}</td><td className="p-1">{outcome.verification_passed ? "YES" : "NO"}</td><td className="p-1 text-right">{outcome.objective_delta_usd == null ? "—" : fmtUsdAbbr(outcome.objective_delta_usd)}</td>
+                      <td className="p-1">{outcome.verification_passed && (outcome.status === "optimal" || outcome.status === "feasible_limit") ? outcome.rank ?? "—" : "—"}</td><td className="p-1">{outcome.scenario_name}</td><td className="p-1">{outcome.status}</td><td className="p-1">{outcome.verification_passed ? "YES" : "NO"}</td><td className="p-1 text-right">{outcome.verification_passed && (outcome.status === "optimal" || outcome.status === "feasible_limit") && outcome.objective_delta_usd != null ? fmtUsdAbbr(outcome.objective_delta_usd) : "—"}</td>
                     </tr>
                   ))}</tbody>
                 </table>

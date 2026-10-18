@@ -1,19 +1,19 @@
 # Tasks: IBAL Showcase
 
 - **Spec:** spec013-ibal-showcase (SPEC.md, PLAN.md)
-- **Status:** Approved 2026-10-17 — IBAL-001 done; implementation authorized
+- **Status:** Approved 2026-10-17 — pinned local SIM showcase built; upstream diagnostic limits and browser verification open
 - **Parent:** 0018 REQ-011–015, REQ-029–030, REQ-041
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
 | IBAL-001 | Resolve pin, diagnostics-default, and presenter repair decisions; approve child docs. | IBAL-001–008 | done | Decisions and approval recorded in SPEC.md, "Decisions (owner, 2026-10-17)" |
-| IBAL-002 | Review and bump engine pin to reviewed main revision; expose manifest through service health. | IBAL-001/002 | todo | Health and pin contract tests |
+| IBAL-002 | Review and bump engine pin to reviewed main revision; expose manifest through service health. | IBAL-001/002 | done | Reviewed InventoryBallast main merge #39 and its spec0019 showcase books; full SHA `bb425cac10d1da29e74fe8f854fd41b31f460773`, package `0.1.0`, source fingerprint `349923fff7c03a1ce57cb237fc64697e847ff695145fdf3019c86769a60a9f1b`. Pin fields are isolated in a separate PR; health checks all three. Local pin identity test passes. |
 | IBAL-003 | Update proxy/request/result contract parity and manifest-driven controls. | IBAL-002/003/007 | done | Manifest-driven controls: `input_features`/`output_sections` live in `capability-manifest.json`, upload rejections follow it (`tests/test_capability_manifest.py`), and the workbench gates Run, uploads, MIP-only inputs, Scenario Studio and result tabs on `/health` + `/v1/capabilities`, with an engine status strip that re-checks after failures, on focus and on demand (`src/lib/ibalCapabilityGate.test.ts`, `test/ibal.spec.ts`). Contract parity: `contracts/ibal/run-response.shape.json` is generated from the pinned engine's result schema (`tests/test_ts_contract_shape.py`) and the TypeScript types are held to it (`src/lib/inventoryOptimizer.contract.test.ts`) |
-| IBAL-004 | Add diagnostic tabs for solver, sensitivity, attribution, flow, infeasibility, agency, and prime. | IBAL-004 | todo | Each view reconciles to engine output; empty/unavailable states tested |
-| IBAL-005 | Add Scenario Studio for named scenarios, ranked stress, and matched/unmatched comparisons. | IBAL-005 | todo | Verified golden scenario and comparison path |
-| IBAL-006 | Add presenter mode, health banner, warm-up, and guided sequence. | IBAL-006 | todo | Playwright walkthrough at parent viewports |
-| IBAL-007 | Verify SIM/source provenance, hashes, production-disabled state, and governance gates. | IBAL-007/008 | todo | Audit tests and visible state |
-| IBAL-008 | Update white paper, validation evidence, and handoff. | REQ-041 | todo | As-built paper and all acceptance criteria evidence |
+| IBAL-004 | Add diagnostic tabs for solver, sensitivity, attribution, flow, infeasibility, agency, and prime. | IBAL-004 | in-progress | Guided showcase exposes solver/formulation, binding rows and nullable duals, economics and driver attribution, demand/coverage/flow, reason codes, agency and prime results. The pinned MIP engine does not return LP sensitivity ranges or an IIS/feasibility relaxation; these are disclosed as unavailable rather than fabricated. Upstream InventoryBallast spec0020 is the precise dependency. |
+| IBAL-005 | Add Scenario Studio for named scenarios, ranked stress, and matched/unmatched comparisons. | IBAL-005 | done | Registered engine scenario picker and stress runner remain; verified feasible outcomes are ordered by engine rank and failed/unchecked outcomes show no valid rank/objective. Guided engine comparison renders matched, new, unmatched driver deltas and reconciliation from upstream artifacts. Golden principal test checks the named shock and repair. |
+| IBAL-006 | Add presenter mode, health banner, warm-up, and guided sequence. | IBAL-006 | in-progress | New guided SIM book selector runs pinned principal, agency and prime base→shock→diagnose→repair→compare artifacts through the service; trust strip carries status, verification, objective, termination, run, input hash, pin. Prime planned infeasibility shows no allocation. API contract tests pass. An opt-in real-service Playwright walkthrough is authored; required viewports/keyboard execution and user-edited continuation remain unverified. |
+| IBAL-007 | Verify SIM/source provenance, hashes, production-disabled state, and governance gates. | IBAL-007/008 | done | Catalog/run response advertises SIM, pinned commit/fingerprint and empty granted gates; presenter labels local/SIM and does not promote prime infeasibility. Auth dependency denies production unless explicitly enabled; golden test confirms. |
+| IBAL-008 | Update white paper, validation evidence, and handoff. | REQ-041 | in-progress | As-built showcase paper added. Five golden service contract tests pass with pinned upstream checkout. Broader `pytest` suite, terminal typecheck/build and browser walkthrough cannot run in this partial workspace (no pytest/npm deps; GitHub Actions capacity exhausted). |
 
 ## Definition of Done
 

@@ -2,7 +2,7 @@
 
 This companion service is the only QuantMeridian boundary allowed to construct, validate, solve,
 or export InventoryBallast data. It pins InventoryBallast commit
-`e84801b65a4d1c23b19cb34b0de1e217f6b345f9` and fails readiness if the engine's identity does not
+`bb425cac10d1da29e74fe8f854fd41b31f460773` (merged upstream PRs #38 and #39) and fails readiness if the engine's identity does not
 match `capability-manifest.json` or no supported solver backend is installed.
 
 Market Terminal does not require `highspy` by default. The service can solve LP/MIP runs through

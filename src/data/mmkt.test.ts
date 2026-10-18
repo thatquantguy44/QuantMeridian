@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
-  BASELINES, DEFAULT_BASELINE, MMKT_SCENARIOS, PERIOD_DATES, allocationsCsv, analyzeCurrency, buildBaselineInput, buildRunInput,
+  BASELINES, DEFAULT_BASELINE, MMKT_SCENARIOS, PERIOD_DATES, allocationsCsv, blotterCsv, analyzeCurrency, buildBaselineInput, buildRunInput,
   compareToBaseline, demoBook, demoCashForecast,
   runnableCandidates, type CurrencyResult, type MmktRunResult, type RateRow,
 } from "./mmkt";
@@ -120,12 +120,28 @@ describe("result analytics", () => {
   test("CSV has one row per allocation and keeps SIM lineage", () => {
     const run = {
       run: { run_id: "r", request_id: "q", received_at: "", request_hash: "h", rate_snapshot_hash: "s", status: "optimal_verified", model_family: "continuous_lp_relaxation", rate_source: "sim", cash_forecast_case: "p50", rate_as_of_date: "2026-10-16", sim_set_id: "SIM-MMKT-2026-10-BASE" },
-      currency_results: [result],
+      currency_results: [result], execution_ready: false,
     } as unknown as MmktRunResult;
     const lines = allocationsCsv(run).split("\n");
     expect(lines).toHaveLength(4);
     expect(lines[1]).toContain("SIM-MMKT-2026-10-BASE");
     expect(lines[1].endsWith(",false")).toBe(true);
+  });
+
+  test("execution CSV follows the verified blotter order and carries cutoff lineage", () => {
+    const run = {
+      run: { run_id: "r", request_hash: "request", rate_snapshot_hash: "snapshot", rate_source: "sim", sim_set_id: "SIM-MMKT-2026-10-BASE" },
+      currency_results: [{ ...result, blotter: [
+        { sequence: 1, candidate_id: "EARLY", legal_entity_id: "QMS", account_id: "A", currency: "USD", purchase_date: "2026-10-19", planned_at: "2026-10-19T09:00:00-04:00", cutoff_at: "2026-10-19T11:00:00-04:00", amount: 60, lot_size_amount: 10, minimum_ticket_amount: 30 },
+        { sequence: 2, candidate_id: "LATE", legal_entity_id: "QMS", account_id: "A", currency: "USD", purchase_date: "2026-10-19", planned_at: "2026-10-19T09:00:00-04:00", cutoff_at: "2026-10-19T15:00:00-04:00", amount: 40, lot_size_amount: 10, minimum_ticket_amount: 30 },
+      ] }], execution_ready: true,
+    } as unknown as MmktRunResult;
+    const lines = blotterCsv(run).split("\n");
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain("1,EARLY");
+    expect(lines[2]).toContain("2,LATE");
+    expect(lines[1]).toContain("2026-10-19T11:00:00-04:00");
+    expect(lines[1]).toContain("SIM-MMKT-2026-10-BASE");
   });
 });
 
