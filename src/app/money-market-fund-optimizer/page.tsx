@@ -13,7 +13,7 @@ interface ConnectionResponse {
   api_schema_version: string | null;
 }
 interface AllocationRow {
-  fund: { id: string; name: string; fund_type: "GOVERNMENT" | "PRIME"; liquidity: "SAME_DAY" | "NEXT_DAY"; net_7day_yield_pct: number };
+  fund: { id: string; name: string; fund_type: "GOVERNMENT" | "PRIME"; liquidity: "SAME_DAY" | "NEXT_DAY"; gross_7day_yield_pct: number; expense_ratio_pct: number; net_7day_yield_pct: number; aum_usd_bn: number; wam_days: number; wal_days: number; daily_liquid_assets_pct: number; weekly_liquid_assets_pct: number; treasury_assets_pct: number; repo_assets_pct: number; agency_assets_pct: number; other_assets_pct: number; snapshot_as_of: string };
   allocated_amount: number;
   portfolio_weight_pct: number;
   estimated_annual_income: number;
@@ -22,6 +22,9 @@ interface OptimizeResult {
   model_id: string;
   model_status: "POC_OPTIMAL";
   source_mode: "SIM";
+  synthetic_mode: true;
+  dataset_id: string;
+  dataset_as_of: string;
   independent_verification: "NOT_PROVIDED";
   total_cash: number;
   cash_reserve_amount: number;
@@ -49,6 +52,7 @@ function tone(status: Readiness): "up" | "amber" | "down" | "blue" {
 }
 
 export default function MoneyMarketFundOptimizer() {
+  const [syntheticMode, setSyntheticMode] = useState(false);
   const [totalCash, setTotalCash] = useState("10000000");
   const [cashReserve, setCashReserve] = useState("10");
   const [minSameDay, setMinSameDay] = useState("30");
@@ -82,6 +86,7 @@ export default function MoneyMarketFundOptimizer() {
   useEffect(() => { void refreshConnection(); }, [refreshConnection]);
 
   async function runOptimization() {
+    if (!syntheticMode) return;
     setSolving(true);
     setSolveError(null);
     try {
@@ -89,6 +94,7 @@ export default function MoneyMarketFundOptimizer() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          synthetic_mode: true,
           total_cash: Number(totalCash),
           cash_reserve_pct: Number(cashReserve),
           min_same_day_pct: Number(minSameDay),
@@ -111,7 +117,13 @@ export default function MoneyMarketFundOptimizer() {
     { key: "fund", header: "Fund", render: (row) => <span className="text-term-text">{row.fund.name}</span> },
     { key: "type", header: "Type", render: (row) => <Tag tone={row.fund.fund_type === "GOVERNMENT" ? "blue" : "amber"}>{row.fund.fund_type}</Tag> },
     { key: "liquidity", header: "Liquidity", render: (row) => <Tag tone={row.fund.liquidity === "SAME_DAY" ? "up" : "neutral"}>{row.fund.liquidity.replace("_", " ")}</Tag> },
-    { key: "yield", header: "Net 7D Yield", align: "right", render: (row) => <span className="tnum text-term-amber">{pct(row.fund.net_7day_yield_pct)}</span> },
+    { key: "gross", header: "Gross 7D", align: "right", render: (row) => <span className="tnum text-term-text-dim">{pct(row.fund.gross_7day_yield_pct)}</span> },
+    { key: "expense", header: "Expense", align: "right", render: (row) => <span className="tnum text-term-text-mute">{pct(row.fund.expense_ratio_pct)}</span> },
+    { key: "net", header: "Net 7D", align: "right", render: (row) => <span className="tnum text-term-amber">{pct(row.fund.net_7day_yield_pct)}</span> },
+    { key: "aum", header: "AUM ($bn)", align: "right", render: (row) => <span className="tnum text-term-text-dim">{row.fund.aum_usd_bn.toFixed(1)}</span> },
+    { key: "wamwal", header: "WAM / WAL", align: "right", render: (row) => <span className="tnum text-term-text-dim">{row.fund.wam_days} / {row.fund.wal_days}d</span> },
+    { key: "liquidassets", header: "DLA / WLA", align: "right", render: (row) => <span className="tnum text-term-text-dim">{pct(row.fund.daily_liquid_assets_pct)} / {pct(row.fund.weekly_liquid_assets_pct)}</span> },
+    { key: "mix", header: "UST / Repo / Agency / Other", align: "right", render: (row) => <span className="tnum text-term-text-mute" title="Illustrative asset mix: Treasury, repo, agency securities, other">{row.fund.treasury_assets_pct} / {row.fund.repo_assets_pct} / {row.fund.agency_assets_pct} / {row.fund.other_assets_pct}%</span> },
     { key: "allocation", header: "Allocation", align: "right", render: (row) => <span className="tnum font-semibold text-term-text">{dollars2(row.allocated_amount)}</span> },
     { key: "weight", header: "Weight", align: "right", render: (row) => <span className="tnum text-term-text-dim">{pct(row.portfolio_weight_pct)}</span> },
     { key: "income", header: "Est. Annual Income", align: "right", render: (row) => <span className="tnum text-term-up">{dollars2(row.estimated_annual_income)}</span> },
@@ -132,6 +144,29 @@ export default function MoneyMarketFundOptimizer() {
         This workspace is separate from CASH treasury funding. It uses an illustrative fund universe and net-yield assumptions. Results demonstrate allocation mechanics only; they are not live offers, forecasts, or investment recommendations.
       </div>
 
+      <div className="mx-2 mb-1 flex flex-wrap items-center justify-between gap-3 border border-term-border bg-term-panel px-3 py-2">
+        <div>
+          <div className="text-xs font-semibold text-term-text">Synthetic Demo Mode</div>
+          <p className="mt-1 text-2xs text-term-text-mute">Uses a fixed, fictional institutional fund snapshot for presentations. Values are illustrative, not live market quotes.</p>
+        </div>
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-term-text">
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Synthetic demo mode"
+            checked={syntheticMode}
+            onChange={(event) => {
+              const enabled = event.target.checked;
+              setSyntheticMode(enabled);
+              setResult(null);
+              setSolveError(null);
+            }}
+            className="h-4 w-4 accent-term-amber"
+          />
+          <span>{syntheticMode ? "ON · SIM DATA" : "OFF"}</span>
+        </label>
+      </div>
+
       <div className="grid flex-1 grid-cols-1 gap-2 p-2 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.2fr)]">
         <div className="flex flex-col gap-2">
           <Panel title="Portfolio Constraints" code="INPUT">
@@ -139,35 +174,35 @@ export default function MoneyMarketFundOptimizer() {
               <label className="flex flex-col gap-1 text-xs text-term-text-dim sm:col-span-2">
                 Total cash to allocate
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <span>$</span><input aria-label="Total cash to allocate" inputMode="decimal" type="number" min="100" step="1000" value={totalCash} onChange={(e) => setTotalCash(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" />
+                  <span>$</span><input aria-label="Total cash to allocate" inputMode="decimal" type="number" min="100" step="1000" value={totalCash} onChange={(e) => { setTotalCash(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" />
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Cash reserve
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Cash reserve percentage" inputMode="decimal" type="number" min="0" max="99" step="1" value={cashReserve} onChange={(e) => setCashReserve(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Cash reserve percentage" inputMode="decimal" type="number" min="0" max="99" step="1" value={cashReserve} onChange={(e) => { setCashReserve(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Minimum same-day liquidity
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Minimum same-day liquidity percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={minSameDay} onChange={(e) => setMinSameDay(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Minimum same-day liquidity percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={minSameDay} onChange={(e) => { setMinSameDay(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Maximum prime exposure
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Maximum prime exposure percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxPrime} onChange={(e) => setMaxPrime(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Maximum prime exposure percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxPrime} onChange={(e) => { setMaxPrime(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
               <label className="flex flex-col gap-1 text-xs text-term-text-dim">
                 Maximum per fund
                 <span className="flex items-center border border-term-border bg-term-panel-2 px-2 text-term-text">
-                  <input aria-label="Maximum per fund percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxFund} onChange={(e) => setMaxFund(e.target.value)} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
+                  <input aria-label="Maximum per fund percentage" inputMode="decimal" type="number" min="0" max="100" step="1" value={maxFund} onChange={(e) => { setMaxFund(e.target.value); setResult(null); setSolveError(null); }} className="w-full bg-transparent px-1 py-1.5 outline-none" /><span>%</span>
                 </span>
               </label>
-              <button type="button" onClick={() => void runOptimization()} disabled={solving} className="self-end border border-term-amber bg-term-amber/15 px-3 py-2 text-xs font-bold uppercase text-term-amber hover:bg-term-amber/25 disabled:opacity-50">
-                {solving ? "Solving…" : "Run POC optimization"}
+              <button type="button" onClick={() => void runOptimization()} disabled={solving || !syntheticMode} className="self-end border border-term-amber bg-term-amber/15 px-3 py-2 text-xs font-bold uppercase text-term-amber hover:bg-term-amber/25 disabled:opacity-50">
+                {solving ? "Solving…" : syntheticMode ? "Run demo optimization" : "Turn on demo mode to run"}
               </button>
             </div>
           </Panel>
@@ -186,9 +221,9 @@ export default function MoneyMarketFundOptimizer() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Panel title="Allocation Result" code="RESULT" accent right={result ? <Tag tone="blue">{result.model_status}</Tag> : undefined}>
+          <Panel title="Allocation Result" code="RESULT" accent right={result ? <><Tag tone="blue">{result.model_status}</Tag><Tag tone="amber">SIM · {result.dataset_as_of}</Tag></> : undefined}>
             {solveError && <div role="alert" className="m-3 border border-term-down/40 bg-term-down/5 px-2 py-1.5 text-xs text-term-down">{solveError}</div>}
-            {!result && !solveError && <div className="p-4 text-xs text-term-text-mute">Run the POC model to calculate a synthetic fund allocation.</div>}
+            {!result && !solveError && <div className="p-4 text-xs text-term-text-mute">{syntheticMode ? "Run the POC model to calculate a synthetic fund allocation." : "Turn on Synthetic Demo Mode to load the fictional fund snapshot and enable the local POC."}</div>}
             {result && <>
               <div className="grid grid-cols-2 divide-x divide-term-border border-b border-term-border md:grid-cols-4">
                 <Stat label="Investable" value={dollars(result.investable_amount)} sub={`Reserve ${dollars(result.cash_reserve_amount)}`} />
@@ -196,6 +231,7 @@ export default function MoneyMarketFundOptimizer() {
                 <Stat label="Annualized Income" value={dollars(result.estimated_annual_income)} sub="Simple run-rate estimate" tone="up" />
                 <Stat label="Same-Day Liquidity" value={pct(result.same_day_liquidity_pct)} sub={dollars(result.same_day_liquidity_amount)} />
               </div>
+              <div className="border-b border-term-border px-3 py-1.5 text-3xs text-term-text-mute">Dataset {result.dataset_id} · fictional share classes · snapshot {result.dataset_as_of} · portfolio mix fields are descriptive; the LP uses net yield and the stated limits.</div>
               <DataGrid columns={columns} rows={result.allocations} rowKey={(row) => row.fund.id} maxHeight="360px" initialSort={{ key: "allocation", dir: "desc" }} zebra />
               <div className="border-t border-term-border p-3">
                 <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-term-text"><span>POC constraint checks</span><Tag tone="amber">NOT INDEPENDENTLY VERIFIED</Tag></div>

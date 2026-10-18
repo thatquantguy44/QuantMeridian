@@ -2,7 +2,7 @@
 
 - **Spec:** spec015-pluggable-optimization-center (`SPEC.md`)
 - **Status:** Draft — implementation in progress; model binding approval pending
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 ## Architecture
 
@@ -43,7 +43,7 @@ A separate `/money-market-fund-optimizer` workspace is being added for fund allo
 
 ## Money Market Fund Optimizer proof of concept
 
-The separate `/money-market-fund-optimizer` module now runs a small deterministic LP locally through `POST /api/mm-fund-optimizer/optimize`. It allocates an investable cash amount across a six-option synthetic government/prime fund universe, maximizing illustrative net 7-day yield subject to cash reserve, minimum same-day liquidity, maximum prime exposure, and per-fund concentration constraints. A bounded vertex-enumeration solver returns the highest-yield feasible point for this small LP and checks the stated constraints before returning it. The UI exposes the assumptions and results, labels the source `SIM`, and states that no independent verifier or live fund data is available.
+The separate `/money-market-fund-optimizer` module runs a small deterministic LP locally through `POST /api/mm-fund-optimizer/optimize`. Synthetic Demo Mode is an explicit opt-in and defaults off; the API also requires `synthetic_mode: true`. When enabled, it uses the fixed `mmfo-demo-us-institutional-2026-10-16` fictional dataset with eight government and prime share classes and descriptive yield, expense, AUM, maturity, liquidity, and portfolio-mix fields. It maximizes illustrative net 7-day yield subject to cash reserve, minimum same-day liquidity, maximum prime exposure, and per-fund concentration constraints. A bounded vertex-enumeration solver returns the highest-yield feasible point for this small LP and checks the stated constraints before returning it. Results expose the dataset ID/as-of date and remain labeled `SIM`; when the toggle is off, the POC run is disabled and produces no synthetic result.
 
 This is a replaceable POC adapter, not the eventual model integration. The future service remains a separate deployment built from the approved model repository. Keep the POC explicitly separated from production bindings; do not use its synthetic universe as a live recommendation source. The model repository, immutable revision, approved input/result schemas, sponsor/vehicle eligibility, fee and tax treatment, liquidity mapping, and independent verifier remain unresolved.
 
