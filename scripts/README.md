@@ -7,6 +7,7 @@ on Ctrl-C.
 npm run dev:all              # or: scripts/dev-all.sh
 scripts/dev-all.sh --no-agent   # skip the agent worker
 scripts/dev-all.sh --no-coll    # skip the collateral optimizer
+scripts/dev-all.sh --no-news    # skip news_nlp
 ```
 
 ## What it starts
@@ -17,6 +18,7 @@ scripts/dev-all.sh --no-coll    # skip the collateral optimizer
 | `ibal` | 8013 | `inventory_optimizer_api` on the pinned InventoryBallast engine |
 | `mmkt` | 8014 | `money_market_api` |
 | `coll` | 8017 | `collateral_optimizer_api` on the reviewed collateral wheel |
+| `news-nlp` | 8088 | `news_nlp` sentiment/NER/clustering; the script sets `NEWS_NLP_URL` for the terminal |
 | `agent-worker` | none | Polls the ECOIQ agent queue |
 
 SXU (8015) and the liquidity API (8016) have no runnable service yet, so they are not started.
@@ -29,8 +31,11 @@ A port that is already in use is left alone and reported; the script will not st
   `../../models/InventoryBallast`; override with `INVENTORY_BALLAST_REPO=/path/to/it`.
 - `.env.local` with the service tokens (see [docs/services.md](../docs/services.md)):
   `INVENTORY_OPTIMIZER_API_TOKEN`, `MONEY_MARKET_API_TOKEN`, `COLLATERAL_OPTIMIZER_API_TOKEN`,
-  `COLLATERAL_OPTIMIZER_API_URL`, `AGENT_QUEUE_DB_URL`, `AGENT_WORKER_TOKEN`. The script exits
-  with a message naming any that are missing.
+  `COLLATERAL_OPTIMIZER_API_URL`, `AGENT_QUEUE_DB_URL`, `AGENT_WORKER_TOKEN`. The script exits with a message naming any that
+  are missing.
+- `MACRO_DB_URL` in `.env.local` (the Postgres gold DB, default
+  `postgresql://fred:fred@localhost:55432/macro_medallion`). Without it the terminal reads no
+  market data; the script prints a warning but still starts.
 
 ## First run versus later runs
 

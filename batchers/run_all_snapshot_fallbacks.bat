@@ -57,7 +57,7 @@ call "%VENV%\Scripts\activate.bat" || exit /b 1
 
 echo [setup] Installing/updating Python pipeline dependencies
 python -m pip install --upgrade pip || exit /b 1
-python -m pip install -e "%ROOT%\macro_data_etl" || exit /b 1
+python -m pip install -e "%ROOT%\services\macro_data_etl" || exit /b 1
 python -m pip install polars duckdb pyarrow httpx tenacity pydantic pydantic-settings pyyaml fastapi "uvicorn[standard]" apscheduler structlog yfinance fredapi pytest pytest-asyncio || exit /b 1
 
 if not exist "%ROOT%\node_modules" (
@@ -109,7 +109,7 @@ echo.
 echo === 5. Verification ===
 call npm run typecheck || set "FAILED=1"
 call npm test || set "FAILED=1"
-python -m pytest "%ROOT%\macro_data_etl\tests" || set "FAILED=1"
+python -m pytest "%ROOT%\services\macro_data_etl\tests" || set "FAILED=1"
 
 echo.
 echo === Snapshot fallback refresh complete ===

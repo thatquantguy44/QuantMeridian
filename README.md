@@ -538,7 +538,7 @@ code changes when the data goes live.
 
 ```bash
 # in the rl_hub repo
-cd macro_data_etl && pip install -e .
+cd services/macro_data_etl && pip install -e .
 macro-etl run --source all          # World Bank + BIS → gold
 macro-etl fedwatch                  # CME futures → FOMC probabilities
 macro-etl export fed_probabilities  # JSON for the terminal
@@ -682,14 +682,14 @@ lexicon, `src/lib/server/sentimentNlp.ts`) → **SIM**.
 
 ```bash
 # scaffolded Python stage — FinBERT sentiment + spaCy NER + event clustering
-cd news_nlp && pip install -e ".[nlp]" && python -m spacy download en_core_web_sm
+cd services/news_nlp && pip install -e ".[nlp]" && python -m spacy download en_core_web_sm
 news-nlp serve --port 8088          # POST /score · GET /headlines · /health
 NEWS_NLP_URL=http://localhost:8088 npm run dev   # → /api/news re-scores with FinBERT
 ```
 
 The `news_nlp` package installs/imports on a lexicon fallback without the model
 stack and surfaces in **DATAOPS** under the `NEWS_NLP` provider. See
-`news_nlp/README.md` and `docs/PLATFORM_DATA_CONNECTIVITY.md` for the full
+`services/news_nlp/README.md` and `docs/PLATFORM_DATA_CONNECTIVITY.md` for the full
 data-connectivity map across all 47 modules.
 
 ---
@@ -912,7 +912,7 @@ FedWatch data. It is fully decoupled (Node terminal ↔ Python batch job; the on
 link is the JSON in `src/data/etl/`).
 
 ```bash
-cd macro_data_etl
+cd services/macro_data_etl
 pip install -e .                                          # polars, duckdb, httpx, typer…
 macro-etl run --source all                                # World Bank + BIS → gold
 macro-etl fedwatch                                        # CME futures → FOMC probabilities
@@ -999,7 +999,7 @@ src/
 test/smoke.spec.ts           # Playwright E2E smoke suite (45 pages) — playwright.config.ts
 .github/workflows/ci.yml     # CI: typecheck → lint → unit tests → build → E2E smoke
 screenshots/                 # 30 full-resolution module captures
-news_nlp/                    # Python FinBERT NLP stage (sentiment · NER · event clustering)
+services/news_nlp/                 # Python FinBERT NLP stage (sentiment · NER · event clustering)
 TESTING_HANDOFF.md           # test-suite plan + data-provenance audit checklist
 docs/LIVE_DATA_READINESS_ASSESSMENT.md   # live-vs-snapshot-vs-sim audit, pre-MVOL baseline plus updates
 ```

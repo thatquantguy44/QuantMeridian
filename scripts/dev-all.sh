@@ -4,6 +4,7 @@
 #   scripts/dev-all.sh              # terminal + IBAL + MMKT + COLL + agent worker
 #   scripts/dev-all.sh --no-agent   # skip the agent worker
 #   scripts/dev-all.sh --no-coll    # skip the collateral optimizer
+#   scripts/dev-all.sh --no-news    # skip the news_nlp service
 #
 # First run builds the virtualenvs, the pinned InventoryBallast engine export and the collateral
 # wheel under .data/ (gitignored). Later runs reuse them. Ctrl-C stops everything started here.
@@ -18,11 +19,13 @@ cd "$ROOT"
 
 WITH_AGENT=1
 WITH_COLL=1
+WITH_NEWS=1
 for arg in "$@"; do
   case "$arg" in
     --no-agent) WITH_AGENT=0 ;;
     --no-coll) WITH_COLL=0 ;;
-    -h|--help) sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --no-news) WITH_NEWS=0 ;;
+    -h|--help) sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -45,7 +48,15 @@ if [ "$WITH_AGENT" = 1 ]; then
   : "${AGENT_WORKER_TOKEN:?missing in .env.local}"
 fi
 
-PY="$(command -v python3.12 || true)"
+[ -n "${MACRO_DB_URL:-}" ] || echo "warning: MACRO_DB_URL is not set in .env.local; the terminal will not read the Postgres gold DB" >&2
+
+# Look up python3.12 outside any activated virtualenv, so new venvs are built from a real interpreter.
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+  CLEAN_PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$VIRTUAL_ENV/bin" | paste -sd: -)"
+else
+  CLEAN_PATH="$PATH"
+fi
+PY="$(PATH="$CLEAN_PATH" command -v python3.12 || true)"
 [ -n "$PY" ] || die "python3.12 not found on PATH"
 command -v npm >/dev/null || die "npm not found on PATH"
 
@@ -130,6 +141,15 @@ if [ "$WITH_COLL" = 1 ]; then
     start coll 8017 "$ROOT" "$COLL_BUILD/venv/bin/uvicorn" collateral_optimizer_api.app:app --host 127.0.0.1 --port 8017
 fi
 
+# ── news_nlp (8088): the terminal reaches it through NEWS_NLP_URL ───────────
+if [ "$WITH_NEWS" = 1 ]; then
+  say "news_nlp (8088)"
+  NEWS_DIR="$ROOT/services/news_nlp"
+  venv "$NEWS_DIR/.venv" -e "$NEWS_DIR[dev]"
+  export NEWS_NLP_URL="${NEWS_NLP_URL:-http://127.0.0.1:8088}"
+  start news-nlp 8088 "$NEWS_DIR" .venv/bin/news-nlp serve --host 127.0.0.1 --port 8088
+fi
+
 # ── Terminal (3000) ─────────────────────────────────────────────────────────
 say "Terminal (3000)"
 [ -d node_modules ] || npm ci
@@ -150,6 +170,7 @@ say "Health"
 wait_health ibal "http://127.0.0.1:8013/health" '"ready":true'
 wait_health mmkt "http://127.0.0.1:8014/health" '"ready":true'
 [ "$WITH_COLL" = 1 ] && wait_health coll "http://127.0.0.1:8017/health" '"ready":true'
+[ "$WITH_NEWS" = 1 ] && wait_health news-nlp "http://127.0.0.1:8088/health"
 [ "$WITH_AGENT" = 1 ] || wait_health terminal "http://127.0.0.1:3000/"
 
 say "Up. Terminal: http://localhost:3000  (Ctrl-C stops everything)"

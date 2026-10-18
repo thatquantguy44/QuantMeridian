@@ -241,4 +241,4 @@ explicitly on missing DB):
 - `/api/news` and `/api/social` — intentionally kept on live providers
 - `/api/polymarket/*` — intentionally stubbed DISABLED
 - `/api/cron/refresh` — clean; no MARKET_PIPELINE_URL; warms gold-sourced routes only
-- `macro_data_etl/` Python pipeline — no live BIS/WorldBank/IMF/CME connector classes remain; transform functions for existing silver Parquet files are still valid for gold-rebuild
+- `services/macro_data_etl/` Python pipeline — no live BIS/WorldBank/IMF/CME connector classes remain; transform functions for existing silver Parquet files are still valid for gold-rebuild

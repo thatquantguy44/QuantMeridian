@@ -312,7 +312,7 @@ The structural problem remains: **nav entries, module config and router registra
 
 ### Status: it is not a live pipeline
 
-`macro_data_etl` has not been run since **2026-06-24** — both `macro_data_etl/data/macro.duckdb` and all four `src/data/etl/*.json` exports carry that timestamp. It is not a data source; it is a set of frozen fixtures that happen to have been pipeline-generated. But five code paths still read it:
+`macro_data_etl` has not been run since **2026-06-24** — both `services/macro_data_etl/data/macro.duckdb` and all four `src/data/etl/*.json` exports carry that timestamp. It is not a data source; it is a set of frozen fixtures that happen to have been pipeline-generated. But five code paths still read it:
 
 - `/api/econ/fomc` — `fomcFromEtl()`, `impliedPathFromEtl()`
 - `/api/econ/series` — the ungated ETL tier (G2)

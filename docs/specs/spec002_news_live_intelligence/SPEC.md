@@ -168,8 +168,8 @@ npm test -- src/lib/server/newsProviders.test.ts src/app/api/news/route.test.ts 
 npm run check:gold-policy
 npm run build:client
 npm run build:server
-python3 -m pytest news_nlp/tests
-python3 -m py_compile news_nlp/src/api.py news_nlp/src/schema.py news_nlp/src/sentiment.py news_nlp/src/entities.py news_nlp/src/cluster.py
+python3 -m pytest services/news_nlp/tests
+python3 -m py_compile services/news_nlp/src/api.py services/news_nlp/src/schema.py services/news_nlp/src/sentiment.py services/news_nlp/src/entities.py services/news_nlp/src/cluster.py
 git diff --check
 ```
 

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "news-nlp"
@@ -33,6 +33,12 @@ dev = ["pytest>=8.0", "ruff>=0.4"]
 
 [project.scripts]
 news-nlp = "news_nlp.cli:main"
+
+# The checkout directory is itself the `news_nlp` package (same layout as macro_data_etl), so
+# the install does not depend on the repo root being on sys.path.
+[tool.setuptools]
+package-dir = { "news_nlp" = "." }
+packages = ["news_nlp", "news_nlp.src"]
 
 [tool.ruff]
 target-version = "py311"
