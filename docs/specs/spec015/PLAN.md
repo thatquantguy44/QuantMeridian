@@ -37,6 +37,10 @@ The current `optimization_core` can verify continuous LPs, not MIPs. Use its ver
 
 The first Spec015 code slice runs on the `spec015/optimization-center-foundation` branch. It adds a same-origin connection health route and an Optimization Center connection panel. Service health is shown separately from Spec015 binding status, which remains `UNCONFIGURED` until an approved model binding is registered. Legacy generated run, savings, dual, and trade panels remain available only with a prominent SIMULATION DATA notice. This does not approve the local MMKT prototype as a Spec015 model binding.
 
+## Money Market Fund Optimizer module
+
+A separate `/money-market-fund-optimizer` workspace is being added for fund allocation. It is distinct from the existing `CASH` treasury funding optimizer. The workspace probes a deployment-configured model service through a same-origin server route, with the model logic remaining in its own repository. The repository identity and approved immutable revision, request/result schemas, input mapping, and independent verifier remain open Spec015 decisions; service reachability alone never enables a run.
+
 ## Repository connection contract
 
 Connection setup is an operator/deployment action. The UI may display approved bindings and request activation of a reviewed binding, but cannot accept and execute arbitrary paths, URLs, code, or shell commands. Each service has exactly one active binding per deployment, with historical bindings retained for run replay. A binding can use:
