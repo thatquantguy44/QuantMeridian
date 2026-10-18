@@ -14,7 +14,7 @@ optimizer.
 |---|---|---|
 | Setup-only configuration workspace | `main` (merged before this branch) | Done. Edits, validates and imports/exports configurations. No solving. |
 | Synthetic PoC showcase (SU-SIM) | `main` (PR #166); SIM switch in PR #167 | Done. A browser-only, illustrative solve on a fixed SIM book. |
-| Production optimizer (service, contracts, run hash, OPT history) | — | Not started. Gated on open decisions and spec approval. |
+| Production optimizer (service, contracts, run hash, OPT history) | — | Not started. Open questions 1–4 are resolved; gated on full spec approval. |
 
 The same PR also carries the MMKT module (spec011, see `docs/specs/spec011/HANDOFF.md`) and the
 demo guide in `docs/demo_books/`.
@@ -29,8 +29,9 @@ demo guide in `docs/demo_books/`.
 4. Use the pinned Agent Skills in `.agents/skills/` (see `AGENTS.md`). Run
    `npm run check:agent-skills-pin` before and after SXU work.
 
-Do not infer production solver behaviour from the showcase. The showcase deliberately avoids
-every open decision.
+Do not infer production solver behaviour from the showcase. The showcase was built to avoid the
+then-open decisions. It is consistent with their 2026-10-18 resolutions, but it is not their
+implementation.
 
 ## Slice 1: setup-only configuration workspace (in `main`)
 
@@ -74,7 +75,7 @@ the workspace instead. Turning SIM off hides the PoC entirely.
   priority modes, flow and dual tamper failures, the infeasible cascade, and a 432-corner
   stress/penalty grid where every corner must either verify or report a hard gap.
 
-**How it stays clear of the open decisions:**
+**How it relates to the decisions (all consistent):**
 - One currency (USD).
 - Explicit lanes only.
 - A continuous solve, rounded for display only.
@@ -101,20 +102,24 @@ the workspace instead. Turning SIM off hides the PoC entirely.
   credited as `flow × (1 − h_i)`. Pair-specific haircuts are out of scope initially.
 - **SU-SIM showcase:** explicitly approved by the owner on 2026-10-18 as a bounded demo mode.
 - **Module SIM switch:** explicitly approved by the owner on 2026-10-18 (SU-013).
-- **Mismatches (open decision 1, resolved 2026-10-18):** a currency mismatch is always a hard
+- **Mismatches (question 1, resolved 2026-10-18):** a currency mismatch is always a hard
   block. A legal-entity mismatch is not; a cross-entity pair is usable when an explicit
   compatibility rule allows it.
+- **Rounding (question 2, resolved 2026-10-18):** no rounding inside the model. Amounts, flows,
+  coverage, exports and the run hash keep full precision. Rounding is display-only, and the
+  verifier uses tolerances on unrounded values. Discrete amounts come only from MIP rules.
+- **Internalization (question 3, resolved 2026-10-18):** internal haircut-adjusted coverage
+  delivered ÷ total haircut-adjusted coverage delivered (unmet demand excluded). Each source has
+  an explicit, user-set `internality` (`internal`/`external`), never inferred. Any unclassified
+  contributing source, or zero delivered coverage, gives `n/a` with the unclassified share
+  disclosed.
+- **Currency (question 4, resolved 2026-10-18):** one currency per run. A configuration may store
+  several currencies, but a run spanning more than one is rejected before solving, naming the
+  records. No base-currency conversion for funding. FX conversion is deferred and needs a new
+  decision that keeps the currency hard block.
 - All are recorded in the decision log in `SPEC.md` § Decisions and open questions.
 
-**Open (do not encode):**
-1. ~~Mismatches~~ (resolved, see above).
-2. The rounding convention for fractional capacity and coverage.
-3. The internalization numerator and denominator, and how internal sources are classified.
-4. Can one solve contain multiple currencies? The design options (one currency per run, base-
-   currency conversion, explicit FX conversion lanes) are written up in the demo guide under
-   "Multi-currency".
-
-The full solver/API contract, objective economics, MIP options and dual semantics also still
+**Open:** no model questions remain. The full solver/API contract, objective economics, MIP options and dual semantics also still
 need owner review.
 
 ## Verification evidence (2026-10-18, branch head)
@@ -133,13 +138,15 @@ need owner review.
 
 1. **Merge PR #167** (SIM switch, approval records, handoff refresh). The earlier `build/spec012-sources-uses-optimizer` branch no
    longer exists on the remote, so ignore any older reference to it.
-2. **Owner decisions.** Resolve open decisions 2–4 (decision 1 is resolved) and approve the full `SPEC.md`, `PLAN.md`,
-   `TASKS.md` and child design docs (SU-001).
+2. **Owner approval.** Questions 1–4 are resolved. Get owner approval of the full `SPEC.md`,
+   `PLAN.md`, `TASKS.md` and child design docs (SU-001).
 3. **Service contracts.** Define versioned request/result contracts and canonical
-   configuration/run hashing (SU-002). Reuse the showcase's verifier checks as acceptance
-   fixtures.
+   configuration/run hashing (SU-002), including the per-source `internality` field and a
+   single run currency. Reuse the showcase's verifier checks as acceptance fixtures.
 4. **Production LP.** The compatibility engine must enforce the currency hard block from
-   decision 1 and reject an `allowed` rule on any currency-mismatched pair. Then build
+   question 1 and reject an `allowed` rule on any currency-mismatched pair. Validation rejects a
+   multi-currency run (question 4). Keep the model unrounded (question 2) and compute the
+   internalization rate as decided (question 3). Then build
    `services/sources_uses_api` on `services/optimization_core` (HiGHS) with the compatibility
    engine, the lexicographic LP and an independent verifier (SU-003–005).
    The showcase's hand-computable cases in `sourcesUsesSynthetic.test.ts` make good golden

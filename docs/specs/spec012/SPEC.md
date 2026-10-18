@@ -2,9 +2,9 @@
 
 - **ID:** spec012-configurable-sources-uses
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-021–029, REQ-041
-- **Status:** Draft — bounded setup-only phase and synthetic PoC showcase (SU-SIM) approved; full optimizer pending decisions and review
+- **Status:** Draft — bounded setup-only phase and synthetic PoC showcase (SU-SIM) approved; open questions 1–4 resolved (2026-10-18); full optimizer approval pending review
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** Owner, for the setup-only phase (2026-10-17), the SU-SIM showcase and the module SIM switch (explicitly approved 2026-10-18). Full optimizer approval remains pending.
+- **Approver:** Owner, for the setup-only phase (2026-10-17), the SU-SIM showcase and the module SIM switch (explicitly approved 2026-10-18). The owner resolved open questions 1–4 on 2026-10-18. Full optimizer approval remains pending.
 - **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Implementation details belong in `PLAN.md` and `TASKS.md`.
@@ -40,8 +40,8 @@ A source may cover a use only when explicit compatibility rules allow it. Curren
 The owner has authorized a setup-only phase: users may manage named configurations, source/use
 records, explicit compatibility states, and CSV/JSON import/export. This approval does not authorize
 solving, recommendations, a production service/model contract, result views, or OPT run-history
-integration. Those remain gated on the open decisions below and approval of the complete spec and
-its child design documents.
+integration. Those remain gated on approval of the complete spec and its child design documents.
+The open questions below were resolved on 2026-10-18 and are recorded in the decision log.
 
 ## Requirements
 
@@ -65,7 +65,7 @@ its child design documents.
 - **AC-004:** Two priority tiers demonstrate lexicographic priority independent of cost magnitude.
 - **AC-005:** Each MIP rule has a feasible binding case and a failed/invalid case; the response identifies LP or MIP and active rules.
 - **AC-006:** Infeasibility explanation and duals map to stable source/use IDs; MIP duals identify fixed-integer LP semantics.
-- **AC-007:** Sankey totals, table totals, and verified solution totals agree; internalization denominator is defined in the approved design.
+- **AC-007:** Sankey totals, table totals, and verified solution totals agree; the internalization rate follows the definition in the decision log (question 3), including `n/a` when any contributing source is unclassified.
 - **AC-008:** No random-number matches remain; OPT history contains the verified configuration/run hashes.
 - **AC-009:** For each source, nominal flow consumes capacity and haircut-adjusted flow contributes to use coverage; changing a configured source haircut changes the canonical run hash.
 
@@ -73,7 +73,7 @@ its child design documents.
 
 **Status:** Explicitly approved by the owner on 2026-10-18 as a bounded demonstration mode (see the decision log below). It does not
 approve the production optimizer, service contract, OPT run-history integration, or production
-recommendations. Those stay gated on the open decisions below.
+recommendations. Those stay gated on approval of the complete spec.
 
 ### Why
 
@@ -158,17 +158,21 @@ result is never shown as a solution.
 All penalty values in the SIM book are illustrative economics. They are not decisions about the
 production objective.
 
-### How the showcase stays clear of open decisions
+### How the showcase relates to the decisions
 
-- **Currency (open decisions 1 and 4):** one currency, USD. No currency mismatch exists, so
-  nothing about mismatch policy is assumed.
-- **Compatibility (open decision 1):** every lane is an explicit `allowed` or `denied` rule.
+The showcase was built before questions 1–4 were resolved and was designed to avoid them. It is
+consistent with every resolution:
+
+- **Currency (questions 1 and 4):** one currency, USD. No currency mismatch exists, and the
+  showcase is a single-currency run.
+- **Compatibility (question 1):** every lane is an explicit `allowed` or `denied` rule.
   Nothing is inferred from legal entity or asset class. A cross-entity lane exists only where the
   dataset states it, with its friction.
-- **Rounding (open decision 2):** the solve is fully continuous. Values are rounded only for
+- **Rounding (question 2):** the solve is fully continuous. Values are rounded only for
   display, to $0.1mm. Verification uses absolute and relative tolerances, not rounded values.
-- **Internalization (open decision 3):** no internalization rate is computed. The UI shows the
-  funding mix by synthetic source family only.
+- **Internalization (question 3):** no internalization rate is computed. The UI shows the
+  funding mix by synthetic source family only. A source family is not an internality
+  classification, so the showcase does not derive one from it.
 
 ### Requirements
 
@@ -209,16 +213,21 @@ production objective.
 | 2026-10-18 | **Approved:** the SU-SIM synthetic PoC showcase as built in PR #166. This covers the penalised balanced transportation LP, configurable penalties, verifier and LP certificate, and the visual front end, within the scope and limits in § SU-SIM. | Owner, explicit approval in the build session |
 | 2026-10-18 | **Question 1 resolved — mismatches.** A **currency mismatch is always a hard block**: no override can make a source in one currency fund a use in another. A **legal-entity mismatch is not a hard block**: a cross-entity pair may be used when an explicit compatibility rule allows it. Compatibility is still never inferred (see Non-goals). | Owner |
 | 2026-10-18 | **Approved:** the module SIM switch. SIM is on by default until the page is wired to a production model, with an on-screen ON/OFF switch (SU-013). | Owner |
+| 2026-10-18 | **Question 2 resolved — rounding.** The model does no rounding. Capacity, flow and coverage are continuous amounts in native currency units, and haircut-adjusted coverage `x_ij × (1 − h_i)` is not rounded. Rounding is applied only when displaying values. Stored results, exports and the run hash keep full precision, and the verifier checks unrounded values with stated absolute and relative tolerances. Discrete amounts (lot size, minimum ticket, all-or-none) enter only through the opt-in MIP rules (SU-005). | Owner |
+| 2026-10-18 | **Question 3 resolved — internalization.** Internalization rate = haircut-adjusted coverage delivered by internal sources ÷ total haircut-adjusted coverage delivered to uses. Unmet demand is not delivered coverage and is not in the denominator. Each source carries an explicit, user-set `internality` attribute (`internal` or `external`) with provenance. It is never inferred from source type, family, legal entity or name. If any source that delivers coverage is unclassified, or no coverage is delivered, the rate is shown as `n/a`, and the unclassified share is disclosed. | Owner |
+| 2026-10-18 | **Question 4 resolved — one currency per run.** Every solve contains exactly one currency. A configuration may store records in more than one currency, but a run whose sources and uses span more than one currency is rejected before solving, and the rejection names the records. Amounts are never converted to a base currency to let funding cross currencies. Explicit FX conversion is deferred; adding it needs a new owner decision and must keep question 1's currency hard block. | Owner |
 
-These approvals do not cover the production optimizer, the service contract, OPT run history or
-the open questions below.
+These approvals do not cover the production optimizer, the service contract or OPT run history.
+They need approval of the complete spec and its child design documents.
 
 **Open questions**
 
+All four were resolved on 2026-10-18. They stay listed here for traceability.
+
 1. ~~Currency and legal-entity mismatches.~~ **Resolved 2026-10-18** — currency is a hard block; legal entity is not (see the decision log).
-2. **Resolved (2026-10-17):** Haircut is attached to each source and is configurable in the source/use configuration, not hard-coded. For a nominal flow `x_ij` from source `i`, source capacity is consumed by `x_ij` and use coverage is credited as `x_ij × (1 − h_i)`, where `h_i` is that source's configured haircut rate. The same source haircut applies to all compatible uses. Pair-specific haircuts are out of scope for the initial release. **Still open:** rounding convention for fractional capacity and coverage.
-3. Confirm internalization-rate numerator/denominator and how to classify “internal” sources.
-4. Confirm whether a configuration can contain multiple currencies in one solve; otherwise enforce one currency per run.
+2. **Resolved (2026-10-17):** Haircut is attached to each source and is configurable in the source/use configuration, not hard-coded. For a nominal flow `x_ij` from source `i`, source capacity is consumed by `x_ij` and use coverage is credited as `x_ij × (1 − h_i)`, where `h_i` is that source's configured haircut rate. The same source haircut applies to all compatible uses. Pair-specific haircuts are out of scope for the initial release. ~~Rounding convention for fractional capacity and coverage.~~ **Resolved 2026-10-18** — no rounding in the model; display-only rounding (see the decision log).
+3. ~~Confirm internalization-rate numerator/denominator and how to classify “internal” sources.~~ **Resolved 2026-10-18** — internal coverage ÷ total coverage delivered; explicit `internality` attribute; unclassified gives `n/a` (see the decision log).
+4. ~~Confirm whether a configuration can contain multiple currencies in one solve; otherwise enforce one currency per run.~~ **Resolved 2026-10-18** — one currency per run; mixed runs are rejected; no base-currency conversion for funding (see the decision log).
 
 ## Related documents
 
