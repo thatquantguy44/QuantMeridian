@@ -38,7 +38,7 @@ Use synthetic known ground truth only for pipeline checks, never as evidence of 
 
 ## Sequence
 
-1. ~~Resolve Q6/Q7~~ (done 2026-10-18); resolve input/source contracts; approve child docs and whitepapers.
+1. ~~Resolve Q6/Q7, currency scope, source contracts and Q4 parameters~~ (done 2026-10-18; see the SPEC decision log); approve child docs and whitepapers.
 2. Add deterministic history generator and schema.
 3. Build forecast and baseline gate; add bands and model cards.
 4. Add shortfall and anomaly paths with review queue.

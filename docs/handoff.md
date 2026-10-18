@@ -83,18 +83,18 @@ four services (REQ-029). Every number shown must come from a verified solve or a
    user-selected `SIM` set and **no silent fallback**. See "Cross-repo follow-up: EcoMedallion" below —
    that work is **not finished and nothing in it is live-verified**.
 
-spec014 Q6 and Q7 were resolved on 2026-10-18: the ML stack is **scikit-learn**, and the new
-liquidity view lives **under `/cash-optimizer/`** as its lever view. Still open in spec014
-(still a draft): currency scoping and source contracts (question 3), forecast window, coverage
-target, alert thresholds and retention (question 4). Also decided 2026-10-18: CQR forecast bands
-on NumPy (no MAPIE), the route `/cash-optimizer/liquidity`, and `/liquidity` stays until that view
-ships, then redirects to it (see the spec014 decision log).
+All spec014 owner questions were resolved on 2026-10-18 (see its decision log): the ML stack is
+**scikit-learn** with CQR bands on NumPy (no MAPIE); the view lives at **`/cash-optimizer/liquidity`**
+and `/liquidity` redirects there once it ships; one currency per run, USD first; forecasts per
+legal entity × currency × account, with positions from the feed shared with spec011 (MM-011);
+plus the history windows, 80% coverage target, alert thresholds and retention. spec014 is still a
+draft: **only owner approval remains** before liquidity code.
 
 **Pick up here on the terminal side:**
 
 1. ~~Review the draft packs in PR #151 for `spec011`–`spec014`~~ PR #151 is merged. `spec011`,
    `spec012` and `spec013` are approved; **`spec014` is still a draft** awaiting owner review
-   before liquidity code (Q6 and Q7 resolved 2026-10-18; questions 3–4 and approval remain).
+   before liquidity code (all owner questions resolved 2026-10-18; only approval remains).
 2. Scaffold `services/optimization_core` and the three services (`0018` T-003/T-004).
    `optimization_core` and `money_market_api` exist in `main`; **`sources_uses_api` (8015) and
    `liquidity_api` (8016) do not exist yet.**
