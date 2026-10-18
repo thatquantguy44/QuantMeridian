@@ -34,6 +34,12 @@ browser ──► terminal (Vite dev server, :3000) ──► model service (127
 
 All Python services need **Python 3.12 or newer**. Use one virtual environment per service.
 
+**Everything at once:** `npm run dev:all` (or `scripts/dev-all.sh`) starts the terminal, IBAL, MMKT,
+COLL and the agent worker, builds what they need under `.data/` on first run, and stops them all on
+Ctrl-C. It reads tokens from `.env.local` and needs an InventoryBallast checkout
+(`INVENTORY_BALLAST_REPO`, default `../../models/InventoryBallast`). Flags: `--no-agent`, `--no-coll`.
+Logs go to `.data/logs/`.
+
 ## 1. The terminal
 
 ```bash

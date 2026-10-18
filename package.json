@@ -6,6 +6,7 @@
   "description": "Quant Intelligence Platform — a Bloomberg-style operating system for market intelligence, macro analytics, securities finance, treasury analytics, and AI decision support.",
   "scripts": {
     "dev": "vite",
+    "dev:all": "bash scripts/dev-all.sh",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "vite build --ssr src/server/index.ts --outDir dist-server",
