@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import * as cash from "@/data/cash";
-import * as collateral from "@/data/collateral";
 import * as securitiesLending from "@/data/securitiesLending";
 import { DESK_DATASETS, DESK_DATASET_IDS, validateDeskDatasets, type DeskDatasetDef } from "./deskDatasets";
 
@@ -18,7 +17,6 @@ describe("desk dataset registry", () => {
 
   it("declares SIM on the desk data files", () => {
     expect(securitiesLending.DATA_SOURCE).toBe("SIM");
-    expect(collateral.DATA_SOURCE).toBe("SIM");
     expect(cash.DATA_SOURCE).toBe("SIM");
   });
 

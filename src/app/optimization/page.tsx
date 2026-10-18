@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
+import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { fmtUsdAbbr } from "@/lib/format";
 import { isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
@@ -74,7 +75,7 @@ export default function OptimizationCenter() {
           <p className="text-xs text-term-text-mute">{connections?.approval}</p>
         </div>
       </Panel>
-      <Panel title="Collateral model preview" code="COLL" right={<Tag tone="amber">SIM ONLY</Tag>}>
+      <Panel title="Collateral model preview" code="COLL" right={<ProvenanceBadge source="SIM" simSelected />}>
         <div className="space-y-3 p-3 text-xs text-term-text-dim">
           <p>56 synthetic lots and eight calls from one pinned InventoryBallast book. The service performs a fresh verifier pass.</p>
           <button type="button" onClick={() => void solveBaseline()} disabled={busy || collateral?.service_health !== "READY"}
