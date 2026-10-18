@@ -4,18 +4,19 @@
 
 **Branch:** `claude/synthetic-snu-poc-27n9hu`. The MMKT module merged into `main` in
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
-follow-up [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) (also merged) records
-the owner approval and refreshes the handoffs. The selectable baseline (question 1) is in the next
-PR from the same branch. The same PRs carry the spec012 SU-SIM work; see
+follow-ups [PR #167](https://github.com/thatquantguy44/QuantMeridian/pull/167) (module approval, handoffs) and [PR #168](https://github.com/thatquantguy44/QuantMeridian/pull/168) (selectable
+baseline, owner questions 1–3) are also merged. The full-spec approval record (MM-001) follows in
+a later PR from the same branch. The same PRs carry the spec012 work; see
 `docs/specs/spec012/HANDOFF.md`.
 
 **State:** the terminal module `/money-market` drives the existing `services/money_market_api`
 continuous LP end to end, on explicitly selected SIM rate sets. Results are verified by the
 service before they are shown. They are **not execution-ready** and not recommendations.
 
-**Spec status:** the owner **explicitly approved the MMKT module slice on 2026-10-18**. It is
-recorded in the decision log in `SPEC.md`. The spec as a whole is still a draft. Owner
-questions 1–3 were all resolved on 2026-10-18 (see the `SPEC.md` decision log).
+**Spec status:** **approved on 2026-10-18.** The owner approved the MMKT module slice and then
+the full spec, plan, tasks and white-paper design (MM-001). Owner questions 1–3 were resolved
+first. All are in the `SPEC.md` decision log. Approval authorizes the remaining tasks; it does
+not mean they are built. See "Next steps" below.
 
 ## Start here
 
@@ -149,9 +150,8 @@ headroom) and the CSV export.
 
 ## Next steps (in order)
 
-1. Merge the baseline PR (follow-up to #167).
-2. Owner approval of the full spec, plan, tasks and white paper (MM-001). Owner questions 1–3 are
-   all resolved (see the `SPEC.md` decision log).
+1. ~~Merge the baseline PR.~~ Merged in PR #168.
+2. ~~Owner approval of the full spec, plan, tasks and white paper (MM-001).~~ Done 2026-10-18.
 3. **MM-006 MIP slice.** Add ticket, lot, count and cutoff rules with formulation disclosure,
    and verify integrality. Only after this can the UI present an execution blotter and cutoff
    timeline (MM-007).

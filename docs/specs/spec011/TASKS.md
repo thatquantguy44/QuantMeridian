@@ -1,14 +1,14 @@
 # Tasks: Money Market Execution Optimizer
 
 - **Spec:** spec011-money-market-execution (`SPEC.md`, `PLAN.md`)
-- **Status:** Draft — implementation in progress; owner review pending
+- **Status:** Approved 2026-10-18 — implementation in progress
 - **Last updated:** 2026-10-18
 - **Checkpoint:** See [HANDOFF.md](HANDOFF.md) for branch state, local run steps and ordered next steps
 - **Parent requirements:** 0018 REQ-016–020, REQ-027–030, REQ-041
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
-| MM-001 | Resolve owner questions; approve the spec, plan, task list, and white-paper design. | MM-001–010 | blocked | Decisions recorded; approval in SPEC.md |
+| MM-001 | Resolve owner questions; approve the spec, plan, task list, and white-paper design. | MM-001–010 | done | **2026-10-18:** questions 1–3 resolved and the full spec, plan, tasks and white-paper design approved; both recorded in the SPEC.md decision log. |
 | MM-002 | Define versioned request/result contracts and capability manifest; add schema/TypeScript/Python parity checks. | MM-001, MM-002, MM-008–010 | in-progress | Strict request and verified LP result contracts are defined; schema parity and service contract checks remain. |
 | MM-003 | Build the Gold/SIM rate snapshot route, status display, normalization, hash, and no-fallback gate. | MM-008, MM-009 | in-progress | Added `/api/econ/mmkt-rate-snapshot` and the Gold snapshot adapter, plus `POST /api/econ/mmkt-runs`, which attaches the server-read snapshot and hash and rejects non-OK candidate rates. **2026-10-18:** two named SIM sets are registered (`SIM-MMKT-2026-10-BASE`, `SIM-MMKT-2026-10-CUT25`, in `src/lib/server/mmktSimRateSets.ts`). Each is selectable only by explicit ID, and an unknown ID still fails closed. Each set has one stale and one unavailable row to exercise fail-closed pricing. Route tests cover the SIM path. Gold remains unwired upstream (XR-3). |
 | MM-004 | Implement instrument/cash forecast validation and deterministic model input assembly. | MM-001, MM-002, MM-008 | in-progress | Added account-level cash continuity, selectable p10/p50/p90 residual scenarios, consistent opening cash rebasing, settlement eligibility, normalized-yield ACT/365 returns, and deterministic LP variable/row assembly. Each run records its selected cash forecast case so treasury users can compare downside, base, and upside runs. Validation and contract coverage remain. |

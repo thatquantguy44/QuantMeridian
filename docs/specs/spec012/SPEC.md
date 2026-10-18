@@ -2,9 +2,9 @@
 
 - **ID:** spec012-configurable-sources-uses
 - **Parent:** InventoryBallast `specs/0018-live-poc-showcase/spec.md`, REQ-021–029, REQ-041
-- **Status:** Draft — bounded setup-only phase and synthetic PoC showcase (SU-SIM) approved; open questions 1–4 resolved (2026-10-18); full optimizer approval pending review
+- **Status:** Approved 2026-10-18 — the full spec, plan, task list and design paper (SU-001), with open questions 1–4 resolved. The setup-only phase and SU-SIM showcase are built; the production optimizer is not yet built (see `TASKS.md`).
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** Owner, for the setup-only phase (2026-10-17), the SU-SIM showcase and the module SIM switch (explicitly approved 2026-10-18). The owner resolved open questions 1–4 on 2026-10-18. Full optimizer approval remains pending.
+- **Approver:** Owner. Setup-only phase approved 2026-10-17; SU-SIM showcase, module SIM switch, open questions 1–4 and the full spec approved 2026-10-18.
 - **Last updated:** 2026-10-18
 
 > WHAT and WHY only. Implementation details belong in `PLAN.md` and `TASKS.md`.
@@ -40,8 +40,8 @@ A source may cover a use only when explicit compatibility rules allow it. Curren
 The owner has authorized a setup-only phase: users may manage named configurations, source/use
 records, explicit compatibility states, and CSV/JSON import/export. This approval does not authorize
 solving, recommendations, a production service/model contract, result views, or OPT run-history
-integration. Those remain gated on approval of the complete spec and its child design documents.
-The open questions below were resolved on 2026-10-18 and are recorded in the decision log.
+integration. **On 2026-10-18 the owner approved the complete spec and its design paper**, which
+authorizes that work (see the decision log). The open questions below were resolved the same day.
 
 ## Requirements
 
@@ -73,7 +73,8 @@ The open questions below were resolved on 2026-10-18 and are recorded in the dec
 
 **Status:** Explicitly approved by the owner on 2026-10-18 as a bounded demonstration mode (see the decision log below). It does not
 approve the production optimizer, service contract, OPT run-history integration, or production
-recommendations. Those stay gated on approval of the complete spec.
+recommendations. Those are authorized by the full-spec approval of 2026-10-18 and must be built
+as the production service, not by promoting the showcase.
 
 ### Why
 
@@ -210,6 +211,7 @@ consistent with every resolution:
 | Date | Decision | Recorded by |
 |---|---|---|
 | 2026-10-17 | Setup-only phase approved. Haircut is per source (decision 2 below). | Owner |
+| 2026-10-18 | **Approved: full spec (SU-001).** The owner approved this `SPEC.md`, `PLAN.md`, `TASKS.md` and the design draft `docs/whitepapers/sources_and_uses.md` after reviewing a built-vs-not-built summary. No separate child design documents exist; that white paper is treated as the child design document. This authorizes the production work in `TASKS.md`: the service (`services/sources_uses_api` on `services/optimization_core`), versioned contracts and run hash, the compatibility engine, the lexicographic LP, MIP rules, verified result views and OPT run history. The browser showcase solver stays showcase-only. The white paper is approved as design direction; it becomes as-built only under SU-010, with its worked example pinned to a golden test. | Owner, explicit approval in the build session |
 | 2026-10-18 | **Approved:** the SU-SIM synthetic PoC showcase as built in PR #166. This covers the penalised balanced transportation LP, configurable penalties, verifier and LP certificate, and the visual front end, within the scope and limits in § SU-SIM. | Owner, explicit approval in the build session |
 | 2026-10-18 | **Question 1 resolved — mismatches.** A **currency mismatch is always a hard block**: no override can make a source in one currency fund a use in another. A **legal-entity mismatch is not a hard block**: a cross-entity pair may be used when an explicit compatibility rule allows it. Compatibility is still never inferred (see Non-goals). | Owner |
 | 2026-10-18 | **Approved:** the module SIM switch. SIM is on by default until the page is wired to a production model, with an on-screen ON/OFF switch (SU-013). | Owner |
@@ -217,8 +219,8 @@ consistent with every resolution:
 | 2026-10-18 | **Question 3 resolved — internalization.** Internalization rate = haircut-adjusted coverage delivered by internal sources ÷ total haircut-adjusted coverage delivered to uses. Unmet demand is not delivered coverage and is not in the denominator. Each source carries an explicit, user-set `internality` attribute (`internal` or `external`) with provenance. It is never inferred from source type, family, legal entity or name. If any source that delivers coverage is unclassified, or no coverage is delivered, the rate is shown as `n/a`, and the unclassified share is disclosed. | Owner |
 | 2026-10-18 | **Question 4 resolved — one currency per run.** Every solve contains exactly one currency. A configuration may store records in more than one currency, but a run whose sources and uses span more than one currency is rejected before solving, and the rejection names the records. Amounts are never converted to a base currency to let funding cross currencies. Explicit FX conversion is deferred; adding it needs a new owner decision and must keep question 1's currency hard block. | Owner |
 
-These approvals do not cover the production optimizer, the service contract or OPT run history.
-They need approval of the complete spec and its child design documents.
+The full-spec approval covers the production optimizer, the service contract and OPT run history.
+The earlier bounded approvals (setup-only, SU-SIM, SIM switch) keep their own scope.
 
 **Open questions**
 
