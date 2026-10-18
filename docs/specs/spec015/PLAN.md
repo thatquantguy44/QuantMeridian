@@ -41,6 +41,12 @@ The first Spec015 code slice runs on the `spec015/optimization-center-foundation
 
 A separate `/money-market-fund-optimizer` workspace is being added for fund allocation. It is distinct from the existing `CASH` treasury funding optimizer. The workspace probes a deployment-configured model service through a same-origin server route, with the model logic remaining in its own repository. The repository identity and approved immutable revision, request/result schemas, input mapping, and independent verifier remain open Spec015 decisions; service reachability alone never enables a run.
 
+## Money Market Fund Optimizer proof of concept
+
+The separate `/money-market-fund-optimizer` module now runs a small deterministic LP locally through `POST /api/mm-fund-optimizer/optimize`. It allocates an investable cash amount across a six-option synthetic government/prime fund universe, maximizing illustrative net 7-day yield subject to cash reserve, minimum same-day liquidity, maximum prime exposure, and per-fund concentration constraints. A bounded vertex-enumeration solver returns the highest-yield feasible point for this small LP and checks the stated constraints before returning it. The UI exposes the assumptions and results, labels the source `SIM`, and states that no independent verifier or live fund data is available.
+
+This is a replaceable POC adapter, not the eventual model integration. The future service remains a separate deployment built from the approved model repository. Keep the POC explicitly separated from production bindings; do not use its synthetic universe as a live recommendation source. The model repository, immutable revision, approved input/result schemas, sponsor/vehicle eligibility, fee and tax treatment, liquidity mapping, and independent verifier remain unresolved.
+
 ## Repository connection contract
 
 Connection setup is an operator/deployment action. The UI may display approved bindings and request activation of a reviewed binding, but cannot accept and execute arbitrary paths, URLs, code, or shell commands. Each service has exactly one active binding per deployment, with historical bindings retained for run replay. A binding can use:

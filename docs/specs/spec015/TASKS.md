@@ -18,7 +18,7 @@
 | OC-T010 | Replace `OPT` generated operational data with registry-backed Runs, Connections, Schedules, and Audit views. | OC-012–016 | in-progress | Added live service health and a prominent SIMULATION DATA notice for the existing generated run, savings, dual, and trade panels. Registry-backed records, schedules, audit, and demo exclusion remain. |
 | OC-T011 | Build same-model A/B comparison and two-model coordinated experiment UI/API. | OC-010–011 | todo | Same-snapshot delta, non-comparable warning, unmatched rows, partial experiment, and separate-family metrics tested. |
 | OC-T012 | Complete end-to-end validation, usability, security, documentation, and staged activation for each service. | OC-001–016 | todo | Contract, adapter, verifier, scheduler, audit, and UI evidence linked; no synthetic result claimed as live. |
-| OC-T013 | Add a separate Money Market Fund Optimizer workspace and connect it to the externally hosted model service through the terminal server. | OC-001, OC-003–008, OC-015–016 | in-progress | Standalone module and server-side health probe added; run controls stay gated until the model repository, immutable revision, schemas, and verifier are approved. |
+| OC-T013 | Add a separate Money Market Fund Optimizer workspace with a replaceable local POC model and later approved external binding. | OC-001, OC-003–008, OC-015–017 | in-progress | Added a synthetic fund allocation LP, constraint inputs/checks, result display, and future-service health probe. The POC is explicitly SIM and lacks independent verification; external repository binding remains gated. |
 
 ## Delivery slices
 
