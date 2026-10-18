@@ -2,6 +2,8 @@ export const SOURCES_USES_SCHEMA_VERSION = 1;
 
 export type CompatibilityStatus = "unspecified" | "allowed" | "denied";
 export type UsePolicy = "hard" | "soft";
+/** Where a record came from (spec012 SU-009). Absent means entered by the user. */
+export type RecordProvenance = "user_input" | "sim";
 
 export interface ConfigurableSource {
   id: string;
@@ -20,6 +22,7 @@ export interface ConfigurableSource {
   haircutPct: number;
   internality: "internal" | "external" | "unclassified";
   tags: string[];
+  provenance?: RecordProvenance;
 }
 
 export interface ConfigurableUse {
@@ -39,6 +42,7 @@ export interface ConfigurableUse {
   policy: UsePolicy;
   shortfallPenaltyBps: number;
   tags: string[];
+  provenance?: RecordProvenance;
 }
 
 export interface CompatibilityRule {
@@ -46,6 +50,7 @@ export interface CompatibilityRule {
   useId: string;
   status: CompatibilityStatus;
   note: string;
+  provenance?: RecordProvenance;
 }
 
 export interface SourcesUsesConfiguration {
@@ -165,6 +170,7 @@ export function validateConfiguration(value: unknown): ConfigurationIssue[] {
     if (!(["internal", "external", "unclassified"] as unknown[]).includes(source.internality)) {
       issues.push({ path: `${path}.internality`, message: "Choose internal, external, or unclassified." });
     }
+    checkProvenance(source, path, issues);
     checkBounds(source, path, issues);
   });
   uses.forEach((use, index) => {
@@ -184,6 +190,7 @@ export function validateConfiguration(value: unknown): ConfigurationIssue[] {
     checkRequiredText(use, "currency", path, issues);
     checkStringArray(use, "tags", path, issues);
     if (use.policy !== "hard" && use.policy !== "soft") issues.push({ path: `${path}.policy`, message: "Choose hard or soft." });
+    checkProvenance(use, path, issues);
     checkBounds(use, path, issues);
   });
   (value.compatibility as unknown[]).forEach((rule, index) => {
@@ -193,6 +200,7 @@ export function validateConfiguration(value: unknown): ConfigurationIssue[] {
     if (typeof rule.useId !== "string" || !useIds.has(rule.useId)) issues.push({ path: `${path}.useId`, message: "Rule references an unknown use." });
     if (!(["unspecified", "allowed", "denied"] as unknown[]).includes(rule.status)) issues.push({ path: `${path}.status`, message: "Choose unspecified, allowed, or denied." });
     if (typeof rule.note !== "string") issues.push({ path: `${path}.note`, message: "Rule note must be text." });
+    checkProvenance(rule, path, issues);
   });
   return issues;
 }
@@ -208,18 +216,19 @@ export function parseConfigurationJson(text: string): SourcesUsesConfiguration {
 }
 
 export function configurationToCsv(configuration: SourcesUsesConfiguration): string {
-  const headers = ["recordType", "id", "label", "category", "amount", "currency", "costBps", "bidBps", "legalEntity", "assetClass", "tenorDays", "priorityTier", "minimum", "maximum", "lotSize", "haircutPct", "internality", "policy", "shortfallPenaltyBps", "tags", "sourceId", "useId", "status", "note"];
+  const headers = ["recordType", "id", "label", "category", "amount", "currency", "costBps", "bidBps", "legalEntity", "assetClass", "tenorDays", "priorityTier", "minimum", "maximum", "lotSize", "haircutPct", "internality", "policy", "shortfallPenaltyBps", "tags", "sourceId", "useId", "status", "note", "provenance"];
   const rows: unknown[][] = [
     ["meta", configuration.id, configuration.name, configuration.description, configuration.schemaVersion, configuration.updatedAt],
-    ...configuration.sources.map((source) => ["source", source.id, source.label, source.category, source.amount, source.currency, source.costBps, "", source.legalEntity, source.assetClass, source.tenorDays ?? "", source.priorityTier, source.minimum ?? "", source.maximum ?? "", source.lotSize ?? "", source.haircutPct, source.internality, "", "", JSON.stringify(source.tags)]),
-    ...configuration.uses.map((use) => ["use", use.id, use.label, use.category, use.amount, use.currency, "", use.bidBps, use.legalEntity, use.assetClass, use.tenorDays ?? "", use.priorityTier, use.minimum ?? "", use.maximum ?? "", use.lotSize ?? "", "", "", use.policy, use.shortfallPenaltyBps, JSON.stringify(use.tags)]),
-    ...configuration.compatibility.map((rule) => ["compatibility", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", rule.sourceId, rule.useId, rule.status, rule.note]),
+    ...configuration.sources.map((source) => ["source", source.id, source.label, source.category, source.amount, source.currency, source.costBps, "", source.legalEntity, source.assetClass, source.tenorDays ?? "", source.priorityTier, source.minimum ?? "", source.maximum ?? "", source.lotSize ?? "", source.haircutPct, source.internality, "", "", JSON.stringify(source.tags), "", "", "", "", source.provenance ?? ""]),
+    ...configuration.uses.map((use) => ["use", use.id, use.label, use.category, use.amount, use.currency, "", use.bidBps, use.legalEntity, use.assetClass, use.tenorDays ?? "", use.priorityTier, use.minimum ?? "", use.maximum ?? "", use.lotSize ?? "", "", "", use.policy, use.shortfallPenaltyBps, JSON.stringify(use.tags), "", "", "", "", use.provenance ?? ""]),
+    ...configuration.compatibility.map((rule) => ["compatibility", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", rule.sourceId, rule.useId, rule.status, rule.note, rule.provenance ?? ""]),
   ];
   return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
 }
 
 export function parseConfigurationCsv(text: string): SourcesUsesConfiguration {
-  const rows = parseCsvRows(text);
+  // Spreadsheet "CSV UTF-8" exports start with a byte-order mark that would hide the header.
+  const rows = parseCsvRows(text.replace(/^\uFEFF/, ""));
   if (rows.length < 2) throw new Error("CSV has no configuration records.");
   const headers = rows[0];
   const idx = (key: string) => headers.indexOf(key);
@@ -239,6 +248,7 @@ export function parseConfigurationCsv(text: string): SourcesUsesConfiguration {
         tenorDays: optionalNumericCell(cell(row, "tenorDays")), priorityTier: numericCell(cell(row, "priorityTier"), 1), minimum: optionalNumericCell(cell(row, "minimum")),
         maximum: optionalNumericCell(cell(row, "maximum")), lotSize: optionalNumericCell(cell(row, "lotSize")), haircutPct: numericCell(cell(row, "haircutPct")),
         internality: cell(row, "internality") as ConfigurableSource["internality"], tags: parseTags(cell(row, "tags")),
+        ...provenanceCell(cell(row, "provenance")),
       });
     } else if (type === "use") {
       uses.push({
@@ -247,9 +257,10 @@ export function parseConfigurationCsv(text: string): SourcesUsesConfiguration {
         tenorDays: optionalNumericCell(cell(row, "tenorDays")), priorityTier: numericCell(cell(row, "priorityTier"), 1), minimum: optionalNumericCell(cell(row, "minimum")),
         maximum: optionalNumericCell(cell(row, "maximum")), lotSize: optionalNumericCell(cell(row, "lotSize")), policy: cell(row, "policy") as UsePolicy,
         shortfallPenaltyBps: numericCell(cell(row, "shortfallPenaltyBps")), tags: parseTags(cell(row, "tags")),
+        ...provenanceCell(cell(row, "provenance")),
       });
     } else if (type === "compatibility") {
-      compatibility.push({ sourceId: cell(row, "sourceId"), useId: cell(row, "useId"), status: cell(row, "status") as CompatibilityStatus, note: cell(row, "note") });
+      compatibility.push({ sourceId: cell(row, "sourceId"), useId: cell(row, "useId"), status: cell(row, "status") as CompatibilityStatus, note: cell(row, "note"), ...provenanceCell(cell(row, "provenance")) });
     } else throw new Error(`Unsupported CSV record type: ${type}`);
   }
   const configuration: SourcesUsesConfiguration = {
@@ -288,6 +299,11 @@ function checkOptionalNumber(value: Record<string, unknown>, key: string, path: 
 function checkStringArray(value: Record<string, unknown>, key: string, path: string, issues: ConfigurationIssue[]) {
   if (!Array.isArray(value[key]) || !(value[key] as unknown[]).every((item) => typeof item === "string")) issues.push({ path: `${path}.${key}`, message: "Tags must be a list of text values." });
 }
+function checkProvenance(value: Record<string, unknown>, path: string, issues: ConfigurationIssue[]) {
+  if (value.provenance !== undefined && value.provenance !== "user_input" && value.provenance !== "sim") {
+    issues.push({ path: `${path}.provenance`, message: "Provenance must be user_input or sim." });
+  }
+}
 function checkBounds(value: Record<string, unknown>, path: string, issues: ConfigurationIssue[]) {
   if (typeof value.minimum === "number" && typeof value.maximum === "number" && value.minimum > value.maximum) {
     issues.push({ path, message: "Minimum amount cannot exceed maximum amount." });
@@ -311,11 +327,12 @@ function parseCsvRows(text: string): string[][] {
       else cell += char;
     } else if (char === '"') quoted = true;
     else if (char === ",") { row.push(cell); cell = ""; }
-    else if (char === "\n") { row.push(cell.replace(/\r$/, "")); rows.push(row); row = []; cell = ""; }
+    else if (char === "\r" && text[i + 1] === "\n") continue;
+    else if (char === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
     else cell += char;
   }
   if (quoted) throw new Error("CSV contains an unclosed quoted field.");
-  if (cell.length || row.length) { row.push(cell.replace(/\r$/, "")); rows.push(row); }
+  if (cell.length || row.length) { row.push(cell); rows.push(row); }
   return rows;
 }
 function numericCell(value: string, fallback = 0): number {
@@ -326,6 +343,9 @@ function numericCell(value: string, fallback = 0): number {
 }
 function optionalNumericCell(value: string): number | null {
   return value.trim() ? numericCell(value) : null;
+}
+function provenanceCell(value: string): { provenance?: RecordProvenance } {
+  return value ? { provenance: value as RecordProvenance } : {};
 }
 function parseTags(value: string): string[] {
   if (!value.trim()) return [];

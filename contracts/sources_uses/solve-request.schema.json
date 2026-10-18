@@ -48,7 +48,7 @@
     },
     "ConfigurationContent": {
       "additionalProperties": false,
-      "description": "The model-relevant part of a configuration. Its name, ID and timestamps are not hashed.",
+      "description": "Everything a run depends on. A configuration's name, ID and timestamps are not part of it.",
       "properties": {
         "compatibility": {
           "items": {
@@ -59,7 +59,6 @@
         },
         "schema_version": {
           "const": "1.0.0",
-          "default": "1.0.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -79,6 +78,7 @@
         }
       },
       "required": [
+        "schema_version",
         "sources",
         "uses",
         "compatibility"
@@ -101,7 +101,7 @@
         },
         "category": {
           "maxLength": 256,
-          "minLength": 1,
+          "pattern": "\\S",
           "title": "Category",
           "type": "string"
         },
@@ -137,7 +137,7 @@
         },
         "label": {
           "maxLength": 256,
-          "minLength": 1,
+          "pattern": "\\S",
           "title": "Label",
           "type": "string"
         },
@@ -183,6 +183,7 @@
           "title": "Minimum"
         },
         "priority_tier": {
+          "maximum": 9007199254740991,
           "minimum": 1,
           "title": "Priority Tier",
           "type": "integer"
@@ -258,7 +259,7 @@
         },
         "category": {
           "maxLength": 256,
-          "minLength": 1,
+          "pattern": "\\S",
           "title": "Category",
           "type": "string"
         },
@@ -274,7 +275,7 @@
         },
         "label": {
           "maxLength": 256,
-          "minLength": 1,
+          "pattern": "\\S",
           "title": "Label",
           "type": "string"
         },
@@ -328,6 +329,7 @@
           "type": "string"
         },
         "priority_tier": {
+          "maximum": 9007199254740991,
           "minimum": 1,
           "title": "Priority Tier",
           "type": "integer"
@@ -393,7 +395,6 @@
   "properties": {
     "api_schema_version": {
       "const": "1.0.0",
-      "default": "1.0.0",
       "title": "Api Schema Version",
       "type": "string"
     },
@@ -412,6 +413,7 @@
     }
   },
   "required": [
+    "api_schema_version",
     "currency",
     "configuration",
     "configuration_hash"

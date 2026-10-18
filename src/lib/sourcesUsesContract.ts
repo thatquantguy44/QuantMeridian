@@ -3,15 +3,14 @@
 // two to the published schema and to shared canonical-hash vectors.
 //
 // The browser keeps its own v1 configuration schema (src/data/sourcesUses.ts). This module maps it
-// onto the contract without converting or rounding amounts (question 2), and hashes only the
-// model-relevant content: a configuration's name, ID and timestamps never change its hash.
-import type { CompatibilityRule, ConfigurableSource, ConfigurableUse, SourcesUsesConfiguration } from "@/data/sourcesUses";
+// onto the contract without converting or rounding amounts (question 2). The hash covers every
+// record field; a configuration's name, ID and timestamps never change it.
+import type { CompatibilityRule, ConfigurableSource, ConfigurableUse, RecordProvenance, SourcesUsesConfiguration } from "@/data/sourcesUses";
 
 export const API_SCHEMA_VERSION = "1.0.0";
 export const CONFIGURATION_SCHEMA_VERSION = "1.0.0";
 
-/** Where a record came from (SU-009). `sim` marks records copied from the SU-SIM showcase. */
-export type RecordProvenance = "user_input" | "sim";
+export type { RecordProvenance };
 
 interface RecordContract {
   id: string;
@@ -66,23 +65,22 @@ export interface SolveRequest {
 }
 
 export function toConfigurationContent(configuration: SourcesUsesConfiguration): ConfigurationContent {
-  const sim = new Set([...configuration.sources, ...configuration.uses].filter((r) => r.tags.includes("SIM")).map((r) => r.id));
-  const provenance = (id: string): RecordProvenance => (sim.has(id) ? "sim" : "user_input");
   return {
     schema_version: CONFIGURATION_SCHEMA_VERSION,
     sources: configuration.sources.map((s) => ({
-      ...common(s), provenance: provenance(s.id),
-      cost_bps: s.costBps, haircut_pct: s.haircutPct, internality: s.internality,
+      ...common(s), cost_bps: s.costBps, haircut_pct: s.haircutPct, internality: s.internality,
     })),
     uses: configuration.uses.map((u) => ({
-      ...common(u), provenance: provenance(u.id),
-      bid_bps: u.bidBps, policy: u.policy, shortfall_penalty_bps: u.shortfallPenaltyBps,
+      ...common(u), bid_bps: u.bidBps, policy: u.policy, shortfall_penalty_bps: u.shortfallPenaltyBps,
     })),
-    // A rule is as user-entered as its records; a rule copied with SIM records is SIM.
-    compatibility: configuration.compatibility.map((r) => ({
-      source_id: r.sourceId, use_id: r.useId, status: r.status, note: r.note,
-      provenance: sim.has(r.sourceId) && sim.has(r.useId) ? "sim" : "user_input",
-    })),
+    // An unspecified rule without a note says nothing; dropping it keeps such configurations'
+    // hashes equal to ones without the rule (the workspace editor already drops them).
+    compatibility: configuration.compatibility
+      .filter((r) => r.status !== "unspecified" || r.note !== "")
+      .map((r) => ({
+        source_id: r.sourceId, use_id: r.useId, status: r.status, note: r.note,
+        provenance: r.provenance ?? "user_input",
+      })),
   };
 }
 
@@ -120,11 +118,13 @@ export function canonicalJson(value: unknown): string {
   throw new Error(`cannot canonicalize ${typeof value}`);
 }
 
+// The browser validator accepts an omitted optional number; the contract states it as null.
 function common(r: ConfigurableSource | ConfigurableUse) {
   return {
     id: r.id, label: r.label, category: r.category, amount: r.amount, currency: r.currency,
-    legal_entity: r.legalEntity, asset_class: r.assetClass, tenor_days: r.tenorDays,
-    priority_tier: r.priorityTier, minimum: r.minimum, maximum: r.maximum, lot_size: r.lotSize, tags: r.tags,
+    legal_entity: r.legalEntity, asset_class: r.assetClass, tenor_days: r.tenorDays ?? null,
+    priority_tier: r.priorityTier, minimum: r.minimum ?? null, maximum: r.maximum ?? null, lot_size: r.lotSize ?? null,
+    tags: [...r.tags], provenance: r.provenance ?? "user_input",
   };
 }
 

@@ -734,17 +734,17 @@ export function toWorkspaceConfiguration(problem: SimProblem, name: string, id: 
     id: s.id, label: s.label, category: FAMILY_META[s.family].label, amount: round(s.amount, 6), costBps: s.costBps,
     currency: "USD", legalEntity: s.legalEntity, assetClass: s.family === "secured" ? "Secured funding" : "Cash", tenorDays: s.tenorDays,
     priorityTier: 1, minimum: s.minDraw > 0 ? s.minDraw : null, maximum: null, lotSize: null, haircutPct: s.haircutPct,
-    internality: s.family === "internal" ? "internal" : "external", tags: ["SIM"],
+    internality: s.family === "internal" ? "internal" : "external", tags: ["SIM"], provenance: "sim",
   }));
   const uses: ConfigurableUse[] = problem.uses.map((u) => ({
     id: u.id, label: u.label, category: TIER_LABELS[u.tier] ?? `Tier ${u.tier}`, amount: round(u.amount, 6), bidBps: 0,
     currency: "USD", legalEntity: u.legalEntity, assetClass: "Funding need", tenorDays: u.tenorDays, priorityTier: u.tier,
-    minimum: null, maximum: null, lotSize: null, policy: u.policy, shortfallPenaltyBps: shortfallPenalty(config, u), tags: ["SIM"],
+    minimum: null, maximum: null, lotSize: null, policy: u.policy, shortfallPenaltyBps: shortfallPenalty(config, u), tags: ["SIM"], provenance: "sim",
   }));
   const compatibility = problem.sources.flatMap((s) => problem.uses.map((u) => {
     const l = allowed.get(laneKey(s.id, u.id));
     const pair = l ? config.lanePenaltyOverrides[laneKey(s.id, u.id)] ?? l.penaltyBps : 0;
-    return { sourceId: s.id, useId: u.id, status: l ? "allowed" as const : "denied" as const, note: l ? `${l.note} · pair penalty ${pair}bp` : "Not eligible in SIM book" };
+    return { sourceId: s.id, useId: u.id, status: l ? "allowed" as const : "denied" as const, note: l ? `${l.note} · pair penalty ${pair}bp` : "Not eligible in SIM book", provenance: "sim" as const };
   }));
   return {
     schemaVersion: SOURCES_USES_SCHEMA_VERSION,

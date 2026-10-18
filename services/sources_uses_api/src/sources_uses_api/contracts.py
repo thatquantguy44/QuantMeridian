@@ -13,21 +13,20 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, StringConstraint
 
 from sources_uses_api.canonical import canonical_hash
 
-API_SCHEMA_VERSION = "1.0.0"
-CONFIGURATION_SCHEMA_VERSION = "1.0.0"
-
 # Printable ASCII keeps record ordering identical in Python and JavaScript.
 RecordId = Annotated[str, StringConstraints(pattern=r"^[\x21-\x7e]{1,128}$")]
 Currency = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")]
 Text = Annotated[str, StringConstraints(max_length=256)]
-RequiredText = Annotated[str, StringConstraints(min_length=1, max_length=256)]
+RequiredText = Annotated[str, StringConstraints(max_length=256, pattern=r"\S")]
 NonNegative = Annotated[FiniteFloat, Field(ge=0)]
 # Where a record came from (SU-009). `sim` marks records copied from the SU-SIM showcase.
 Provenance = Literal["user_input", "sim"]
 
 
 class StrictModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # No type coercion: a coerced value ("1400" -> 1400.0) would hash differently from the
+    # payload the client hashed.
+    model_config = ConfigDict(extra="forbid", strict=True)
 
 
 class _Record(StrictModel):
@@ -39,7 +38,8 @@ class _Record(StrictModel):
     legal_entity: Text
     asset_class: Text
     tenor_days: NonNegative | None
-    priority_tier: int = Field(ge=1)
+    # Bounded so JavaScript reproduces it exactly (Number.MAX_SAFE_INTEGER).
+    priority_tier: int = Field(ge=1, le=9_007_199_254_740_991)
     minimum: NonNegative | None
     maximum: NonNegative | None
     lot_size: NonNegative | None
@@ -75,9 +75,9 @@ class CompatibilityRule(StrictModel):
 
 
 class ConfigurationContent(StrictModel):
-    """The model-relevant part of a configuration. Its name, ID and timestamps are not hashed."""
+    """Everything a run depends on. A configuration's name, ID and timestamps are not part of it."""
 
-    schema_version: Literal["1.0.0"] = CONFIGURATION_SCHEMA_VERSION
+    schema_version: Literal["1.0.0"]
     sources: list[SourceRecord]
     uses: list[UseRecord]
     compatibility: list[CompatibilityRule]
@@ -108,25 +108,38 @@ class ConfigurationContent(StrictModel):
 
 
 class SolveRequest(StrictModel):
-    api_schema_version: Literal["1.0.0"] = API_SCHEMA_VERSION
+    api_schema_version: Literal["1.0.0"]
     currency: Currency
     configuration: ConfigurationContent
     configuration_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
+    @model_validator(mode="before")
+    @classmethod
+    def single_currency(cls, data: Any) -> Any:
+        """Question 4: every record in a run is in the run currency; nothing is converted.
+
+        Runs before the nested configuration is validated, so a mixed-currency run is reported
+        as such, naming its records, even when the configuration has other errors.
+        """
+        if not isinstance(data, dict) or not isinstance(data.get("configuration"), dict):
+            return data
+        currency = data.get("currency")
+        off: dict[str, list[str]] = {}
+        for kind in ("sources", "uses"):
+            records = data["configuration"].get(kind)
+            if isinstance(records, list):
+                off[kind] = [
+                    str(record.get("id"))
+                    for record in records
+                    if isinstance(record, dict) and record.get("currency") != currency
+                ]
+        named = "; ".join(f"{kind} {_list(ids)}" for kind, ids in off.items() if ids)
+        if named:
+            raise ValueError(f"a run has exactly one currency ({currency}); not in it: {named}")
+        return data
+
     @model_validator(mode="after")
-    def single_currency_and_matching_hash(self) -> SolveRequest:
-        # Question 4: every record in a run is in the run currency; nothing is converted.
-        other_sources = [s.id for s in self.configuration.sources if s.currency != self.currency]
-        other_uses = [u.id for u in self.configuration.uses if u.currency != self.currency]
-        if other_sources or other_uses:
-            named = "; ".join(
-                f"{kind} {', '.join(ids)}"
-                for kind, ids in (("sources", other_sources), ("uses", other_uses))
-                if ids
-            )
-            raise ValueError(
-                f"a run has exactly one currency ({self.currency}); not in it: {named}"
-            )
+    def matching_hash(self) -> SolveRequest:
         if configuration_hash(self.configuration) != self.configuration_hash:
             raise ValueError("configuration_hash does not match the configuration")
         return self
@@ -146,6 +159,11 @@ def configuration_hash(configuration: ConfigurationContent) -> str:
 def request_hash(request: SolveRequest) -> str:
     """The run hash: every request field, with the configuration represented by its hash."""
     return canonical_hash(request.model_dump(mode="json", exclude={"configuration"}))
+
+
+def _list(ids: list[str], limit: int = 10) -> str:
+    shown = ", ".join(ids[:limit])
+    return shown if len(ids) <= limit else f"{shown} and {len(ids) - limit} more"
 
 
 def _unique(records: list[Any], kind: str) -> dict[str, Any]:

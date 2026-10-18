@@ -14,6 +14,7 @@ import {
   configurationToCsv, createEmptyConfiguration, createSource, createUse, parseConfigurationCsv,
   parseConfigurationJson, setCompatibilityRule, type SourcesUsesConfiguration,
 } from "@/data/sourcesUses";
+import { baseProblem, toWorkspaceConfiguration } from "@/data/sourcesUsesSynthetic";
 
 const read = (path: string) => JSON.parse(readFileSync(new URL(`../../contracts/sources_uses/${path}`, import.meta.url), "utf-8"));
 const SCHEMA = read("solve-request.schema.json");
@@ -40,7 +41,7 @@ const schemaKeys = (definition: { properties: object }) => Object.keys(definitio
 function configuration(): SourcesUsesConfiguration {
   const base = createEmptyConfiguration("Treasury, \"stress\"\ncase");
   const s1 = { ...createSource(), id: "S1", label: "Cash pool", category: "Cash", amount: 1400, costBps: 8, legalEntity: "QMS", internality: "internal" as const };
-  const s2 = { ...createSource(), id: "S2", label: "Repo · UST", category: "Secured", amount: 1700.25, costBps: 26, haircutPct: 2, tenorDays: 1, tags: ["SIM"], internality: "external" as const };
+  const s2 = { ...createSource(), id: "S2", label: "Repo · UST", category: "Secured", amount: 1700.25, costBps: 26, haircutPct: 2, tenorDays: 1, tags: ["SIM"], internality: "external" as const, provenance: "sim" as const };
   const u1 = { ...createUse(), id: "U1", label: "CCP margin", category: "Margin", amount: 900, policy: "hard" as const };
   const u2 = { ...createUse(), id: "U2", label: "Client shorts", category: "Prime", amount: 0.000001, policy: "soft" as const, shortfallPenaltyBps: 40, priorityTier: 2 };
   let config: SourcesUsesConfiguration = { ...base, sources: [s1, s2], uses: [u1, u2] };
@@ -86,7 +87,7 @@ describe("canonical JSON", () => {
 });
 
 describe("configuration content and hash", () => {
-  test("maps the browser schema without inventing values, marking SIM-tagged records", () => {
+  test("maps the browser schema without inventing values, carrying explicit provenance", () => {
     const content = toConfigurationContent(configuration());
     const s2 = content.sources.find((s) => s.id === "S2")!;
     expect(s2).toMatchObject({ amount: 1700.25, cost_bps: 26, haircut_pct: 2, internality: "external", provenance: "sim" });
@@ -117,5 +118,71 @@ describe("configuration content and hash", () => {
     const config = configuration();
     const request = await toSolveRequest(config, "USD");
     expect(request).toMatchObject({ api_schema_version: "1.0.0", currency: "USD", configuration_hash: await configurationHash(toConfigurationContent(config)) });
+  });
+});
+
+describe("review fixes", () => {
+  test("B1: an omitted optional field hashes as null, identically after JSON and CSV import", async () => {
+    const config = configuration();
+    const json = JSON.parse(JSON.stringify(config));
+    delete json.sources[0].tenorDays;
+    delete json.uses[0].lotSize;
+    const fromJson = parseConfigurationJson(JSON.stringify(json));
+    const hash = await configurationHash(toConfigurationContent(fromJson));
+    expect(toConfigurationContent(fromJson).sources.find((s) => s.id === "S1")!.tenor_days).toBeNull();
+    expect(await configurationHash(toConfigurationContent(parseConfigurationCsv(configurationToCsv(fromJson))))).toBe(hash);
+  });
+
+  test("B2/B3: provenance comes from the explicit record field, not tags or shared IDs", () => {
+    const config = configuration();
+    const sources = config.sources.map((s) => (s.id === "S1" ? { ...s, id: "A", provenance: "sim" as const } : { ...s, provenance: undefined }));
+    const uses = config.uses.map((u) => (u.id === "U1" ? { ...u, id: "A" } : u));
+    const content = toConfigurationContent({ ...config, sources, uses, compatibility: [] });
+    expect(content.sources.find((s) => s.id === "A")!.provenance).toBe("sim");
+    expect(content.uses.find((u) => u.id === "A")!.provenance).toBe("user_input");
+    // A free-text "SIM" tag no longer decides provenance.
+    expect(content.sources.find((s) => s.id === "S2")!.provenance).toBe("user_input");
+  });
+
+  test("B3: records copied from the SIM showcase carry explicit sim provenance", () => {
+    const sim = toWorkspaceConfiguration(baseProblem(), "SIM", "cfg-sim");
+    const content = toConfigurationContent(sim);
+    expect(new Set([...content.sources, ...content.uses, ...content.compatibility].map((r) => r.provenance))).toEqual(new Set(["sim"]));
+  });
+
+  test("S9: an unspecified rule with no note hashes like no rule at all", async () => {
+    const config = configuration();
+    const withEmpty = { ...config, compatibility: [...config.compatibility, { sourceId: "S1", useId: "U2", status: "unspecified" as const, note: "" }] };
+    expect(await configurationHash(toConfigurationContent(withEmpty))).toBe(await configurationHash(toConfigurationContent(config)));
+  });
+
+  test("N3: mapped tags are copies, not the browser's arrays", () => {
+    const config = configuration();
+    const content = toConfigurationContent(config);
+    expect(content.sources.find((s) => s.id === "S2")!.tags).not.toBe(config.sources.find((s) => s.id === "S2")!.tags);
+  });
+});
+
+describe("enum and required-field parity with the schema", () => {
+  type Members<T extends string> = Record<T, true>;
+  const INTERNALITY: Members<SourceRecordContract["internality"]> = { internal: true, external: true, unclassified: true };
+  const POLICY: Members<UseRecordContract["policy"]> = { hard: true, soft: true };
+  const STATUS: Members<CompatibilityRuleContract["status"]> = { unspecified: true, allowed: true, denied: true };
+  const PROVENANCE: Members<SourceRecordContract["provenance"]> = { user_input: true, sim: true };
+  const enumOf = (property: { enum?: string[] }) => [...(property.enum ?? [])].sort();
+
+  test("TypeScript unions have exactly the schema's enum values", () => {
+    expect(keys(INTERNALITY)).toEqual(enumOf(SCHEMA.$defs.SourceRecord.properties.internality));
+    expect(keys(POLICY)).toEqual(enumOf(SCHEMA.$defs.UseRecord.properties.policy));
+    expect(keys(STATUS)).toEqual(enumOf(SCHEMA.$defs.CompatibilityRule.properties.status));
+    for (const def of ["SourceRecord", "UseRecord", "CompatibilityRule"]) {
+      expect(keys(PROVENANCE)).toEqual(enumOf(SCHEMA.$defs[def].properties.provenance));
+    }
+  });
+
+  test("every contract field is required, as the TypeScript types declare", () => {
+    for (const def of [SCHEMA, ...Object.values(SCHEMA.$defs)] as { properties: object; required?: string[] }[]) {
+      expect([...(def.required ?? [])].sort()).toEqual(schemaKeys(def));
+    }
   });
 });

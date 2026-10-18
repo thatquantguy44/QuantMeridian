@@ -6,11 +6,13 @@ optimizer (`docs/specs/spec012/`, task SU-002). The compatibility engine, LP, ve
 
 ## Contracts
 
-`src/sources_uses_api/contracts.py` defines strict Pydantic models (unknown fields rejected):
+`src/sources_uses_api/contracts.py` defines strict Pydantic models: unknown fields are rejected,
+no type coercion is done (`"1400"` is not a number), and the version fields are required.
 
-- `ConfigurationContent`: the model-relevant part of a configuration, at `schema_version` `1.0.0`.
-  Sources, uses and compatibility rules, each carrying `provenance` (`user_input` or `sim`).
-  A configuration's name, ID and timestamps are deliberately not part of it.
+- `ConfigurationContent`: everything a run depends on, at `schema_version` `1.0.0`. Sources,
+  uses and compatibility rules, each carrying `provenance` (`user_input` or `sim`). Provenance
+  comes from the browser record's explicit `provenance` field, which "Copy to workspace" sets to
+  `sim`; it is never read from tags. A configuration's name, ID and timestamps are not part of it.
 - `SolveRequest`: `api_schema_version` `1.0.0`, one run `currency`, the configuration and its
   `configuration_hash`.
 
@@ -21,7 +23,7 @@ Validation enforces the owner decisions recorded in `docs/specs/spec012/SPEC.md`
 | Question 1 | A rule may not `allow` a source to fund a use in another currency. Cross-entity pairs are fine with an explicit rule. |
 | Question 2 | Amounts are native currency units and are never rounded, in the model or the hash. |
 | Question 3 | Each source's `internality` (`internal`, `external`, `unclassified`) is set by the user, never inferred. |
-| Question 4 | Every source and use in a request must be in the run currency; the error names the records that are not. |
+| Question 4 | Every source and use in a request must be in the run currency; the error names the records that are not, and is reported before any other configuration error. A configuration that stores several currencies cannot be run as a whole. |
 
 The terminal maps the browser's v1 configuration (`src/data/sourcesUses.ts`) onto this contract in
 `src/lib/sourcesUsesContract.ts`.
@@ -30,7 +32,10 @@ The terminal maps the browser's v1 configuration (`src/data/sourcesUses.ts`) ont
 
 - **Configuration hash:** SHA-256 of the canonical JSON of `ConfigurationContent`, with sources and
   uses sorted by `id` and rules by `(source_id, use_id)`. Reordering records, renaming or re-saving
-  a configuration does not change it; changing any model input (for example a haircut) does.
+  a configuration does not change it; changing any record field (a haircut, a label, a note, tag
+  order) does, so the hash identifies the exact configuration that was run. The terminal drops
+  `unspecified` rules with no note before hashing, as the workspace editor does, and states an
+  omitted optional number as `null`.
 - **Request (run) hash:** SHA-256 of the canonical request with the configuration replaced by its
   hash. Every future request option is covered automatically.
 

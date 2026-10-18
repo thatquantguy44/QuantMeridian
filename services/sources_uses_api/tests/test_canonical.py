@@ -51,7 +51,6 @@ def test_non_finite_numbers_are_rejected(value: float) -> None:
         canonical_json(value)
 
 
-
 def test_integral_floats_serialize_without_a_decimal_point() -> None:
     # Pydantic stores amounts as floats; JavaScript has no int/float split.
     assert canonical_json(125_000_000.0) == canonical_json(125_000_000) == "125000000"

@@ -199,3 +199,43 @@ def test_published_json_schema_is_current() -> None:
     if os.environ.get("SXU_UPDATE_CONTRACT_SCHEMA") == "1":
         SCHEMA_PATH.write_text(schema, encoding="utf-8")
     assert SCHEMA_PATH.read_text(encoding="utf-8") == schema
+
+
+class TestReviewFindings:
+    def test_q4_names_off_currency_records_even_with_a_cross_currency_allowed_rule(self) -> None:
+        config = content(
+            sources=[source(), source("S2", currency="EUR")],
+            uses=[use(), use("U2", currency="EUR")],
+            compatibility=[rule(), rule("S1", "U2")],
+        )
+        payload = {**request(content()), "configuration": config}
+        message = errors(SolveRequest, payload)
+        assert "sources S2" in message and "uses U2" in message
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [("amount", "1400"), ("amount", True), ("priority_tier", "2"), ("priority_tier", True)],
+    )
+    def test_rejects_values_that_would_need_type_coercion(self, field: str, value: Any) -> None:
+        # A coerced value would hash differently from the client's raw payload.
+        errors(ConfigurationContent, content(sources=[source(**{field: value})]))
+
+    def test_version_fields_are_required(self) -> None:
+        payload = request()
+        del payload["api_schema_version"]
+        errors(SolveRequest, payload)
+        config = content()
+        del config["schema_version"]
+        errors(ConfigurationContent, config)
+
+    def test_changing_a_source_haircut_changes_the_run_hash(self) -> None:
+        # AC-009 is stated for the run hash.
+        base = request_hash(SolveRequest.model_validate(request()))
+        haircut = request(content(sources=[source(haircut_pct=2.0)]))
+        assert request_hash(SolveRequest.model_validate(haircut)) != base
+
+    def test_rejects_blank_labels(self) -> None:
+        errors(ConfigurationContent, content(sources=[source(label="   ")]))
+
+    def test_rejects_priority_tiers_beyond_exact_javascript_integers(self) -> None:
+        errors(ConfigurationContent, content(uses=[use(priority_tier=9_007_199_254_740_993)]))
