@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
+import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { fmtAbbr, fmtUsdAbbr } from "@/lib/format";
 import { changedSnapshotFields, comparableCollateralRuns, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
@@ -92,7 +93,7 @@ export default function CollateralPage() {
   return <div className="flex min-h-full flex-col">
     <PageHeader code="COLL" title="Collateral Management"
       desc="Pinned InventoryBallast model · local demonstration preview"
-      right={<Tag tone="amber">SIM / NO LIVE RECOMMENDATION</Tag>} />
+      right={<><ProvenanceBadge source="SIM" simSelected /><Tag tone="amber">SIM / NO LIVE RECOMMENDATION</Tag></>} />
     <div className="mx-2 mt-2 border border-term-amber/40 bg-term-panel p-3 text-xs text-term-text-dim" role="status">
       This is a deterministic synthetic book solved by the pinned model. Results are local previews, not governed inventory,
       production recommendations, booked movements, or audited operational runs.
