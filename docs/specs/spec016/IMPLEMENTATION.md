@@ -17,6 +17,7 @@ No runtime branch checkout or Git installation occurs.
 | Standalone upstream native suite | 8 tests passed. |
 | Adapter contract and integration suite | 8 tests passed: exact pin drift, schema/fixture parity, direct/service solve parity, five scenarios, seven invalid snapshot cases, allocation/cost/flag tamper rejection, unverified target stripping, auth/size/production gates. |
 | Python compile | Pass for adapter, tests, wheel builder and update preparer. |
+| Local SIM export runtime contract | Pass under Node 24 for the pinned verified and infeasible Python fixtures: full run preserved, lineage matched, and a forged recommendation flag rejected. |
 | Terminal typecheck, Vitest and Playwright | Added to the pinned integration workflow; not run locally because the workspace has no `node_modules` and its npm proxy was unreachable. The first PR CI run failed before any job step executed; no job log was available through GitHub. Terminal checks remain unverified. |
 
 For the pinned synthetic baseline, direct model and service return a verified
@@ -37,6 +38,15 @@ storage, authorization, idempotency and append-only audit. The source and
 policy owners must supply governed positions, calls, agreements, FX, shared
 availability/reservation, and operational approval before production book mode
 can be considered. These external inputs have no approved interface here.
+
+COLL and OPT now let a user export the current local preview as JSON. The
+export repeats the complete service snapshot/result envelope without
+recalculating economics, and adds an explicit local-preview notice, cost/horizon
+units, and a provenance block with source mode, timestamps, hashes, run and
+correlation IDs, exact model pin, artifact digest, schema versions and adapter
+verification state. The same path exports an infeasible result with no target
+or cost. Contract and real-service browser assertions cover the payload; the
+browser assertions remain pending because CI still fails before job steps.
 
 The CI workflows need the repository secret `INVENTORYBALLAST_READ_TOKEN` to
 read the private upstream commit. The daily updater opens a draft review PR

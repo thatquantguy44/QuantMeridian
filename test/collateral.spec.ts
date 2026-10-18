@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test("COLL shows the true unconfigured service state without a synthetic solve", async ({ page }) => {
   await page.route("**/api/collateral-optimizer/health", route => route.fulfill({
@@ -23,6 +24,16 @@ test("COLL walks the pinned five-scenario SIM book without invented savings", as
   await expect(page.getByText("Calls and haircut-adjusted coverage")).toBeVisible();
   await expect(page.getByText("Target allocation routes · model output")).toBeVisible();
   await expect(page.getByText("SIM / NO LIVE RECOMMENDATION")).toBeVisible();
+  const baselineDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export preview JSON" }).click();
+  const baselineFile = await baselineDownload;
+  expect(baselineFile.suggestedFilename()).toMatch(/^quantmeridian-collateral-sim-baseline-.*\.json$/);
+  const baselineExport = JSON.parse(await readFile(await baselineFile.path(), "utf8"));
+  expect(baselineExport.classification).toBe("LOCAL_MODEL_PREVIEW");
+  expect(baselineExport.recommendation_eligible).toBe(false);
+  expect(baselineExport.provenance.input_hash).toBe(baselineExport.run.input_hash);
+  expect(baselineExport.provenance.model_commit).toBe(baselineExport.run.model_commit);
+  expect(baselineExport.provenance.adapter_verified).toBe(true);
 
   await page.getByRole("button", { name: /Margin spike/ }).click();
   await expect(page.getByText("Incumbent invalid or no verified target")).toBeVisible();
@@ -38,6 +49,12 @@ test("COLL walks the pinned five-scenario SIM book without invented savings", as
   await expect(page.getByText("No verified target allocation.")).toBeVisible();
   await expect(page.getByText("No verified movement proposal.")).toBeVisible();
   await expect(page.getByText("Target cost")).toBeVisible();
+  const infeasibleDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export preview JSON" }).click();
+  const infeasibleExport = JSON.parse(await readFile(await (await infeasibleDownload).path(), "utf8"));
+  expect(infeasibleExport.provenance.lifecycle_status).toBe("INFEASIBLE");
+  expect(infeasibleExport.run.result.allocations).toEqual([]);
+  expect(infeasibleExport.run.result.cost).toBeNull();
   await expect(page.locator("body")).not.toContainText("LCR contribution");
 });
 
@@ -48,5 +65,10 @@ test("OPT reads a real SIM preview without operational run totals", async ({ pag
   await page.getByRole("button", { name: "Solve baseline preview" }).click();
   await expect(page.getByText(/SUCCEEDED_VERIFIED/).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/No live recommendation, booked movement, or operational savings total/)).toBeVisible();
+  const previewDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export preview JSON" }).click();
+  const previewExport = JSON.parse(await readFile(await (await previewDownload).path(), "utf8"));
+  expect(previewExport.provenance.source_mode).toBe("SIM");
+  expect(previewExport.provenance.result_schema_version).toBe("1.0");
   await expect(page.locator("body")).not.toContainText("Recommended Trades");
 });

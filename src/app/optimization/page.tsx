@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { fmtUsdAbbr } from "@/lib/format";
-import { isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
+import { downloadCollateralRun, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
 type Connection = { family: "MMKT" | "COLL"; label: string; binding_status: string;
   service_health: string; detail: string; model_status: string | null };
@@ -94,6 +94,10 @@ export default function OptimizationCenter() {
             <p>Model {preview.package_version} @ {preview.model_commit} · adapter {preview.adapter_version} · input {preview.input_hash}</p>
             <p>Preview only. Verification: {preview.adapter_verification.passed ? "passed" : "no verified target"}.
               No live recommendation, booked movement, or operational savings total.</p>
+            <button type="button" disabled={busy} onClick={() => downloadCollateralRun(preview)}
+              className="border border-term-amber px-3 py-1 text-term-amber disabled:opacity-40">
+              Export preview JSON
+            </button>
           </>}
         </div>
       </Panel>

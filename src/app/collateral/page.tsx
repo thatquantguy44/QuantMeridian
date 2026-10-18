@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { fmtAbbr, fmtUsdAbbr } from "@/lib/format";
-import { changedSnapshotFields, comparableCollateralRuns, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
+import { changedSnapshotFields, comparableCollateralRuns, downloadCollateralRun, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
 const SCENARIOS = [
   ["baseline", "Baseline", "Reallocate the feasible, expensive current posting."],
@@ -150,6 +150,13 @@ export default function CollateralPage() {
               <span className="break-all">Parent hash: {run.parent_hash ?? "None"}</span>
               <span>Scenario: {run.scenario_id ?? "Uploaded snapshot"}</span>
               <span>Verifier: {run.adapter_verification.passed ? "fresh assessment passed" : "no approved target"}</span>
+            </div>
+            <div className="px-3 pb-3 text-xs text-term-text-dim">
+              <button type="button" onClick={() => downloadCollateralRun(run)}
+                className="border border-term-amber px-3 py-1 text-term-amber">
+                Export preview JSON
+              </button>
+              <p className="mt-2">Includes the full service result, native snapshot, source and model pin lineage, and verifier state. Local preview only.</p>
             </div>
           </Panel>
           {baseline && run.run_id !== baseline.run_id &&

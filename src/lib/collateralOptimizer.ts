@@ -11,7 +11,8 @@ export interface CollateralSnapshot {
   current_pledges: { asset_id: string; call_id: string; market_value: number }[];
 }
 export interface CollateralRun {
-  api_schema_version: "1.0.0"; run_id: string;
+  api_schema_version: "1.0.0"; run_id: string; correlation_id: string;
+  idempotency_key: string | null; raw_payload_sha256: string;
   lifecycle_status: "SUCCEEDED_VERIFIED" | "SUCCEEDED_UNVERIFIED" | "INFEASIBLE" | "FAILED";
   preview_only: true; recommendation_eligible: false;
   source_mode: "SIM" | "USER_UPLOAD"; native_source: string; input_hash: string;
@@ -45,7 +46,16 @@ export function isCollateralRun(value: unknown): value is CollateralRun {
       run.recommendation_eligible !== false ||
       !["SUCCEEDED_VERIFIED", "SUCCEEDED_UNVERIFIED", "INFEASIBLE", "FAILED"].includes(run.lifecycle_status ?? "") ||
       !["SIM", "USER_UPLOAD"].includes(run.source_mode ?? "") ||
+      typeof run.run_id !== "string" || typeof run.correlation_id !== "string" ||
+      typeof run.raw_payload_sha256 !== "string" ||
+      !(run.idempotency_key === null || typeof run.idempotency_key === "string") ||
       typeof run.model_commit !== "string" || typeof run.input_hash !== "string" ||
+      typeof run.package_version !== "string" || typeof run.adapter_version !== "string" ||
+      typeof run.wheel_sha256 !== "string" || typeof run.as_of !== "string" ||
+      typeof run.input_age_minutes !== "number" || !Number.isFinite(run.input_age_minutes) ||
+      !(run.parent_hash === null || typeof run.parent_hash === "string") ||
+      !(run.scenario_id === null || typeof run.scenario_id === "string") ||
+      run.snapshot_schema_version !== "1.0" ||
       !run.snapshot || run.snapshot.schema_version !== "1.0" ||
       !run.result || !run.adapter_verification || run.result_schema_version !== "1.0") return false;
   const result = run.result;
@@ -83,4 +93,48 @@ export function comparableCollateralRuns(a: CollateralRun, b: CollateralRun): bo
     a.result_schema_version === b.result_schema_version &&
     a.snapshot.horizon_days === b.snapshot.horizon_days &&
     a.lifecycle_status === "SUCCEEDED_VERIFIED" && b.lifecycle_status === "SUCCEEDED_VERIFIED";
+}
+
+/** Portable local preview. All values and financial components remain the service's output. */
+export function buildCollateralRunExport(run: CollateralRun) {
+  if (!isCollateralRun(run)) throw Error("Collateral result contract failed; export blocked.");
+  return {
+    export_schema_version: "1.0.0" as const,
+    classification: "LOCAL_MODEL_PREVIEW" as const,
+    preview_only: true as const,
+    recommendation_eligible: false as const,
+    notice: "Local model preview only. No governed inventory, live recommendation, booked movement, or settlement instruction.",
+    units: { cost_currency: "USD" as const, horizon_days: run.snapshot.horizon_days,
+      snapshot_values: "native currency per asset or call" as const },
+    provenance: {
+      run_id: run.run_id, correlation_id: run.correlation_id,
+      idempotency_key: run.idempotency_key, raw_payload_sha256: run.raw_payload_sha256,
+      source_mode: run.source_mode, native_source: run.native_source,
+      as_of: run.as_of, input_age_minutes: run.input_age_minutes,
+      input_hash: run.input_hash, parent_hash: run.parent_hash,
+      scenario_id: run.scenario_id, model_commit: run.model_commit,
+      package_version: run.package_version, wheel_sha256: run.wheel_sha256,
+      adapter_version: run.adapter_version,
+      snapshot_schema_version: run.snapshot_schema_version,
+      result_schema_version: run.result_schema_version,
+      lifecycle_status: run.lifecycle_status,
+      adapter_verified: run.adapter_verification.passed
+    },
+    run
+  };
+}
+
+export function downloadCollateralRun(run: CollateralRun): void {
+  const data = buildCollateralRunExport(run);
+  const clean = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const name = `quantmeridian-collateral-${clean(run.source_mode.toLowerCase())}-${clean(run.scenario_id ?? "upload")}-${clean(run.run_id)}.json`;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + "\n"],
+    { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

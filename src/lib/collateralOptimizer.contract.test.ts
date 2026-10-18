@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changedSnapshotFields, comparableCollateralRuns, isCollateralRun,
+import { buildCollateralRunExport, changedSnapshotFields, comparableCollateralRuns, isCollateralRun,
   type CollateralRun, type CollateralSnapshot } from "./collateralOptimizer";
 import baselineFixture from "../../contracts/optimization/collateral/baseline.service.json";
 import infeasibleFixture from "../../contracts/optimization/collateral/infeasible-stress.service.json";
@@ -11,7 +11,9 @@ const snapshot: CollateralSnapshot = {
   assets: [], calls: [], agreements: [], current_pledges: []
 };
 const run: CollateralRun = {
-  api_schema_version: "1.0.0", run_id: "one", lifecycle_status: "SUCCEEDED_VERIFIED",
+  api_schema_version: "1.0.0", run_id: "one", correlation_id: "test-correlation",
+  idempotency_key: null, raw_payload_sha256: "a".repeat(64),
+  lifecycle_status: "SUCCEEDED_VERIFIED",
   preview_only: true, recommendation_eligible: false, source_mode: "SIM",
   native_source: "SIM", input_hash: "hash-a", parent_hash: null, scenario_id: "baseline",
   model_commit: "eb74850a0f972ca9e1f40558ecd7909d3e76e6b3", package_version: "0.1.0",
@@ -54,5 +56,32 @@ describe("collateral terminal result contract", () => {
     expect(changedSnapshotFields(snapshot, variant.snapshot)).toEqual(["minimum_liquidity_reserve_usd"]);
     expect(comparableCollateralRuns(run, variant)).toBe(false);
     expect(comparableCollateralRuns(run, { ...run, model_commit: "another" })).toBe(false);
+  });
+  it("exports verified and infeasible service runs with complete lineage and no invented target", () => {
+    if (!isCollateralRun(baselineFixture) || !isCollateralRun(infeasibleFixture))
+      throw Error("Pinned Python fixtures are incompatible with the terminal contract.");
+    const baselineExport = buildCollateralRunExport(baselineFixture);
+    expect(baselineExport.classification).toBe("LOCAL_MODEL_PREVIEW");
+    expect(baselineExport.recommendation_eligible).toBe(false);
+    expect(baselineExport.provenance).toMatchObject({
+      run_id: baselineFixture.run_id,
+      correlation_id: baselineFixture.correlation_id,
+      raw_payload_sha256: baselineFixture.raw_payload_sha256,
+      source_mode: "SIM", native_source: baselineFixture.native_source,
+      input_hash: baselineFixture.input_hash, parent_hash: baselineFixture.parent_hash,
+      model_commit: baselineFixture.model_commit, wheel_sha256: baselineFixture.wheel_sha256,
+      result_schema_version: "1.0", adapter_verified: true
+    });
+    expect(baselineExport.units).toEqual({ cost_currency: "USD", horizon_days: 30,
+      snapshot_values: "native currency per asset or call" });
+    expect(JSON.parse(JSON.stringify(baselineExport)).run).toEqual(baselineFixture);
+
+    const infeasibleExport = buildCollateralRunExport(infeasibleFixture);
+    expect(infeasibleExport.provenance.lifecycle_status).toBe("INFEASIBLE");
+    expect(infeasibleExport.provenance.adapter_verified).toBe(false);
+    expect(infeasibleExport.run.result.allocations).toEqual([]);
+    expect(infeasibleExport.run.result.cost).toBeNull();
+    expect(() => buildCollateralRunExport({ ...run, recommendation_eligible: true } as unknown as CollateralRun))
+      .toThrow("export blocked");
   });
 });
