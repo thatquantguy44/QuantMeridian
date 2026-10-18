@@ -4,12 +4,17 @@ import { useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
+import Link from "@/components/Link";
+import { NAV } from "@/lib/nav";
 import { fmtUsdAbbr } from "@/lib/format";
 import { downloadCollateralRun, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
 type Connection = { family: "MMKT" | "COLL"; label: string; binding_status: string;
   service_health: string; detail: string; model_status: string | null };
 type Connections = { approval: string; connections: Connection[] };
+
+/** Every other optimization model in the sidebar group; derived from NAV so it follows module gating. */
+const MODELS = NAV.filter(item => item.group === "OPTIMIZATION" && item.code !== "OPT");
 
 export default function OptimizationCenter() {
   const [connections, setConnections] = useState<Connections | null>(null);
@@ -55,6 +60,26 @@ export default function OptimizationCenter() {
     <div className="p-2 text-xs text-term-text-dim">
       Model services have separate health. No generated runs, duals, trades, or savings enter operational totals.
       The collateral solve below uses a fictional SIM book and has no persistent audit record.
+    </div>
+    <div className="px-2">
+      <Panel title="Optimization models" code="MODELS">
+        <nav aria-label="Optimization models" className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+          {MODELS.map(item => {
+            const link = connections?.connections.find(c => c.family === item.code);
+            return <Link key={item.code} href={item.href}
+              className="flex items-start gap-2 border border-term-border p-2 text-xs hover:border-term-amber">
+              <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-term-amber" aria-hidden />
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-center gap-2">
+                  <strong>{item.code} · {item.label}</strong>
+                  {link && <Tag tone={link.service_health === "READY" ? "up" : "amber"}>SERVICE {link.service_health}</Tag>}
+                </span>
+                <span className="block text-term-text-dim">{item.desc}</span>
+              </span>
+            </Link>;
+          })}
+        </nav>
+      </Panel>
     </div>
     <div className="grid gap-2 p-2 lg:grid-cols-2">
       <Panel title="Connections" code="CONN">
