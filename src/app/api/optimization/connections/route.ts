@@ -1,4 +1,5 @@
 import { json } from "@/lib/server/http";
+import { collateralProxy } from "@/lib/server/collateralOptimizerProxy";
 
 export const runtime = "nodejs";
 
@@ -81,13 +82,27 @@ async function probeService(baseUrl: string | undefined) {
   }
 }
 
+async function probeCollateral() {
+  const response = await collateralProxy(new Request("http://terminal/api/collateral-optimizer/health"),
+    "/health", "GET");
+  const health = await response.json() as {
+    code?: string; message?: string; readiness?: ServiceHealth;
+    detail?: string; model_status?: string; api_schema_version?: string;
+  };
+  const state: ServiceHealth = response.ok ?
+    (health.readiness ?? "INCOMPATIBLE") :
+    health.code?.includes("INCOMPATIBLE") || health.code === "RESPONSE_INVALID" ? "INCOMPATIBLE" :
+    health.code?.includes("UNCONFIGURED") || health.code === "PRODUCTION_DISABLED" ? "UNCONFIGURED" :
+    "UNAVAILABLE";
+  return { service_health: state, detail: health.detail ?? health.message ?? "Collateral service state is unavailable.",
+    model_status: health.model_status ?? null, api_schema_version: health.api_schema_version ?? null };
+}
+
 export async function GET() {
   const mmktUrl = env("MONEY_MARKET_API_URL") ?? DEFAULT_MMKT_URL;
-  const collateralUrl = env("COLLATERAL_OPTIMIZER_API_URL");
-
   const [mmkt, collateral] = await Promise.all([
     probeService(mmktUrl),
-    probeService(collateralUrl),
+    probeCollateral(),
   ]);
 
   return json(

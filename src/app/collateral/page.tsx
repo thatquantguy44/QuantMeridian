@@ -1,296 +1,245 @@
+"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
-import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
-import { DataGrid, type Column } from "@/components/ui/DataGrid";
-import { BarChart } from "@/components/charts/BarChart";
-import { ProgressBar } from "@/components/charts/Radial";
-import {
-  getCollateralAssets,
-  getMarginBook,
-  getCollateralSummary,
-  getConstraints,
-  type CollateralAsset,
-  type MarginRow,
-  type Constraint,
-} from "@/data/collateral";
-import { fmtAbbr, fmtUsdAbbr, fmtNum, fmtPct, fmtBps, pnlClass } from "@/lib/format";
+import { fmtAbbr, fmtUsdAbbr } from "@/lib/format";
+import { changedSnapshotFields, comparableCollateralRuns, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
-const AGREEMENT_TONE: Record<MarginRow["agreement"], "blue" | "amber" | "violet" | "neutral"> = {
-  "ISDA-CSA": "blue",
-  GMRA: "amber",
-  MSLA: "violet",
-  CCP: "neutral",
-};
+const SCENARIOS = [
+  ["baseline", "Baseline", "Reallocate the feasible, expensive current posting."],
+  ["margin_spike", "Margin spike", "US CCP call rises 35%; incumbent savings are unavailable."],
+  ["liquidity_scarcity", "Liquidity scarcity", "A higher local reserve binds."],
+  ["cutoff_and_fees", "Cutoff + fees", "Near deadlines and higher activation fees."],
+  ["infeasible_stress", "Infeasible stress", "Eligible capacity cannot cover an extreme call."]
+] as const;
 
-const CONSTRAINT_TONE: Record<Constraint["type"], "blue" | "amber" | "violet" | "down" | "neutral"> = {
-  HAIRCUT: "blue",
-  CONCENTRATION: "amber",
-  ELIGIBILITY: "violet",
-  REGULATORY: "down",
-  COUNTERPARTY: "neutral",
-};
+type Health = { status?: string; readiness?: string; detail?: string; model_status?: string };
+type ErrorBody = { code?: string; message?: string; issues?: { location: string; message: string }[] };
 
-function assetTone(t: CollateralAsset["type"]): "up" | "blue" | "amber" | "violet" | "down" | "neutral" {
-  if (t.startsWith("CASH")) return "up";
-  if (t === "UST" || t === "AGENCY") return "blue";
-  if (t === "CORP_IG") return "amber";
-  if (t === "CORP_HY") return "down";
-  if (t === "GOLD") return "violet";
-  return "neutral";
+function failure(body: ErrorBody, fallback: string): string {
+  const issues = body.issues?.map((item) => item.location + ": " + item.message).join("; ");
+  return [body.code, issues || body.message || fallback].filter(Boolean).join(" — ");
 }
 
+async function post(path: string, payload: unknown): Promise<unknown> {
+  const response = await fetch(path, { method: "POST", cache: "no-store",
+    headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+  const body = await response.json() as unknown;
+  if (!response.ok) throw Error(failure(body as ErrorBody, "Request failed."));
+  return body;
+}
+
+const cell = "border-b border-term-border-soft px-2 py-1.5 text-left text-xs";
+const numberCell = cell + " text-right tnum";
+
 export default function CollateralPage() {
-  const summary = getCollateralSummary();
-  const margin = getMarginBook();
-  const assets = getCollateralAssets();
-  const constraints = getConstraints();
+  const [health, setHealth] = useState<Health | null>(null);
+  const [scenario, setScenario] = useState("baseline");
+  const [run, setRun] = useState<CollateralRun | null>(null);
+  const [baseline, setBaseline] = useState<CollateralRun | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [upload, setUpload] = useState("");
 
-  const savingsGenerated = summary.currentCost - summary.optimizedCost;
-  const bindingConstraints = constraints.filter((c) => c.binding);
-
-  // What-If: adjust concentration cap and cash buffer; recompute plausible savings.
-  const [concCap, setConcCap] = useState(25);
-  const [cashBuffer, setCashBuffer] = useState(8);
-  const [whatIf, setWhatIf] = useState<{ savings: number; cost: number } | null>(null);
-
-  function rerun() {
-    // Relaxing the concentration cap above 25 and lowering the cash buffer below 8
-    // both create slack that the optimizer can monetize. Tightening does the reverse.
-    const concSlack = (concCap - 25) / 25; // +ve = more headroom
-    const bufferSlack = (8 - cashBuffer) / 8; // +ve = lower buffer requirement
-    const uplift = 1 + Math.max(-0.4, Math.min(0.5, concSlack * 0.6 + bufferSlack * 0.5));
-    const newSavings = savingsGenerated * uplift;
-    const newCost = summary.currentCost - newSavings;
-    setWhatIf({ savings: newSavings, cost: newCost });
+  async function solve(payload: unknown, selected: string) {
+    setBusy(true); setError(null); setRun(null);
+    try {
+      const data = await post("/api/collateral-optimizer/runs", payload);
+      if (!isCollateralRun(data)) throw Error("Terminal result contract failed.");
+      setRun(data);
+      setScenario(selected);
+      if (selected === "baseline") setBaseline(data);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Collateral service unavailable.");
+    } finally { setBusy(false); }
   }
 
-  const marginCols: Column<MarginRow>[] = [
-    { key: "counterparty", header: "Counterparty", render: (m) => <span className="font-semibold text-term-text">{m.counterparty}</span>, sortVal: (m) => m.counterparty },
-    { key: "agreement", header: "Agreement", align: "center", render: (m) => <Tag tone={AGREEMENT_TONE[m.agreement]}>{m.agreement}</Tag>, sortVal: (m) => m.agreement },
-    { key: "rating", header: "Rating", align: "center", render: (m) => <span className="text-term-text-dim">{m.rating}</span>, sortVal: (m) => m.rating },
-    { key: "im", header: "IM", align: "right", render: (m) => <span className="text-term-text">{fmtUsdAbbr(m.im)}</span>, sortVal: (m) => m.im },
-    { key: "vm", header: "VM", align: "right", render: (m) => <span className={pnlClass(m.vm)}>{fmtUsdAbbr(m.vm)}</span>, sortVal: (m) => m.vm },
-    { key: "posted", header: "Posted", align: "right", render: (m) => <span className="text-term-text-dim">{fmtUsdAbbr(m.posted)}</span>, sortVal: (m) => m.posted },
-    {
-      key: "excess",
-      header: "Excess/Deficit",
-      align: "right",
-      render: (m) => <span className={m.excess < 0 ? "text-term-down" : "text-term-up"}>{fmtUsdAbbr(m.excess)}</span>,
-      sortVal: (m) => m.excess,
-    },
-  ];
+  useEffect(() => {
+    let active = true;
+    async function start() {
+      try {
+        const response = await fetch("/api/collateral-optimizer/health", { cache: "no-store" });
+        const body = await response.json() as Health & ErrorBody;
+        if (!active) return;
+        if (!response.ok) { setHealth({ readiness: body.code ?? "UNAVAILABLE", detail: body.message }); return; }
+        setHealth(body);
+        if (body.readiness === "READY") void solve({ source_mode: "SIM", scenario_id: "baseline" }, "baseline");
+      } catch { if (active) setHealth({ readiness: "UNAVAILABLE", detail: "Service could not be reached." }); }
+    }
+    void start();
+    return () => { active = false; };
+  }, []);
 
-  const assetCols: Column<CollateralAsset>[] = [
-    { key: "asset", header: "Asset", render: (a) => <span className="font-semibold text-term-text">{a.asset}</span>, sortVal: (a) => a.asset },
-    { key: "type", header: "Type", align: "center", render: (a) => <Tag tone={assetTone(a.type)}>{a.type}</Tag>, sortVal: (a) => a.type },
-    { key: "available", header: "Available", align: "right", render: (a) => <span className="text-term-text-dim">{fmtUsdAbbr(a.available)}</span>, sortVal: (a) => a.available },
-    { key: "haircut", header: "Haircut", align: "right", render: (a) => <span className="text-term-text-dim">{fmtPct(a.haircut, 1)}</span>, sortVal: (a) => a.haircut },
-    { key: "currentAlloc", header: "Current", align: "right", render: (a) => <span className="text-term-text">{fmtUsdAbbr(a.currentAlloc)}</span>, sortVal: (a) => a.currentAlloc },
-    { key: "optimizedAlloc", header: "Optimized", align: "right", render: (a) => <span className="text-term-amber">{fmtUsdAbbr(a.optimizedAlloc)}</span>, sortVal: (a) => a.optimizedAlloc },
-    {
-      key: "delta",
-      header: "Δ",
-      align: "right",
-      render: (a) => {
-        const d = a.optimizedAlloc - a.currentAlloc;
-        return <span className={pnlClass(d)}>{`${d >= 0 ? "+" : ""}${fmtUsdAbbr(d)}`}</span>;
-      },
-      sortVal: (a) => a.optimizedAlloc - a.currentAlloc,
-    },
-    { key: "costBps", header: "Cost", align: "right", render: (a) => <span className="text-term-text-dim">{fmtBps(a.costBps, 1)}</span>, sortVal: (a) => a.costBps },
-    { key: "eligiblePct", header: "Eligible", align: "right", render: (a) => <span className="text-term-text-dim">{fmtPct(a.eligiblePct, 0)}</span>, sortVal: (a) => a.eligiblePct },
-  ];
+  async function solveUpload() {
+    try {
+      const snapshot = JSON.parse(upload) as unknown;
+      await post("/api/collateral-optimizer/validate", { source_mode: "USER_UPLOAD", snapshot });
+      await solve({ source_mode: "USER_UPLOAD", snapshot }, "upload");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Invalid native JSON snapshot."); }
+  }
 
-  const constraintCols: Column<Constraint>[] = [
-    { key: "name", header: "Constraint", render: (c) => <span className="text-term-text">{c.name}</span>, sortVal: (c) => c.name },
-    { key: "type", header: "Type", align: "center", render: (c) => <Tag tone={CONSTRAINT_TONE[c.type]}>{c.type}</Tag>, sortVal: (c) => c.type },
-    { key: "current", header: "Current", align: "right", render: (c) => <span className="text-term-text">{fmtNum(c.current, 1)}</span>, sortVal: (c) => c.current },
-    { key: "limit", header: "Limit", align: "right", render: (c) => <span className="text-term-text-dim">{fmtNum(c.limit, 1)}</span>, sortVal: (c) => c.limit },
-    {
-      key: "usage",
-      header: "Usage",
-      align: "right",
-      width: "120px",
-      render: (c) => <ProgressBar value={c.current} max={c.limit} color={c.binding ? "#FF3B3B" : "#2ECC71"} showPct />,
-      sortVal: (c) => c.current / c.limit,
-    },
-    { key: "status", header: "Status", align: "center", render: (c) => <Tag tone={c.binding ? "down" : "up"}>{c.binding ? "BINDING" : "SLACK"}</Tag>, sortVal: (c) => (c.binding ? 1 : 0) },
-    { key: "shadow", header: "Shadow Price", align: "right", render: (c) => (c.binding ? <span className="text-term-amber">{fmtUsdAbbr(c.shadowPrice)}</span> : <span className="text-term-text-mute">—</span>), sortVal: (c) => c.shadowPrice },
-  ];
+  const result = run?.result;
+  const verified = run?.lifecycle_status === "SUCCEEDED_VERIFIED" && run.adapter_verification.passed;
+  const cost = verified ? result?.cost : null;
+  const changes = baseline && run ? changedSnapshotFields(baseline.snapshot, run.snapshot) : [];
+  const comparable = baseline && run ? comparableCollateralRuns(baseline, run) : false;
+  const target = new Map<string, number>();
+  for (const row of result?.allocations ?? []) target.set(row.asset_id, (target.get(row.asset_id) ?? 0) + row.market_value);
+  const current = new Map<string, number>();
+  for (const row of run?.snapshot.current_pledges ?? []) current.set(row.asset_id, (current.get(row.asset_id) ?? 0) + row.market_value);
 
-  return (
-    <div className="flex min-h-full flex-col">
-      <PageHeader code="COLL" title="Collateral Management" desc="Margin · Optimization · Constraints · What-If" right={<ProvenanceBadge source="SIM" />} />
-
-      <KpiStrip>
-        <Stat label="Total IM" value={fmtUsdAbbr(summary.totalIM)} sub="initial margin" />
-        <Stat label="Total VM" value={fmtUsdAbbr(summary.totalVM)} sub="variation margin" />
-        <Stat label="Excess Collateral" value={fmtUsdAbbr(summary.excessCollateral)} sub="posted surplus" tone="up" />
-        <Stat label="Deficit" value={fmtUsdAbbr(summary.deficit)} sub={`${summary.deficitCount} counterparties`} tone="down" />
-        <Stat label="Optimized Savings" value={fmtUsdAbbr(summary.optimizedSavings)} sub="vs current allocation" tone="amber" />
-        <Stat label="Utilization" value={fmtPct(summary.utilizationPct, 1)} sub="collateral pool" />
-      </KpiStrip>
-
-      <div className="grid flex-1 grid-cols-1 gap-2 p-2 xl:grid-cols-3">
-        {/* Margin Overview */}
-        <Panel title="Margin Overview" code="MRGN" className="xl:col-span-2" right={<Tag tone={summary.deficitCount > 0 ? "down" : "up"}>{summary.deficitCount} deficits</Tag>}>
-          <div className="grid grid-cols-3 divide-x divide-term-border border-b border-term-border">
-            <Stat label="Total IM" value={fmtUsdAbbr(summary.totalIM)} />
-            <Stat label="Total VM" value={fmtUsdAbbr(summary.totalVM)} />
-            <Stat label="Net Excess" value={fmtUsdAbbr(summary.excessCollateral + summary.deficit)} tone={summary.excessCollateral + summary.deficit < 0 ? "down" : "up"} />
+  return <div className="flex min-h-full flex-col">
+    <PageHeader code="COLL" title="Collateral Management"
+      desc="Pinned InventoryBallast model · local demonstration preview"
+      right={<Tag tone="amber">SIM / NO LIVE RECOMMENDATION</Tag>} />
+    <div className="mx-2 mt-2 border border-term-amber/40 bg-term-panel p-3 text-xs text-term-text-dim" role="status">
+      This is a deterministic synthetic book solved by the pinned model. Results are local previews, not governed inventory,
+      production recommendations, booked movements, or audited operational runs.
+    </div>
+    <div className="grid gap-2 p-2 lg:grid-cols-[1fr_2fr]">
+      <Panel title="Binding and scenario" code="BIND">
+        <div className="space-y-3 p-3 text-xs">
+          <p>Service: <strong>{health?.readiness ?? "LOADING"}</strong> · {health?.detail ?? "Checking binding…"}</p>
+          <p>Model state: {health?.model_status ?? "Unavailable"}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {SCENARIOS.map(([id, label, detail]) =>
+              <button key={id} type="button" disabled={busy || health?.readiness !== "READY"}
+                onClick={() => void solve({ source_mode: "SIM", scenario_id: id }, id)}
+                aria-pressed={scenario === id}
+                className={"border px-3 py-2 text-left hover:border-term-amber " +
+                  (scenario === id ? "border-term-amber text-term-amber" : "border-term-border text-term-text-dim")}>
+                <strong className="block">{label}</strong><span>{detail}</span>
+              </button>)}
           </div>
-          <DataGrid columns={marginCols} rows={margin} rowKey={(m) => m.counterparty} maxHeight="320px" initialSort={{ key: "excess", dir: "asc" }} zebra />
-        </Panel>
-
-        {/* Optimization summary */}
-        <Panel title="Optimization Result" code="OPT" accent>
-          <div className="border-b border-term-border">
-            <Stat label="Savings Generated" value={fmtUsdAbbr(savingsGenerated)} sub="current cost − optimized cost" tone="up" />
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-term-border border-b border-term-border">
-            <Stat label="Current Cost" value={fmtUsdAbbr(summary.currentCost)} tone="down" />
-            <Stat label="Optimized Cost" value={fmtUsdAbbr(summary.optimizedCost)} tone="amber" />
-          </div>
-          <div className="p-2">
-            <div className="term-label mb-1">Cost Reduction</div>
-            <ProgressBar value={summary.optimizedCost} max={summary.currentCost} color="#2ECC71" height={9} showPct />
-            <div className="mt-1 tnum text-2xs text-term-text-dim">
-              Optimized cost is {fmtPct((summary.optimizedCost / summary.currentCost) * 100, 1)} of current.
+          <button type="button" className="border border-term-border px-2 py-1 text-term-text"
+            onClick={() => setUpload(run ? JSON.stringify(run.snapshot, null, 2) : "")}>
+            Copy current native snapshot into editor
+          </button>
+          <label className="block">Validated JSON upload or edited native snapshot
+            <textarea aria-label="Native collateral snapshot JSON" value={upload}
+              onChange={(event) => setUpload(event.target.value)} rows={5}
+              className="mt-1 w-full border border-term-border bg-term-bg p-2 font-mono text-xs text-term-text" />
+          </label>
+          <button type="button" onClick={() => void solveUpload()} disabled={!upload || busy || health?.readiness !== "READY"}
+            className="border border-term-amber px-3 py-1 text-term-amber disabled:opacity-40">
+            Validate and solve upload
+          </button>
+        </div>
+      </Panel>
+      <div className="space-y-2">
+        {busy && <Panel title="Solving" code="RUN"><p className="p-3 text-xs" role="status">Running the pinned optimizer…</p></Panel>}
+        {error && <Panel title="Validation or service error" code="ERR"><p className="p-3 text-xs text-term-down" role="alert">{error}</p></Panel>}
+        {!run && !busy && !error && <Panel title="No result" code="EMPTY"><p className="p-3 text-xs">Select a scenario when the service is ready.</p></Panel>}
+        {run && <>
+          <Panel title="Model result" code="RESULT" right={<Tag tone={verified ? "up" : "down"}>{run.lifecycle_status}</Tag>}>
+            <KpiStrip>
+              <Stat label="Target cost" value={cost ? fmtUsdAbbr(cost.total_usd) : "Unavailable"}
+                sub={run.snapshot.horizon_days + " day horizon · USD"} />
+              <Stat label="Modeled savings" value={cost?.savings_usd == null ? "Unavailable" : fmtUsdAbbr(cost.savings_usd)}
+                sub={cost?.savings_usd == null ? "Incumbent invalid or no verified target" : "vs verified incumbent · USD"} />
+              <Stat label="Remaining liquidity" value={result?.residual_liquidity_usd == null ? "Unavailable" : fmtUsdAbbr(result.residual_liquidity_usd)}
+                sub="supplied local policy · USD" />
+            </KpiStrip>
+            <div className="grid gap-1 p-3 text-xs text-term-text-dim md:grid-cols-2">
+              <span>Input: {run.source_mode} / native {run.native_source} · {run.as_of}</span>
+              <span>Input age: {run.input_age_minutes.toFixed(0)} minutes</span>
+              <span>Model: {run.package_version} @ {run.model_commit.slice(0, 12)}</span>
+              <span>Adapter: {run.adapter_version} · snapshot/result 1.0 · {result?.formulation}</span>
+              <span className="break-all">Input hash: {run.input_hash}</span>
+              <span className="break-all">Parent hash: {run.parent_hash ?? "None"}</span>
+              <span>Scenario: {run.scenario_id ?? "Uploaded snapshot"}</span>
+              <span>Verifier: {run.adapter_verification.passed ? "fresh assessment passed" : "no approved target"}</span>
             </div>
-          </div>
-        </Panel>
-
-        {/* Allocation grid */}
-        <Panel title="Optimization Dashboard" code="ALLOC" className="xl:col-span-2">
-          <DataGrid columns={assetCols} rows={assets} rowKey={(a) => a.asset} maxHeight="320px" initialSort={{ key: "optimizedAlloc", dir: "desc" }} zebra />
-        </Panel>
-
-        {/* Current vs Optimized compare */}
-        <Panel title="Current vs Optimized" code="CMP">
-          <div className="grid grid-cols-2 gap-2 p-2">
-            <div>
-              <div className="term-label mb-1 text-term-text-dim">Current</div>
-              <BarChart horizontal fmt={(n) => fmtUsdAbbr(n)} data={assets.map((a) => ({ label: a.asset, value: a.currentAlloc, color: "#3B9DFF" }))} />
+          </Panel>
+          {baseline && run.run_id !== baseline.run_id &&
+            <Panel title="Baseline comparison" code="COMPARE">
+              <p className="p-3 text-xs text-term-text-dim">
+                {comparable ? "Same snapshot and pin. Costs are comparable in USD over the same horizon."
+                  : "NON-COMPARABLE for a causal savings claim: snapshot or pin differs."}
+                {" "}Changed fields: {changes.join(", ") || "none"}.
+                {" "}Baseline hash: {baseline.input_hash.slice(0, 12)} · Current hash: {run.input_hash.slice(0, 12)}.
+              </p>
+            </Panel>}
+          {verified && cost && <Panel title="USD cost over modeled horizon" code="COST">
+            <div className="grid grid-cols-2 gap-2 p-3 text-xs sm:grid-cols-4">
+              <Stat label="Carry" value={fmtUsdAbbr(cost.carry_usd)} />
+              <Stat label="Movement" value={fmtUsdAbbr(cost.variable_move_usd)} />
+              <Stat label="Activation fees" value={fmtUsdAbbr(cost.fixed_activation_usd)} />
+              <Stat label="Current cost" value={cost.current_cost_usd == null ? "Unavailable" : fmtUsdAbbr(cost.current_cost_usd)} />
             </div>
-            <div>
-              <div className="term-label mb-1 text-term-amber">Optimized</div>
-              <BarChart horizontal fmt={(n) => fmtUsdAbbr(n)} data={assets.map((a) => ({ label: a.asset, value: a.optimizedAlloc, color: "#FF8C00" }))} />
-            </div>
-          </div>
-        </Panel>
-
-        {/* Constraints */}
-        <Panel title="Optimization Constraints" code="CSTR" className="xl:col-span-2" right={<Tag tone="down">{bindingConstraints.length} binding</Tag>}>
-          <DataGrid columns={constraintCols} rows={constraints} rowKey={(c) => c.name} maxHeight="320px" initialSort={{ key: "usage", dir: "desc" }} zebra />
-        </Panel>
-
-        {/* Shadow prices */}
-        <Panel title="Shadow Prices / Dual Values" code="DUAL">
-          <div className="p-2">
-            {bindingConstraints.length > 0 ? (
-              <BarChart horizontal fmt={(n) => fmtUsdAbbr(n)} data={bindingConstraints.map((c) => ({ label: c.name, value: c.shadowPrice, color: "#FF8C00" }))} />
-            ) : (
-              <div className="py-6 text-center text-2xs text-term-text-mute">No binding constraints.</div>
-            )}
-            <div className="mt-2 border-t border-term-border-soft pt-1.5 text-2xs text-term-text-dim">
-              Dual value = marginal savings per unit of constraint relaxation.
-            </div>
-          </div>
-        </Panel>
-
-        {/* What-If */}
-        <Panel title="What-If Analysis" code="SCEN" accent className="xl:col-span-3">
-          <div className="grid grid-cols-1 gap-2 p-2 lg:grid-cols-3">
-            <div className="flex flex-col gap-3">
-              <div>
-                <div className="mb-1 flex justify-between text-2xs">
-                  <span className="text-term-text-dim">Concentration Cap (UST)</span>
-                  <span className="tnum text-term-amber">{fmtPct(concCap, 1)}</span>
-                </div>
-                <input
-                  type="range"
-                  min={15}
-                  max={40}
-                  step={0.5}
-                  value={concCap}
-                  onChange={(e) => setConcCap(Number(e.target.value))}
-                  className="w-full accent-term-amber"
-                />
-                <div className="flex justify-between text-3xs text-term-text-mute">
-                  <span>15%</span>
-                  <span>base 25%</span>
-                  <span>40%</span>
-                </div>
-              </div>
-              <div>
-                <div className="mb-1 flex justify-between text-2xs">
-                  <span className="text-term-text-dim">Min Cash Buffer</span>
-                  <span className="tnum text-term-amber">{fmtPct(cashBuffer, 1)}</span>
-                </div>
-                <input
-                  type="range"
-                  min={2}
-                  max={15}
-                  step={0.5}
-                  value={cashBuffer}
-                  onChange={(e) => setCashBuffer(Number(e.target.value))}
-                  className="w-full accent-term-amber"
-                />
-                <div className="flex justify-between text-3xs text-term-text-mute">
-                  <span>2%</span>
-                  <span>base 8%</span>
-                  <span>15%</span>
-                </div>
-              </div>
-              <button
-                onClick={rerun}
-                className="mt-1 rounded-sm border border-term-amber/40 bg-term-amber/10 px-3 py-1.5 text-2xs font-semibold uppercase tracking-wide text-term-amber hover:bg-term-amber/20"
-              >
-                Re-run Optimization
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-px self-start bg-term-border lg:col-span-2">
-              <Stat label="Baseline Savings" value={fmtUsdAbbr(savingsGenerated)} sub="current model" tone="up" className="bg-term-panel" />
-              <Stat
-                label="Scenario Savings"
-                value={whatIf ? fmtUsdAbbr(whatIf.savings) : "—"}
-                sub={whatIf ? "after re-run" : "run to compute"}
-                tone="amber"
-                className="bg-term-panel"
-              />
-              <Stat label="Baseline Cost" value={fmtUsdAbbr(summary.currentCost)} sub="unoptimized" tone="down" className="bg-term-panel" />
-              <Stat
-                label="Scenario Cost"
-                value={whatIf ? fmtUsdAbbr(whatIf.cost) : "—"}
-                sub={
-                  whatIf ? (
-                    <span className={pnlClass(savingsGenerated - whatIf.savings === 0 ? 0 : whatIf.savings - savingsGenerated)}>
-                      {`${whatIf.savings - savingsGenerated >= 0 ? "+" : ""}${fmtUsdAbbr(whatIf.savings - savingsGenerated)} vs base`}
-                    </span>
-                  ) : (
-                    "run to compute"
-                  )
-                }
-                className="bg-term-panel"
-              />
-              <div className="col-span-2 bg-term-panel p-2">
-                <div className="term-label mb-1">Savings: Baseline vs Scenario</div>
-                <BarChart
-                  horizontal
-                  fmt={(n) => fmtUsdAbbr(n)}
-                  data={[
-                    { label: "Baseline", value: savingsGenerated, color: "#3B9DFF" },
-                    { label: "Scenario", value: whatIf ? whatIf.savings : savingsGenerated, color: "#FF8C00" },
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
-        </Panel>
+          </Panel>}
+        </>}
       </div>
     </div>
-  );
+    {run && <div className="grid gap-2 px-2 pb-2 xl:grid-cols-2">
+      <Panel title="Calls and haircut-adjusted coverage" code="CALLS">
+        <div className="overflow-x-auto"><table className="w-full">
+          <thead><tr>{["Call / agreement", "Type", "Required USD", "Covered USD", "Shortfall USD"].map(x => <th key={x} className={cell}>{x}</th>)}</tr></thead>
+          <tbody>{run.snapshot.calls.map(call => {
+            const row = result?.coverage.find(item => item.call_id === call.call_id);
+            return <tr key={call.call_id}>
+              <td className={cell}>{call.call_id}<small className="block text-term-text-mute">{call.agreement_id}</small></td>
+              <td className={cell}>{call.margin_type}</td>
+              <td className={numberCell}>{row ? fmtUsdAbbr(row.required_usd) : "—"}</td>
+              <td className={numberCell}>{row ? fmtUsdAbbr(row.covered_usd) : "—"}</td>
+              <td className={numberCell}>{result?.diagnostics.call_shortfall_usd[call.call_id] == null ? "—" :
+                fmtUsdAbbr(result.diagnostics.call_shortfall_usd[call.call_id])}</td>
+            </tr>;
+          })}</tbody>
+        </table></div>
+      </Panel>
+      <Panel title="Lots · native market values" code="LOTS">
+        <div className="max-h-96 overflow-auto"><table className="w-full">
+          <thead><tr>{["Lot", "Class", "Currency", "Available", "Current", "Target"].map(x => <th key={x} className={cell}>{x}</th>)}</tr></thead>
+          <tbody>{run.snapshot.assets.map(asset => <tr key={asset.asset_id}>
+            <td className={cell}>{asset.asset_id}</td><td className={cell}>{asset.asset_class}</td>
+            <td className={cell}>{asset.currency}</td>
+            <td className={numberCell}>{fmtAbbr(asset.allocatable_value)}</td>
+            <td className={numberCell}>{fmtAbbr(current.get(asset.asset_id) ?? 0)}</td>
+            <td className={numberCell}>{verified ? fmtAbbr(target.get(asset.asset_id) ?? 0) : "—"}</td>
+          </tr>)}</tbody>
+        </table></div>
+      </Panel>
+      <Panel title="Target allocation routes · model output" code="ALLOC">
+        {verified && result?.allocations.length ? <div className="max-h-80 overflow-auto"><table className="w-full">
+          <thead><tr>{["Lot", "Call", "Market / native", "FX USD/unit", "Haircut", "Covered USD"].map(x => <th key={x} className={cell}>{x}</th>)}</tr></thead>
+          <tbody>{result.allocations.map(row => <tr key={row.asset_id + row.call_id}>
+            <td className={cell}>{row.asset_id}</td><td className={cell}>{row.call_id}</td>
+            <td className={numberCell}>{fmtAbbr(row.market_value)} {row.currency}</td>
+            <td className={numberCell}>{run.snapshot.fx.find(q => q.currency === row.currency)?.usd_per_unit ?? "—"}</td>
+            <td className={numberCell}>{(row.haircut * 100).toFixed(1)}%</td>
+            <td className={numberCell}>{fmtUsdAbbr(row.covered_usd)}</td>
+          </tr>)}</tbody>
+        </table></div> : <p className="p-3 text-xs">No verified target allocation.</p>}
+      </Panel>
+      <Panel title="Movements · no execution" code="MOVE">
+        {verified && result?.movements.length ? <div className="max-h-80 overflow-auto"><table className="w-full">
+          <thead><tr>{["Lot", "Call", "Currency", "Previous", "Target", "Delta"].map(x => <th key={x} className={cell}>{x}</th>)}</tr></thead>
+          <tbody>{result.movements.map(row => <tr key={row.asset_id + row.call_id}>
+            <td className={cell}>{row.asset_id}</td><td className={cell}>{row.call_id}</td>
+            <td className={cell}>{run.snapshot.assets.find(asset => asset.asset_id === row.asset_id)?.currency ?? "—"}</td>
+            <td className={numberCell}>{fmtAbbr(row.previous_value)}</td>
+            <td className={numberCell}>{fmtAbbr(row.target_value)}</td>
+            <td className={numberCell}>{fmtAbbr(row.delta_value)}</td>
+          </tr>)}</tbody>
+        </table></div> : <p className="p-3 text-xs">No verified movement proposal.</p>}
+      </Panel>
+      <Panel title="Constraints and diagnostics" code="ROWS">
+        <div className="space-y-2 p-3 text-xs text-term-text-dim">
+          <p>Minimum supplied liquidity reserve: {fmtUsdAbbr(run.snapshot.minimum_liquidity_reserve_usd)} USD.
+            Remaining after target: {result?.residual_liquidity_usd == null ? "Unavailable" : fmtUsdAbbr(result.residual_liquidity_usd)} USD.</p>
+          <p>Binding rows: {result?.diagnostics.binding_constraints.join(", ") || "None reported"}.</p>
+          <p>Incumbent violations: {result?.diagnostics.incumbent_violations.join(", ") || "None"}.</p>
+          <p>Solver: {result?.diagnostics.solver_status} · {result?.diagnostics.message}</p>
+          {result?.formulation === "LP" && Object.keys(result.diagnostics.lp_duals_usd_per_unit).length > 0 &&
+            <details><summary>Model LP duals (USD per named row unit)</summary>
+              <ul>{Object.entries(result.diagnostics.lp_duals_usd_per_unit).map(([key, value]) =>
+                <li key={key}>{key}: {value}</li>)}</ul>
+            </details>}
+          {result?.formulation === "MIP" && <p>LP duals unavailable for MIP.</p>}
+        </div>
+      </Panel>
+    </div>}
+  </div>;
 }

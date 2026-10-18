@@ -1,0 +1,442 @@
+{
+  "$defs": {
+    "Agreement": {
+      "additionalProperties": false,
+      "properties": {
+        "agreement_id": {
+          "minLength": 1,
+          "title": "Agreement Id",
+          "type": "string"
+        },
+        "allowed_custodians": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Custodians",
+          "type": "array"
+        },
+        "classes": {
+          "items": {
+            "$ref": "#/$defs/ClassRule"
+          },
+          "minItems": 1,
+          "title": "Classes",
+          "type": "array"
+        },
+        "cross_currency_allowed": {
+          "default": false,
+          "title": "Cross Currency Allowed",
+          "type": "boolean"
+        },
+        "denied_issuers": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Denied Issuers",
+          "type": "array"
+        },
+        "effective_from": {
+          "format": "date-time",
+          "title": "Effective From",
+          "type": "string"
+        },
+        "effective_until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective Until"
+        },
+        "legal_entity": {
+          "minLength": 1,
+          "title": "Legal Entity",
+          "type": "string"
+        },
+        "maximum_issuer_fraction": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Maximum Issuer Fraction",
+          "type": "number"
+        }
+      },
+      "required": [
+        "agreement_id",
+        "legal_entity",
+        "effective_from",
+        "allowed_custodians",
+        "maximum_issuer_fraction",
+        "classes"
+      ],
+      "title": "Agreement",
+      "type": "object"
+    },
+    "AssetLot": {
+      "additionalProperties": false,
+      "properties": {
+        "allocatable_value": {
+          "description": "Native-currency market value",
+          "exclusiveMinimum": 0,
+          "title": "Allocatable Value",
+          "type": "number"
+        },
+        "annual_carry_bps": {
+          "minimum": 0,
+          "title": "Annual Carry Bps",
+          "type": "number"
+        },
+        "asset_class": {
+          "minLength": 1,
+          "title": "Asset Class",
+          "type": "string"
+        },
+        "asset_id": {
+          "minLength": 1,
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        },
+        "custodian": {
+          "minLength": 1,
+          "title": "Custodian",
+          "type": "string"
+        },
+        "fixed_activation_fee_usd": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Fixed Activation Fee Usd",
+          "type": "number"
+        },
+        "issuer": {
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "legal_entity": {
+          "minLength": 1,
+          "title": "Legal Entity",
+          "type": "string"
+        },
+        "liquidity_credit": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Liquidity Credit",
+          "type": "number"
+        },
+        "minimum_lot_value": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Minimum Lot Value",
+          "type": "number"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "settlement_minutes": {
+          "minimum": 0,
+          "title": "Settlement Minutes",
+          "type": "integer"
+        },
+        "variable_move_bps": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Variable Move Bps",
+          "type": "number"
+        }
+      },
+      "required": [
+        "asset_id",
+        "asset_class",
+        "issuer",
+        "legal_entity",
+        "custodian",
+        "currency",
+        "allocatable_value",
+        "annual_carry_bps",
+        "liquidity_credit",
+        "settlement_minutes",
+        "observed_at"
+      ],
+      "title": "AssetLot",
+      "type": "object"
+    },
+    "ClassRule": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_class": {
+          "minLength": 1,
+          "title": "Asset Class",
+          "type": "string"
+        },
+        "haircut": {
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "title": "Haircut",
+          "type": "number"
+        }
+      },
+      "required": [
+        "asset_class",
+        "haircut"
+      ],
+      "title": "ClassRule",
+      "type": "object"
+    },
+    "CurrentPledge": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "minLength": 1,
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "market_value": {
+          "description": "Asset native-currency market value",
+          "exclusiveMinimum": 0,
+          "title": "Market Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "asset_id",
+        "call_id",
+        "market_value"
+      ],
+      "title": "CurrentPledge",
+      "type": "object"
+    },
+    "FxQuote": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "usd_per_unit": {
+          "exclusiveMinimum": 0,
+          "title": "Usd Per Unit",
+          "type": "number"
+        }
+      },
+      "required": [
+        "currency",
+        "usd_per_unit",
+        "observed_at"
+      ],
+      "title": "FxQuote",
+      "type": "object"
+    },
+    "MarginCall": {
+      "additionalProperties": false,
+      "properties": {
+        "agreement_id": {
+          "minLength": 1,
+          "title": "Agreement Id",
+          "type": "string"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "counterparty": {
+          "minLength": 1,
+          "title": "Counterparty",
+          "type": "string"
+        },
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        },
+        "deadline_minutes": {
+          "minimum": 0,
+          "title": "Deadline Minutes",
+          "type": "integer"
+        },
+        "legal_entity": {
+          "minLength": 1,
+          "title": "Legal Entity",
+          "type": "string"
+        },
+        "margin_type": {
+          "enum": [
+            "IM",
+            "VM",
+            "CCP",
+            "REPO"
+          ],
+          "title": "Margin Type",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "required_value": {
+          "description": "Native-currency call amount",
+          "exclusiveMinimum": 0,
+          "title": "Required Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "call_id",
+        "agreement_id",
+        "margin_type",
+        "counterparty",
+        "legal_entity",
+        "currency",
+        "required_value",
+        "deadline_minutes",
+        "observed_at"
+      ],
+      "title": "MarginCall",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "agreements": {
+      "items": {
+        "$ref": "#/$defs/Agreement"
+      },
+      "minItems": 1,
+      "title": "Agreements",
+      "type": "array"
+    },
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/AssetLot"
+      },
+      "minItems": 1,
+      "title": "Assets",
+      "type": "array"
+    },
+    "book_id": {
+      "minLength": 1,
+      "title": "Book Id",
+      "type": "string"
+    },
+    "calls": {
+      "items": {
+        "$ref": "#/$defs/MarginCall"
+      },
+      "minItems": 1,
+      "title": "Calls",
+      "type": "array"
+    },
+    "current_pledges": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CurrentPledge"
+      },
+      "title": "Current Pledges",
+      "type": "array"
+    },
+    "fx": {
+      "items": {
+        "$ref": "#/$defs/FxQuote"
+      },
+      "minItems": 1,
+      "title": "Fx",
+      "type": "array"
+    },
+    "horizon_days": {
+      "exclusiveMinimum": 0,
+      "maximum": 365,
+      "title": "Horizon Days",
+      "type": "integer"
+    },
+    "max_input_age_minutes": {
+      "exclusiveMinimum": 0,
+      "maximum": 525600,
+      "title": "Max Input Age Minutes",
+      "type": "integer"
+    },
+    "minimum_liquidity_reserve_usd": {
+      "minimum": 0,
+      "title": "Minimum Liquidity Reserve Usd",
+      "type": "number"
+    },
+    "parent_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Hash"
+    },
+    "scenario_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scenario Id"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "minLength": 1,
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "required": [
+    "book_id",
+    "source",
+    "as_of",
+    "horizon_days",
+    "max_input_age_minutes",
+    "minimum_liquidity_reserve_usd",
+    "fx",
+    "assets",
+    "calls",
+    "agreements"
+  ],
+  "title": "Snapshot",
+  "type": "object"
+}

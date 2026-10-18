@@ -1,0 +1,39 @@
+{
+  "repository": "thatquantguy44/InventoryBallast",
+  "subdirectory": "projects/collateral_optimizer",
+  "commit": "eb74850a0f972ca9e1f40558ecd7909d3e76e6b3",
+  "distribution": "collateral-optimizer",
+  "package_version": "0.1.0",
+  "snapshot_schema_version": "1.0",
+  "result_schema_version": "1.0",
+  "adapter_version": "0.1.0",
+  "source_digest_sha256": "1bbe3d5fa3370bf53dcd49b9310e699254312c386600f48400fc83080c4de110",
+  "dependency_lock_sha256": "91d7bea217bfbbe29feac94cc3f61cd521d835b70d8f67a871516ef1f292ec8d",
+  "wheel_sha256": "84a163c2137a367d06af506b5e6b6c970126c4ade36e103031aee0159b7fbc5e",
+  "source_files_sha256": {
+    "README.md": "3f334507d8882cadf73b751ff4caf67c3c773e1f1407f472e18885149575d410",
+    "pyproject.toml": "c5074edaca05dca696fcb2f9762158882b3e7b618d7e33501d66c6427463bc2f",
+    "src/collateral_optimizer/__init__.py": "3f717c8751f38ed7444c557de9c227cd0bf70894ed20673029a0214a52036c37",
+    "src/collateral_optimizer/cli.py": "c600573d849fc57794362bc3900948224bde5ae79521e72169d013030323113a",
+    "src/collateral_optimizer/demo.py": "9c6707df071e97e81d211db97764f72637dd8ab80c5674e4d255c823d6647907",
+    "src/collateral_optimizer/domain.py": "45062e3784043e40bf72cef6bcb399fa0ead106ce0cbf543fdce5d174907812b",
+    "src/collateral_optimizer/engine.py": "ad675b85e58d943dc2fcd6dd8208c3d19da17cd9f0d0ea6728fc08b05818f46d",
+    "src/collateral_optimizer/formulation.py": "386a6d93a8374318bd24cf06a660759580ff2a7e09c89dcc4c20574710bd2ec2",
+    "src/collateral_optimizer/solver.py": "90b0db447146e1e77f79a2f8655cc6d02147247d5df1e5deb54ec932743890d6",
+    "src/collateral_optimizer/verify.py": "d8cbf256544cedac2bd67ed49b856586a4c56668a634d3c5f61a6bed34d01e70"
+  },
+  "features": {
+    "post_trade": true,
+    "lp": true,
+    "mip": true,
+    "source_domain_verifier": true,
+    "named_sim_scenarios": true,
+    "lp_duals_only": true,
+    "pre_trade_im": false,
+    "compression": false,
+    "lcr_nsfr": false,
+    "stochastic_planning": false,
+    "execution": false,
+    "shared_reservation": false
+  }
+}

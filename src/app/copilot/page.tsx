@@ -7,7 +7,6 @@ import { BarChart } from "@/components/charts/BarChart";
 import { LineChart } from "@/components/charts/LineChart";
 import { getSLSummary, getInventory } from "@/data/securitiesLending";
 import { getFinancingOpportunities } from "@/data/primeFinance";
-import { getCollateralSummary } from "@/data/collateral";
 import { getCashSummary } from "@/data/cash";
 import { fmtUsdAbbr, fmtSignedPct, fmtPct, fmtNum, fmtBps } from "@/lib/format";
 
@@ -111,19 +110,15 @@ function answerFor(qRaw: string): Answer {
     };
   }
 
-  // Collateral savings
+  // Collateral is model-backed only in the explicitly labeled SIM preview.
   if (has("collateral") && has("saving", "optimiz", "optimis")) {
-    const c = getCollateralSummary();
     return {
-      text: `Today's collateral optimization run generated ${fmtUsdAbbr(
-        c.optimizedSavings
-      )} of estimated savings by re-allocating toward cheaper-to-deliver assets.`,
+      text: "No governed collateral run or operational savings is available. The COLL workspace can solve a pinned model against a clearly labeled synthetic book.",
       bullets: [
-        `Optimized savings ${fmtUsdAbbr(c.optimizedSavings)}`,
-        `Current pledge cost ${fmtUsdAbbr(c.currentCost)} → optimized ${fmtUsdAbbr(c.optimizedCost)}`,
-        `Collateral utilization ${fmtPct(c.utilizationPct)}, ${c.deficitCount} margin deficits`,
+        "Synthetic results are local previews only.",
+        "The model reports savings only when the current posting passes verification.",
       ],
-      actions: ["Commit optimized allocation", "Review binding constraints"],
+      actions: ["Open Collateral Management", "Review source and binding state"],
     };
   }
 

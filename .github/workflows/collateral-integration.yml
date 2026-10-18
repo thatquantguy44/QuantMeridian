@@ -1,0 +1,64 @@
+name: Collateral pinned integration
+on:
+  pull_request:
+    paths:
+      - "services/collateral_optimizer_api/**"
+      - "scripts/build-collateral-wheel.py"
+      - "scripts/prepare-collateral-pin-update.py"
+      - "src/app/collateral/**"
+      - "src/app/optimization/**"
+      - "src/app/api/collateral-optimizer/**"
+      - "src/lib/collateralOptimizer*"
+      - "src/lib/server/collateralOptimizer*"
+      - "test/collateral.spec.ts"
+      - ".github/workflows/collateral-*.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Check out the reviewed private upstream commit
+        env:
+          GH_TOKEN: ${{ secrets.INVENTORYBALLAST_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "INVENTORYBALLAST_READ_TOKEN is required for exact-pin CI"; exit 1; }
+          gh repo clone thatquantguy44/InventoryBallast "$RUNNER_TEMP/InventoryBallast" -- --filter=blob:none
+          sha=$(python -c 'import json; print(json.load(open("services/collateral_optimizer_api/binding-manifest.json"))["commit"])')
+          git -C "$RUNNER_TEMP/InventoryBallast" checkout --detach "$sha"
+          python scripts/build-collateral-wheel.py "$RUNNER_TEMP/InventoryBallast/projects/collateral_optimizer" --output "$RUNNER_TEMP/collateral-wheel" --require-git
+      - name: Install locked service and run model contracts
+        env:
+          COLLATERAL_OPTIMIZER_API_TOKEN: contract-token
+        run: |
+          python -m pip install httpx
+          python -m pip install -r services/collateral_optimizer_api/requirements.lock
+          python -m pip install --no-deps "$RUNNER_TEMP"/collateral-wheel/collateral_optimizer-*.whl
+          export COLLATERAL_BINDING_ATTESTATION="$RUNNER_TEMP/collateral-wheel/binding-attestation.json"
+          PYTHONPATH=services/collateral_optimizer_api/src python -m unittest discover -s services/collateral_optimizer_api/tests -v
+          PYTHONPATH="$RUNNER_TEMP/InventoryBallast/projects/collateral_optimizer/src" python -m unittest discover -s "$RUNNER_TEMP/InventoryBallast/projects/collateral_optimizer/tests" -v
+      - name: Terminal type and proxy contracts
+        run: |
+          npm ci
+          npm run typecheck
+          npm test -- src/lib/collateralOptimizer.contract.test.ts src/lib/server/collateralOptimizerProxy.test.ts
+      - name: Browser path through the pinned local service
+        env:
+          COLLATERAL_OPTIMIZER_API_URL: http://127.0.0.1:8017
+          COLLATERAL_OPTIMIZER_API_TOKEN: contract-token
+          COLLATERAL_E2E_REAL: "1"
+          COLLATERAL_BINDING_ATTESTATION: ${{ runner.temp }}/collateral-wheel/binding-attestation.json
+          PYTHONPATH: services/collateral_optimizer_api/src
+        run: |
+          python -m uvicorn collateral_optimizer_api.app:app --host 127.0.0.1 --port 8017 &
+          npx playwright install --with-deps chromium
+          npx playwright test test/collateral.spec.ts
