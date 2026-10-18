@@ -4,7 +4,7 @@ FROM python:3.12-slim-bookworm
 # copied into the build context (./wheels/inventory_optimizer-0.1.0-py3-none-any.whl), or
 # inventory-optimizer==0.1.0 from an index pip can reach. Readiness verifies the installed code
 # against capability-manifest.json whichever source is used.
-ARG INVENTORY_OPTIMIZER_ENGINE="inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@e84801b65a4d1c23b19cb34b0de1e217f6b345f9"
+ARG INVENTORY_OPTIMIZER_ENGINE="inventory-optimizer @ git+https://github.com/thatquantguy44/InventoryBallast.git@bb425cac10d1da29e74fe8f854fd41b31f460773"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
