@@ -8,7 +8,6 @@
  */
 import { getSLSummary, getInventory } from "@/data/securitiesLending";
 import { getFinancingOpportunities } from "@/data/primeFinance";
-import { getCollateralSummary } from "@/data/collateral";
 import { getCashSummary } from "@/data/cash";
 
 /** Round to keep the payload small and readable. */
@@ -16,7 +15,6 @@ const r = (n: number, dp = 2) => (Number.isFinite(n) ? Number(n.toFixed(dp)) : n
 
 export function buildCopilotContext(): Record<string, unknown> {
   const sl = getSLSummary();
-  const collateral = getCollateralSummary();
   const cash = getCashSummary();
   const opps = getFinancingOpportunities();
   const internalize = opps.filter((o) => o.type === "INTERNALIZE");
@@ -35,11 +33,8 @@ export function buildCopilotContext(): Record<string, unknown> {
       top_borrowers_by_revenue: sl.byBorrower.slice(0, 8).map((b) => ({ name: b.label, day_revenue_usd: r(b.dayRevenue, 0), share_pct: r(b.share * 100, 1) })),
     },
     collateral: {
-      optimized_savings_usd: r(collateral.optimizedSavings, 0),
-      current_cost_usd: r(collateral.currentCost, 0),
-      optimized_cost_usd: r(collateral.optimizedCost, 0),
-      utilization_pct: r(collateral.utilizationPct * 100, 1),
-      deficit_count: collateral.deficitCount,
+      source_mode: "UNCONFIGURED",
+      detail: "No governed collateral snapshot or operational run is registered. COLL offers a separate SIM model preview.",
     },
     cash_funding: {
       blended_rate_bps: r(cash.blendedRateBps, 1),

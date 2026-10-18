@@ -1,36 +1,36 @@
 # Tasks: InventoryBallast Collateral Optimizer binding
 
 - **Spec:** [SPEC.md](SPEC.md), [PLAN.md](PLAN.md)
-- **Status:** Spec drafted; model integration and activation not implemented
+- **Status:** Local SIM integration implemented; production activation blocked by spec015 and governed-source decisions
 - **Last updated:** 2026-10-18
 
 | ID | Task | Covers | Status | Completion evidence |
 | --- | --- | --- | --- | --- |
 | COLL-T001 | Record the upstream nested package, merged candidate SHA, native contracts, current mock gap and spec015 boundary. | COLL-001, COLL-004, COLL-007 | done | SPEC/PLAN name the exact repository/subdirectory, commit and v0.1.0 interface. |
-| COLL-T002 | Review candidate release and build an exact-SHA wheel, lock, provenance and binding manifest; keep the IBAL root package pin independent. | COLL-001, COLL-002 | todo | Clean build and startup identity check; drifted commit/version/digest fails. |
-| COLL-T003 | Define service request/result, capability, health, validation and error schemas with parity fixtures and ingress source modes. | COLL-003, COLL-004, COLL-010 | todo | Python/TS shape checks; invalid and stale snapshots rejected; no source string can assert governed provenance. |
-| COLL-T004 | Implement the separate Python adapter and same-origin proxy with explicit auth, limits, correlation and typed errors. | COLL-001, COLL-003, COLL-004 | todo | Direct-versus-service golden request matches; service-down and unconfigured states are distinct. |
-| COLL-T005 | Invoke native `verify.assess` again at the adapter boundary and reconcile objective, coverage, reserve, movement and statuses. | COLL-005, COLL-009 | todo | Tampered target/cost/flag tests fail; invalid incumbent suppresses savings. |
-| COLL-T006 | Expose the five upstream SIM scenarios and validated JSON upload, preserving base and scenario hashes. | COLL-004, COLL-008, COLL-010 | todo | Offline repeatability and named overlay tests; user upload is separately labeled. |
-| COLL-T007 | Replace connected COLL calculations and grids with service-backed calls, assets, costs, constraints, movements and error states. | COLL-006–010 | todo | No mock savings, allocation, shadow price or uplift enters connected results or OPT totals; responsive UI checks. |
-| COLL-T008 | Add exact-SHA upstream release detection and a reviewable pin-update PR workflow; prove rollback. | COLL-002, COLL-011 | todo | Candidate PR contains source diff, artifacts and contract evidence; rollback retains run lineage. |
-| COLL-T009 | Integrate with spec015 immutable run records, comparison and OPT audit without changing model math. | COLL-003, COLL-009–010 | blocked by spec015 registry decisions | Same-snapshot and drifted comparisons, idempotent runs and source/version provenance pass. |
-| COLL-T010 | Gate production book mode on governed sources, shared asset availability, authorization, audit and operational approval. | COLL-012 | blocked by source/policy ownership | Unapproved live mode cannot run; no settlement action exists. |
+| COLL-T002 | Review candidate release and build an exact-SHA wheel, lock, provenance and binding manifest; keep the IBAL root package pin independent. | COLL-001, COLL-002 | implemented; clean-checkout CI pending | Manifest names merged SHA `eb74850a0f972ca9e1f40558ecd7909d3e76e6b3`; local builder produced reviewed wheel SHA `84a163c2…fbc5e`; identity drift and rollback checks pass. CI exercises `--require-git` with the private checkout. |
+| COLL-T003 | Define service request/result, capability, health, validation and error schemas with parity fixtures and ingress source modes. | COLL-003, COLL-004, COLL-010 | implemented | Native 1.0 schemas and baseline/infeasible fixtures are checked against pinned package; strict native validation rejects seven invalid input cases. |
+| COLL-T004 | Implement the separate Python adapter and same-origin proxy with explicit auth, limits, correlation and typed errors. | COLL-001, COLL-003, COLL-004 | implemented | Python direct/service parity and auth/size tests pass; proxy tests cover unconfigured, unavailable, incompatible, and production gates (CI pending). |
+| COLL-T005 | Invoke native `verify.assess` again at the adapter boundary and reconcile objective, coverage, reserve, movement and statuses. | COLL-005, COLL-009 | implemented | Allocation, objective, component and flag tamper tests pass; adapter strips unverified target and costs; margin spike suppresses incumbent savings. |
+| COLL-T006 | Expose the five upstream SIM scenarios and validated JSON upload, preserving base and scenario hashes. | COLL-004, COLL-008, COLL-010 | implemented | Python five-scenario repeatability tests pass; upload uses native strict Snapshot and distinct USER_UPLOAD source mode. |
+| COLL-T007 | Replace connected COLL calculations and grids with service-backed calls, assets, costs, constraints, movements and error states. | COLL-006–010 | implemented; browser CI pending | COLL and OPT use service result only; old mock COLL/OPT data removed. Real-service Playwright test covers five scenarios and narrow viewport in CI. |
+| COLL-T008 | Add exact-SHA upstream release detection and a reviewable pin-update PR workflow; prove rollback. | COLL-002, COLL-011 | implemented; future release trigger pending | Daily/manual workflow prepares a draft pin PR with SHA/version/digest/diff/check evidence or blockers. Identity test proves restored exact pin becomes ready. No newer release exists to exercise a real update PR yet. |
+| COLL-T009 | Integrate with spec015 immutable run records, comparison and OPT audit without changing model math. | COLL-003, COLL-009–010 | blocked by spec015 registry decisions | Preview carries hashes, full SHA, version and changed fields; differing inputs/pins are marked non-comparable. Durable identity, idempotency, immutable storage, authorization and audit are not defined/available. |
+| COLL-T010 | Gate production book mode on governed sources, shared asset availability, authorization, audit and operational approval. | COLL-012 | gate implemented; activation blocked | Service and proxy reject PRODUCTION_BOOK and production terminal requests; tests pass. Governed source, global reservations and operations approval remain absent. |
 
 ## Acceptance evidence map
 
 | Criterion | Planned evidence |
 | --- | --- |
-| AC-001 | COLL-T002 exact-SHA build/startup and independent IBAL-pin check |
-| AC-002 | COLL-T003/T004 direct-versus-service golden fixture |
-| AC-003 | COLL-T003/T004 strict validation and error fixtures |
-| AC-004 | COLL-T006 five-scenario repeatability and infeasible fixtures |
-| AC-005 | COLL-T005 objective/allocation/flag tamper cases |
-| AC-006 | COLL-T005/T007 incumbent, reserve, LP/MIP and UI tests |
-| AC-007 | COLL-T004/T007 connected-path and unavailable-state UI tests |
-| AC-008 | COLL-T008 automated candidate, review and rollback drill |
-| AC-009 | COLL-T009 matched/drifted comparison tests |
-| AC-010 | COLL-T010 production gate and no-execution tests |
+| AC-001 | Builder/manifest/identity tests pass locally; clean exact-SHA checkout CI requires `INVENTORYBALLAST_READ_TOKEN`. |
+| AC-002 | Python direct native solve equals service result and canonical input hash. |
+| AC-003 | Python 7-case invalid snapshot test and service error envelope; proxy contract CI pending. |
+| AC-004 | Python five-scenario deterministic tests and infeasible fixture pass. |
+| AC-005 | Python allocation/objective/component/flag tamper tests pass. |
+| AC-006 | Python incumbent, reserve and MIP dual tests pass; browser CI pending. |
+| AC-007 | Connected UI/OPT implementation and proxy/browser tests added; npm/Playwright CI pending. |
+| AC-008 | Automated draft update workflow and rollback identity drill added; future candidate PR pending. |
+| AC-009 | Local comparison marks drift non-comparable; historical durable comparisons blocked by spec015 registry. |
+| AC-010 | Service/proxy production gates and no-execution design tested; live activation blocked. |
 
 ## Delivery order
 

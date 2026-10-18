@@ -1,0 +1,1406 @@
+{
+  "adapter_verification": {
+    "absolute_tolerance_usd": 0.01,
+    "checked_rows": 0,
+    "errors": [],
+    "passed": false,
+    "reconstructed_cost_usd": null,
+    "relative_tolerance": 1e-06
+  },
+  "adapter_version": "0.1.0",
+  "api_schema_version": "1.0.0",
+  "as_of": "2026-10-15T10:00:00+00:00",
+  "correlation_id": "00000000-0000-4000-8000-000000000002",
+  "idempotency_key": null,
+  "input_age_minutes": 5.0,
+  "input_hash": "7b012524e6287b678cc318d51b794b20373758dffa532044c01a00af67bb3cd9",
+  "lifecycle_status": "INFEASIBLE",
+  "model_commit": "eb74850a0f972ca9e1f40558ecd7909d3e76e6b3",
+  "native_source": "SIM",
+  "package_version": "0.1.0",
+  "parent_hash": "b82f553b43d962eb6b65cfcb4abf7a6fd7e0ae41474168ea838ffa46da851ea0",
+  "preview_only": true,
+  "raw_payload_sha256": "9ac7143faf6bf02a3b09d90c3cee7cce6ed381c2f23cee3efd9ae43fd113f04d",
+  "recommendation_eligible": false,
+  "result": {
+    "allocations": [],
+    "book_id": "SIM-COLL-20261015",
+    "cost": null,
+    "coverage": [],
+    "diagnostics": {
+      "binding_constraints": [],
+      "call_shortfall_usd": {
+        "US-CCP-1": 1288140000.0
+      },
+      "incumbent_violations": [
+        "undercovered:US-CSA-1",
+        "undercovered:US-CSA-2",
+        "undercovered:US-CCP-1",
+        "undercovered:US-REPO-1",
+        "undercovered:EU-CSA-1",
+        "undercovered:EU-CCP-1",
+        "undercovered:UK-CSA-1",
+        "undercovered:UK-REPO-1"
+      ],
+      "lp_duals_usd_per_unit": {},
+      "message": "The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)",
+      "mip_gap": null,
+      "row_count": 257,
+      "solver_backend": "scipy-highs",
+      "solver_status": "infeasible",
+      "solver_version": "1.17.0",
+      "variable_count": 194,
+      "verification_errors": []
+    },
+    "engine_version": "0.1.0",
+    "formulation": "MIP",
+    "input_hash": "7b012524e6287b678cc318d51b794b20373758dffa532044c01a00af67bb3cd9",
+    "movements": [],
+    "parent_hash": "b82f553b43d962eb6b65cfcb4abf7a6fd7e0ae41474168ea838ffa46da851ea0",
+    "residual_liquidity_usd": null,
+    "result_version": "1.0",
+    "scenario_id": "infeasible_stress",
+    "source": "SIM",
+    "status": "infeasible",
+    "verified": false
+  },
+  "result_schema_version": "1.0",
+  "run_id": "00000000-0000-4000-8000-000000000001",
+  "scenario_id": "infeasible_stress",
+  "snapshot": {
+    "agreements": [
+      {
+        "agreement_id": "CSA-US",
+        "allowed_custodians": [
+          "SIM-CUST-US",
+          "SIM-TRIPARTY"
+        ],
+        "classes": [
+          {
+            "asset_class": "CASH",
+            "haircut": 0.0
+          },
+          {
+            "asset_class": "SOVEREIGN",
+            "haircut": 0.02
+          },
+          {
+            "asset_class": "AGENCY",
+            "haircut": 0.05
+          },
+          {
+            "asset_class": "IG",
+            "haircut": 0.2
+          },
+          {
+            "asset_class": "EQUITY",
+            "haircut": 0.18
+          },
+          {
+            "asset_class": "GOLD",
+            "haircut": 0.15
+          }
+        ],
+        "cross_currency_allowed": false,
+        "denied_issuers": [],
+        "effective_from": "2026-09-15T10:00:00Z",
+        "effective_until": null,
+        "legal_entity": "US",
+        "maximum_issuer_fraction": 0.7
+      },
+      {
+        "agreement_id": "CCP-US",
+        "allowed_custodians": [
+          "SIM-CUST-US",
+          "SIM-TRIPARTY"
+        ],
+        "classes": [
+          {
+            "asset_class": "CASH",
+            "haircut": 0.0
+          },
+          {
+            "asset_class": "SOVEREIGN",
+            "haircut": 0.02
+          },
+          {
+            "asset_class": "AGENCY",
+            "haircut": 0.05
+          },
+          {
+            "asset_class": "IG",
+            "haircut": 0.2
+          }
+        ],
+        "cross_currency_allowed": false,
+        "denied_issuers": [],
+        "effective_from": "2026-09-15T10:00:00Z",
+        "effective_until": null,
+        "legal_entity": "US",
+        "maximum_issuer_fraction": 0.7
+      },
+      {
+        "agreement_id": "REPO-US",
+        "allowed_custodians": [
+          "SIM-CUST-US",
+          "SIM-TRIPARTY"
+        ],
+        "classes": [
+          {
+            "asset_class": "CASH",
+            "haircut": 0.0
+          },
+          {
+            "asset_class": "SOVEREIGN",
+            "haircut": 0.02
+          },
+          {
+            "asset_class": "IG",
+            "haircut": 0.2
+          }
+        ],
+        "cross_currency_allowed": false,
+        "denied_issuers": [],
+        "effective_from": "2026-09-15T10:00:00Z",
+        "effective_until": null,
+        "legal_entity": "US",
+        "maximum_issuer_fraction": 0.7
+      },
+      {
+        "agreement_id": "CSA-EU",
+        "allowed_custodians": [
+          "SIM-CUST-EU",
+          "SIM-TRIPARTY"
+        ],
+        "classes": [
+          {
+            "asset_class": "CASH",
+            "haircut": 0.0
+          },
+          {
+            "asset_class": "SOVEREIGN",
+            "haircut": 0.02
+          },
+          {
+            "asset_class": "AGENCY",
+            "haircut": 0.05
+          },
+          {
+            "asset_class": "IG",
+            "haircut": 0.2
+          },
+          {
+            "asset_class": "EQUITY",
+            "haircut": 0.18
+          },
+          {
+            "asset_class": "GOLD",
+            "haircut": 0.15
+          }
+        ],
+        "cross_currency_allowed": false,
+        "denied_issuers": [],
+        "effective_from": "2026-09-15T10:00:00Z",
+        "effective_until": null,
+        "legal_entity": "EU",
+        "maximum_issuer_fraction": 0.7
+      },
+      {
+        "agreement_id": "CCP-EU",
+        "allowed_custodians": [
+          "SIM-CUST-EU",
+          "SIM-TRIPARTY"
+        ],
+        "classes": [
+          {
+            "asset_class": "CASH",
+            "haircut": 0.0
+          },
+          {
+            "asset_class": "SOVEREIGN",
+            "haircut": 0.02
+          },
+          {
+            "asset_class": "AGENCY",
+            "haircut": 0.05
+          },
+          {
+            "asset_class": "IG",
+            "haircut": 0.2
+          }
+        ],
+        "cross_currency_allowed": false,
+        "denied_issuers": [],
+        "effective_from": "2026-09-15T10:00:00Z",
+        "effective_until": null,
+        "legal_entity": "EU",
+        "maximum_issuer_fraction": 0.7
+      },
+      {
+        "agreement_id": "CSA-UK",
+        "allowed_custodians": [
+          "SIM-CUST-UK",
+          "SIM-TRIPARTY"
+        ],
+        "classes": [
+          {
+            "asset_class": "CASH",
+            "haircut": 0.0
+          },
+          {
+            "asset_class": "SOVEREIGN",
+            "haircut": 0.02
+          },
+          {
+            "asset_class": "AGENCY",
+            "haircut": 0.05
+          },
+          {
+            "asset_class": "IG",
+            "haircut": 0.2
+          },
+          {
+            "asset_class": "EQUITY",
+            "haircut": 0.18
+          },
+          {
+            "asset_class": "GOLD",
+            "haircut": 0.15
+          }
+        ],
+        "cross_currency_allowed": false,
+        "denied_issuers": [],
+        "effective_from": "2026-09-15T10:00:00Z",
+        "effective_until": null,
+        "legal_entity": "UK",
+        "maximum_issuer_fraction": 0.7
+      },
+      {
+        "agreement_id": "REPO-UK",
+        "allowed_custodians": [
+          "SIM-CUST-UK",
+          "SIM-TRIPARTY"
+        ],
+        "classes": [
+          {
+            "asset_class": "CASH",
+            "haircut": 0.0
+          },
+          {
+            "asset_class": "SOVEREIGN",
+            "haircut": 0.02
+          },
+          {
+            "asset_class": "IG",
+            "haircut": 0.2
+          }
+        ],
+        "cross_currency_allowed": false,
+        "denied_issuers": [],
+        "effective_from": "2026-09-15T10:00:00Z",
+        "effective_until": null,
+        "legal_entity": "UK",
+        "maximum_issuer_fraction": 0.7
+      }
+    ],
+    "as_of": "2026-10-15T10:00:00Z",
+    "assets": [
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-01-A",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-01-A",
+        "legal_entity": "US",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-01-B",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-01-B",
+        "legal_entity": "US",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-02-A",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-02-A",
+        "legal_entity": "US",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-02-B",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-02-B",
+        "legal_entity": "US",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-03-A",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-03-A",
+        "legal_entity": "US",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-03-B",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-03-B",
+        "legal_entity": "US",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-04-A",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-04-A",
+        "legal_entity": "US",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-04-B",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-04-B",
+        "legal_entity": "US",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-05-A",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-05-A",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-05-B",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-05-B",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-06-A",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-06-A",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-06-B",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-06-B",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-07-A",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-07-A",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-07-B",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-07-B",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 128.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-HELD-08-A",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-08-A",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 95000000.0,
+        "annual_carry_bps": 82.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-HELD-08-B",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-HELD-08-B",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 90,
+        "variable_move_bps": 0.4
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 39.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-01",
+        "currency": "USD",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-01",
+        "legal_entity": "US",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 5000000.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 40.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-02",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-02",
+        "legal_entity": "EU",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 41.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-03",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-03",
+        "legal_entity": "UK",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 28.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-FREE-04",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-04",
+        "legal_entity": "US",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 30,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 29.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-FREE-05",
+        "currency": "EUR",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-05",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 30,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 30.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-FREE-06",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-06",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 30,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 48.0,
+        "asset_class": "AGENCY",
+        "asset_id": "SIM-FREE-07",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-07",
+        "legal_entity": "US",
+        "liquidity_credit": 0.65,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 60,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 42.0,
+        "asset_class": "AGENCY",
+        "asset_id": "SIM-FREE-08",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-08",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.65,
+        "minimum_lot_value": 5000000.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 60,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 43.0,
+        "asset_class": "AGENCY",
+        "asset_id": "SIM-FREE-09",
+        "currency": "GBP",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-09",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.65,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 60,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 57.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-FREE-10",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-10",
+        "legal_entity": "US",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 75,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 58.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-FREE-11",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-11",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 75,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 59.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-FREE-12",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-12",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 75,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 95.0,
+        "asset_class": "EQUITY",
+        "asset_id": "SIM-FREE-13",
+        "currency": "USD",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-13",
+        "legal_entity": "US",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 120,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 96.0,
+        "asset_class": "EQUITY",
+        "asset_id": "SIM-FREE-14",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-14",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 120,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 90.0,
+        "asset_class": "EQUITY",
+        "asset_id": "SIM-FREE-15",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-15",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 5000000.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 120,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 73.0,
+        "asset_class": "GOLD",
+        "asset_id": "SIM-FREE-16",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-16",
+        "legal_entity": "US",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 150,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 74.0,
+        "asset_class": "GOLD",
+        "asset_id": "SIM-FREE-17",
+        "currency": "EUR",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-17",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 150,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 75.0,
+        "asset_class": "GOLD",
+        "asset_id": "SIM-FREE-18",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-18",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 150,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 43.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-19",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-19",
+        "legal_entity": "US",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 44.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-20",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-20",
+        "legal_entity": "EU",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 45.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-21",
+        "currency": "GBP",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-21",
+        "legal_entity": "UK",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 25.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-FREE-22",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-22",
+        "legal_entity": "US",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 5000000.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 30,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 26.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-FREE-23",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-23",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 30,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 27.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-FREE-24",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-24",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 30,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 45.0,
+        "asset_class": "AGENCY",
+        "asset_id": "SIM-FREE-25",
+        "currency": "USD",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-25",
+        "legal_entity": "US",
+        "liquidity_credit": 0.65,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 60,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 46.0,
+        "asset_class": "AGENCY",
+        "asset_id": "SIM-FREE-26",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-26",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.65,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 60,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 47.0,
+        "asset_class": "AGENCY",
+        "asset_id": "SIM-FREE-27",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-27",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.65,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 60,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 61.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-FREE-28",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-28",
+        "legal_entity": "US",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 75,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 55.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-FREE-29",
+        "currency": "EUR",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-29",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 5000000.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 75,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 56.0,
+        "asset_class": "IG",
+        "asset_id": "SIM-FREE-30",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-30",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.15,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 75,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 92.0,
+        "asset_class": "EQUITY",
+        "asset_id": "SIM-FREE-31",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-31",
+        "legal_entity": "US",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 120,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 93.0,
+        "asset_class": "EQUITY",
+        "asset_id": "SIM-FREE-32",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-32",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 120,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 94.0,
+        "asset_class": "EQUITY",
+        "asset_id": "SIM-FREE-33",
+        "currency": "GBP",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-33",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 120,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 77.0,
+        "asset_class": "GOLD",
+        "asset_id": "SIM-FREE-34",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-34",
+        "legal_entity": "US",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 150,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 78.0,
+        "asset_class": "GOLD",
+        "asset_id": "SIM-FREE-35",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-35",
+        "legal_entity": "EU",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 150,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 48000000.0,
+        "annual_carry_bps": 72.0,
+        "asset_class": "GOLD",
+        "asset_id": "SIM-FREE-36",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 750.0,
+        "issuer": "SIM-ISSUER-FREE-36",
+        "legal_entity": "UK",
+        "liquidity_credit": 0.0,
+        "minimum_lot_value": 5000000.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 150,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 54000000.0,
+        "annual_carry_bps": 40.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-37",
+        "currency": "USD",
+        "custodian": "SIM-TRIPARTY",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-37",
+        "legal_entity": "US",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 60000000.0,
+        "annual_carry_bps": 41.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-38",
+        "currency": "EUR",
+        "custodian": "SIM-CUST-EU",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-38",
+        "legal_entity": "EU",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 66000000.0,
+        "annual_carry_bps": 42.0,
+        "asset_class": "CASH",
+        "asset_id": "SIM-FREE-39",
+        "currency": "GBP",
+        "custodian": "SIM-CUST-UK",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-39",
+        "legal_entity": "UK",
+        "liquidity_credit": 1.0,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 10,
+        "variable_move_bps": 0.6
+      },
+      {
+        "allocatable_value": 72000000.0,
+        "annual_carry_bps": 29.0,
+        "asset_class": "SOVEREIGN",
+        "asset_id": "SIM-FREE-40",
+        "currency": "USD",
+        "custodian": "SIM-CUST-US",
+        "fixed_activation_fee_usd": 0.0,
+        "issuer": "SIM-ISSUER-FREE-40",
+        "legal_entity": "US",
+        "liquidity_credit": 0.9,
+        "minimum_lot_value": 0.0,
+        "observed_at": "2026-10-15T09:55:00Z",
+        "settlement_minutes": 30,
+        "variable_move_bps": 0.6
+      }
+    ],
+    "book_id": "SIM-COLL-20261015",
+    "calls": [
+      {
+        "agreement_id": "CSA-US",
+        "call_id": "US-CSA-1",
+        "counterparty": "SIM-CP-01",
+        "currency": "USD",
+        "deadline_minutes": 180,
+        "legal_entity": "US",
+        "margin_type": "IM",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 68000000.0
+      },
+      {
+        "agreement_id": "CSA-US",
+        "call_id": "US-CSA-2",
+        "counterparty": "SIM-CP-02",
+        "currency": "USD",
+        "deadline_minutes": 180,
+        "legal_entity": "US",
+        "margin_type": "VM",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 55000000.0
+      },
+      {
+        "agreement_id": "CCP-US",
+        "call_id": "US-CCP-1",
+        "counterparty": "SIM-CP-03",
+        "currency": "USD",
+        "deadline_minutes": 180,
+        "legal_entity": "US",
+        "margin_type": "CCP",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 2500000000.0
+      },
+      {
+        "agreement_id": "REPO-US",
+        "call_id": "US-REPO-1",
+        "counterparty": "SIM-CP-04",
+        "currency": "USD",
+        "deadline_minutes": 180,
+        "legal_entity": "US",
+        "margin_type": "REPO",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 46000000.0
+      },
+      {
+        "agreement_id": "CSA-EU",
+        "call_id": "EU-CSA-1",
+        "counterparty": "SIM-CP-05",
+        "currency": "EUR",
+        "deadline_minutes": 180,
+        "legal_entity": "EU",
+        "margin_type": "IM",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 42000000.0
+      },
+      {
+        "agreement_id": "CCP-EU",
+        "call_id": "EU-CCP-1",
+        "counterparty": "SIM-CP-06",
+        "currency": "EUR",
+        "deadline_minutes": 180,
+        "legal_entity": "EU",
+        "margin_type": "CCP",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 39000000.0
+      },
+      {
+        "agreement_id": "CSA-UK",
+        "call_id": "UK-CSA-1",
+        "counterparty": "SIM-CP-07",
+        "currency": "GBP",
+        "deadline_minutes": 180,
+        "legal_entity": "UK",
+        "margin_type": "VM",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 51000000.0
+      },
+      {
+        "agreement_id": "REPO-UK",
+        "call_id": "UK-REPO-1",
+        "counterparty": "SIM-CP-08",
+        "currency": "GBP",
+        "deadline_minutes": 180,
+        "legal_entity": "UK",
+        "margin_type": "REPO",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "required_value": 36000000.0
+      }
+    ],
+    "current_pledges": [
+      {
+        "asset_id": "SIM-HELD-01-A",
+        "call_id": "US-CSA-1",
+        "market_value": 40652173.91304348
+      },
+      {
+        "asset_id": "SIM-HELD-01-B",
+        "call_id": "US-CSA-1",
+        "market_value": 34693877.551020406
+      },
+      {
+        "asset_id": "SIM-HELD-02-A",
+        "call_id": "US-CSA-2",
+        "market_value": 32880434.7826087
+      },
+      {
+        "asset_id": "SIM-HELD-02-B",
+        "call_id": "US-CSA-2",
+        "market_value": 28061224.48979592
+      },
+      {
+        "asset_id": "SIM-HELD-03-A",
+        "call_id": "US-CCP-1",
+        "market_value": 43043478.26086956
+      },
+      {
+        "asset_id": "SIM-HELD-03-B",
+        "call_id": "US-CCP-1",
+        "market_value": 36734693.87755102
+      },
+      {
+        "asset_id": "SIM-HELD-04-A",
+        "call_id": "US-REPO-1",
+        "market_value": 27500000.000000004
+      },
+      {
+        "asset_id": "SIM-HELD-04-B",
+        "call_id": "US-REPO-1",
+        "market_value": 23469387.755102042
+      },
+      {
+        "asset_id": "SIM-HELD-05-A",
+        "call_id": "EU-CSA-1",
+        "market_value": 25108695.652173918
+      },
+      {
+        "asset_id": "SIM-HELD-05-B",
+        "call_id": "EU-CSA-1",
+        "market_value": 21428571.42857143
+      },
+      {
+        "asset_id": "SIM-HELD-06-A",
+        "call_id": "EU-CCP-1",
+        "market_value": 23315217.391304348
+      },
+      {
+        "asset_id": "SIM-HELD-06-B",
+        "call_id": "EU-CCP-1",
+        "market_value": 19897959.18367347
+      },
+      {
+        "asset_id": "SIM-HELD-07-A",
+        "call_id": "UK-CSA-1",
+        "market_value": 30489130.434782613
+      },
+      {
+        "asset_id": "SIM-HELD-07-B",
+        "call_id": "UK-CSA-1",
+        "market_value": 26020408.163265307
+      },
+      {
+        "asset_id": "SIM-HELD-08-A",
+        "call_id": "UK-REPO-1",
+        "market_value": 21521739.13043478
+      },
+      {
+        "asset_id": "SIM-HELD-08-B",
+        "call_id": "UK-REPO-1",
+        "market_value": 18367346.93877551
+      }
+    ],
+    "fx": [
+      {
+        "currency": "USD",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "usd_per_unit": 1.0
+      },
+      {
+        "currency": "EUR",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "usd_per_unit": 1.09
+      },
+      {
+        "currency": "GBP",
+        "observed_at": "2026-10-15T09:55:00Z",
+        "usd_per_unit": 1.31
+      }
+    ],
+    "horizon_days": 30,
+    "max_input_age_minutes": 60,
+    "minimum_liquidity_reserve_usd": 550000000.0,
+    "parent_hash": "b82f553b43d962eb6b65cfcb4abf7a6fd7e0ae41474168ea838ffa46da851ea0",
+    "scenario_id": "infeasible_stress",
+    "schema_version": "1.0",
+    "source": "SIM"
+  },
+  "snapshot_schema_version": "1.0",
+  "source_mode": "SIM",
+  "wheel_sha256": "84a163c2137a367d06af506b5e6b6c970126c4ade36e103031aee0159b7fbc5e"
+}

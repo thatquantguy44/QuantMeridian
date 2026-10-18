@@ -1,0 +1,407 @@
+{
+  "$defs": {
+    "Allocation": {
+      "additionalProperties": false,
+      "properties": {
+        "activation_fee_usd": {
+          "title": "Activation Fee Usd",
+          "type": "number"
+        },
+        "asset_class": {
+          "title": "Asset Class",
+          "type": "string"
+        },
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "carry_usd": {
+          "title": "Carry Usd",
+          "type": "number"
+        },
+        "covered_usd": {
+          "title": "Covered Usd",
+          "type": "number"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "haircut": {
+          "title": "Haircut",
+          "type": "number"
+        },
+        "issuer": {
+          "title": "Issuer",
+          "type": "string"
+        },
+        "market_value": {
+          "title": "Market Value",
+          "type": "number"
+        },
+        "variable_move_usd": {
+          "title": "Variable Move Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "asset_id",
+        "call_id",
+        "asset_class",
+        "currency",
+        "issuer",
+        "market_value",
+        "haircut",
+        "covered_usd",
+        "carry_usd",
+        "variable_move_usd",
+        "activation_fee_usd"
+      ],
+      "title": "Allocation",
+      "type": "object"
+    },
+    "Cost": {
+      "additionalProperties": false,
+      "properties": {
+        "carry_usd": {
+          "title": "Carry Usd",
+          "type": "number"
+        },
+        "current_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Current Cost Usd"
+        },
+        "fixed_activation_usd": {
+          "title": "Fixed Activation Usd",
+          "type": "number"
+        },
+        "savings_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Savings Usd"
+        },
+        "total_usd": {
+          "title": "Total Usd",
+          "type": "number"
+        },
+        "variable_move_usd": {
+          "title": "Variable Move Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "carry_usd",
+        "variable_move_usd",
+        "fixed_activation_usd",
+        "total_usd",
+        "current_cost_usd",
+        "savings_usd"
+      ],
+      "title": "Cost",
+      "type": "object"
+    },
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "covered_usd": {
+          "title": "Covered Usd",
+          "type": "number"
+        },
+        "required_usd": {
+          "title": "Required Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "call_id",
+        "required_usd",
+        "covered_usd"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "Diagnostics": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_constraints": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Binding Constraints",
+          "type": "array"
+        },
+        "call_shortfall_usd": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Call Shortfall Usd",
+          "type": "object"
+        },
+        "incumbent_violations": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Incumbent Violations",
+          "type": "array"
+        },
+        "lp_duals_usd_per_unit": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Lp Duals Usd Per Unit",
+          "type": "object"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "mip_gap": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mip Gap"
+        },
+        "row_count": {
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "solver_backend": {
+          "const": "scipy-highs",
+          "default": "scipy-highs",
+          "title": "Solver Backend",
+          "type": "string"
+        },
+        "solver_status": {
+          "title": "Solver Status",
+          "type": "string"
+        },
+        "solver_version": {
+          "title": "Solver Version",
+          "type": "string"
+        },
+        "variable_count": {
+          "title": "Variable Count",
+          "type": "integer"
+        },
+        "verification_errors": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Verification Errors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "solver_version",
+        "solver_status",
+        "message",
+        "variable_count",
+        "row_count"
+      ],
+      "title": "Diagnostics",
+      "type": "object"
+    },
+    "Movement": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "delta_value": {
+          "title": "Delta Value",
+          "type": "number"
+        },
+        "previous_value": {
+          "title": "Previous Value",
+          "type": "number"
+        },
+        "target_value": {
+          "title": "Target Value",
+          "type": "number"
+        },
+        "variable_move_usd": {
+          "title": "Variable Move Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "asset_id",
+        "call_id",
+        "previous_value",
+        "target_value",
+        "delta_value",
+        "variable_move_usd"
+      ],
+      "title": "Movement",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "allocations": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Allocation"
+      },
+      "title": "Allocations",
+      "type": "array"
+    },
+    "book_id": {
+      "title": "Book Id",
+      "type": "string"
+    },
+    "cost": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Cost"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "coverage": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Coverage"
+      },
+      "title": "Coverage",
+      "type": "array"
+    },
+    "diagnostics": {
+      "$ref": "#/$defs/Diagnostics"
+    },
+    "engine_version": {
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "formulation": {
+      "enum": [
+        "LP",
+        "MIP"
+      ],
+      "title": "Formulation",
+      "type": "string"
+    },
+    "input_hash": {
+      "title": "Input Hash",
+      "type": "string"
+    },
+    "movements": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Movement"
+      },
+      "title": "Movements",
+      "type": "array"
+    },
+    "parent_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Parent Hash"
+    },
+    "residual_liquidity_usd": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Residual Liquidity Usd"
+    },
+    "result_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Result Version",
+      "type": "string"
+    },
+    "scenario_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Scenario Id"
+    },
+    "source": {
+      "title": "Source",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "optimal",
+        "infeasible",
+        "error",
+        "unverified"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "verified": {
+      "title": "Verified",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "engine_version",
+    "book_id",
+    "source",
+    "input_hash",
+    "parent_hash",
+    "scenario_id",
+    "status",
+    "verified",
+    "formulation",
+    "diagnostics"
+  ],
+  "title": "OptimizationResult",
+  "type": "object"
+}

@@ -1,0 +1,100 @@
+name: Collateral upstream pin proposal
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: collateral-pin-update
+  cancel-in-progress: false
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - name: Fetch upstream merged main with read-only private credential
+        env:
+          GH_TOKEN: ${{ secrets.INVENTORYBALLAST_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "INVENTORYBALLAST_READ_TOKEN is required"; exit 1; }
+          gh repo clone thatquantguy44/InventoryBallast "$RUNNER_TEMP/InventoryBallast" -- --filter=blob:none
+      - name: Prepare exact-SHA candidate and evidence
+        id: prepare
+        run: python scripts/prepare-collateral-pin-update.py "$RUNNER_TEMP/InventoryBallast" --summary "$RUNNER_TEMP/collateral-update.json"
+      - name: Candidate native and adapter conformance
+        id: candidate
+        continue-on-error: true
+        env:
+          COLLATERAL_OPTIMIZER_API_TOKEN: contract-token
+        run: |
+          set -euo pipefail
+          changed=$(jq -r .changed "$RUNNER_TEMP/collateral-update.json")
+          blocked=$(jq -r '.blocked // false' "$RUNNER_TEMP/collateral-update.json")
+          if [ "$changed" != true ] || [ "$blocked" = true ]; then exit 0; fi
+          sha=$(jq -r .new_sha "$RUNNER_TEMP/collateral-update.json")
+          wheel_dir="$RUNNER_TEMP/collateral-update-${sha:0:12}"
+          python -m pip install httpx
+          python -m pip install -r services/collateral_optimizer_api/requirements.lock
+          python -m pip install --no-deps "$wheel_dir"/collateral_optimizer-*.whl
+          export COLLATERAL_BINDING_ATTESTATION="$wheel_dir/binding-attestation.json"
+          PYTHONPATH=services/collateral_optimizer_api/src python -m unittest discover -s services/collateral_optimizer_api/tests -v
+          PYTHONPATH="$RUNNER_TEMP/InventoryBallast/projects/collateral_optimizer/src" python -m unittest discover -s "$RUNNER_TEMP/InventoryBallast/projects/collateral_optimizer/tests" -v
+          npm ci
+          npm run typecheck
+          npm test -- src/lib/collateralOptimizer.contract.test.ts src/lib/server/collateralOptimizerProxy.test.ts
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          summary = json.loads((Path(os.environ["RUNNER_TEMP"]) / "collateral-update.json").read_text())
+          report = Path(summary["report"])
+          text = report.read_text().replace(
+              "Pending candidate CI, financial fixture review, and five-scenario staging check.",
+              "Candidate checks passed: upstream native unittest, service contract/tamper/five-scenario unittest, TypeScript typecheck, and collateral contract/proxy Vitest. Financial source review and staging promotion remain required.")
+          report.write_text(text)
+          PY
+      - name: Record failed candidate checks for draft review
+        if: ${{ steps.prepare.outcome == 'success' && steps.candidate.outcome == 'failure' }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          summary = json.loads((Path(os.environ["RUNNER_TEMP"]) / "collateral-update.json").read_text())
+          if summary["changed"]:
+              report = Path(summary["report"])
+              report.write_text(report.read_text().replace(
+                  "Pending candidate CI, financial fixture review, and five-scenario staging check.",
+                  "Candidate conformance checks FAILED in this workflow. Inspect its logs and repair the pin PR before approval. Financial review and staging promotion remain pending."))
+          PY
+      - name: Open draft review PR
+        if: ${{ steps.prepare.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          changed=$(jq -r .changed "$RUNNER_TEMP/collateral-update.json")
+          if [ "$changed" != true ]; then echo "No nested package changes"; exit 0; fi
+          sha=$(jq -r .new_sha "$RUNNER_TEMP/collateral-update.json")
+          branch="automation/collateral-pin-${sha:0:12}"
+          report=$(jq -r .report "$RUNNER_TEMP/collateral-update.json")
+          if gh pr list --head "$branch" --state open --json number --jq 'length' | grep -q '^1$'; then
+            echo "A review PR already exists for this candidate."
+            exit 0
+          fi
+          git switch -c "$branch"
+          git add services/collateral_optimizer_api scripts/build-collateral-wheel.py docs/specs/spec016/updates
+          git diff --cached --check
+          git commit -m "chore(collateral): propose InventoryBallast pin $sha"
+          git push origin "$branch"
+          gh pr create --draft --base main --head "$branch" --title "chore(collateral): review InventoryBallast $sha" --body-file "$report"
+      - name: Fail workflow if candidate checks failed
+        if: ${{ steps.candidate.outcome == 'failure' }}
+        run: exit 1
