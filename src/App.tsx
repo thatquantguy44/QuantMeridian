@@ -17,6 +17,7 @@ import Squeeze from "./app/securities-lending/squeeze/page";
 import PrimeFinance from "./app/prime-finance/page";
 import Collateral from "./app/collateral/page";
 import CashOptimizer from "./app/cash-optimizer/page";
+import MoneyMarketFundOptimizer from "./app/money-market-fund-optimizer/page";
 import Reinvestment from "./app/reinvestment/page";
 import Liquidity from "./app/liquidity/page";
 import SourcesUses from "./app/sources-uses/page";
@@ -108,6 +109,7 @@ export function App() {
         {on("PB") && <Route path="prime-finance" element={<PrimeFinance />} />}
         {on("COLL") && <Route path="collateral" element={<Collateral />} />}
         {on("CASH") && <Route path="cash-optimizer" element={<CashOptimizer />} />}
+        {on("MMFO") && <Route path="money-market-fund-optimizer" element={<MoneyMarketFundOptimizer />} />}
         {on("REINV") && <Route path="reinvestment" element={<Reinvestment />} />}
         {on("LIQ") && <Route path="liquidity" element={<Liquidity />} />}
         {on("SXU") && <Route path="sources-uses" element={<SourcesUses />} />}
