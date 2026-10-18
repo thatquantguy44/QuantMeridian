@@ -3,6 +3,7 @@ import {
   provenanceMeta,
   PROVENANCE_TONE_CLASS,
   classifyFreshness,
+  resolveBadgeSource,
   FRESHNESS_TONE_CLASS,
 } from "@/lib/provenance";
 import { useSimMode } from "@/lib/simMode";
@@ -16,21 +17,23 @@ import { useSimMode } from "@/lib/simMode";
  * an amber "Nd" once it is aging, and a red "STALE · Nd" once it is stale. This
  * is independent of the source tier, so a live-but-unrefreshed pipeline or an
  * old committed snapshot both read as stale rather than looking current.
+ *
+ * Pass `simSelected` when the module itself explicitly selected labelled SIM data (for
+ * example a synthetic showcase), so the pill stays SIM even when global SIM mode is off.
  */
 export function ProvenanceBadge({
   source,
   asOf,
   className,
+  simSelected,
 }: {
   source: string;
   asOf?: string | null;
   className?: string;
+  simSelected?: boolean;
 }) {
   const { simEnabled, snapshotFallbackEnabled } = useSimMode();
-  const effectiveSource =
-    source === "SIM" && !simEnabled ? "ERR"
-    : source === "SNAPSHOT" && !snapshotFallbackEnabled ? "ERR"
-    : source;
+  const effectiveSource = resolveBadgeSource(source, { simEnabled, snapshotFallbackEnabled, simSelected });
   const meta = provenanceMeta(effectiveSource);
   const tone = PROVENANCE_TONE_CLASS[meta.tone];
   const fresh = asOf !== undefined ? classifyFreshness(asOf) : null;

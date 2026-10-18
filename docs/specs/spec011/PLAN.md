@@ -2,7 +2,7 @@
 
 - **Spec:** spec011-money-market-execution (`SPEC.md`)
 - **Status:** Draft — implementation in progress; owner review pending
-- **Last updated:** 2026-10-17
+- **Last updated:** 2026-10-18
 
 > HOW. This plan stays within 0018's separate-service and shared-library decisions.
 
@@ -40,7 +40,7 @@ Use hand-computable golden portfolios, one test per constraint family, verifier 
 
 The owner-authorized integration and LP work is in progress while the child spec remains draft.
 
-**2026-10-18 — MMKT module (owner request).** A terminal module at `/money-market` drives the
+**2026-10-18 — MMKT module (requested, then explicitly approved by the owner; see the `SPEC.md` decision log).** A terminal module at `/money-market` drives the
 service end to end. It does the following:
 - Reports service, binding and token readiness, with setup steps.
 - Requires an explicit rate-source choice (Gold, or a named SIM set), shows every snapshot row
@@ -48,6 +48,8 @@ service end to end. It does the following:
 - Edits an illustrative candidate universe, forecast case, floors, WAM/WAL and exposure limits.
 - Runs the five named scenarios and presents only verified results.
 - Labels every result as a continuous LP relaxation, not an execution blotter.
+
+See [HANDOFF.md](HANDOFF.md) for the current branch, local run steps, verification evidence and next steps.
 
 It does not resolve or encode the open owner questions:
 - No baseline comparison is shown (question 1).

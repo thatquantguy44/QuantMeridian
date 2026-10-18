@@ -1,8 +1,8 @@
 # Plan: Configurable Sources and Uses Optimizer
 
 - **Spec:** spec012-configurable-sources-uses (`SPEC.md`)
-- **Status:** Setup-only phase approved; full optimizer design remains pending
-- **Last updated:** 2026-10-17
+- **Status:** Setup-only phase (in `main`) and synthetic PoC showcase (SU-SIM, merged in PR #166) approved; full optimizer design remains pending
+- **Last updated:** 2026-10-18
 
 ## Approach
 
@@ -39,8 +39,14 @@ updating the manifest.
 The owner has approved a bounded setup-only phase: versioned browser configuration, source/use editing, explicit compatibility setup, and validated import/export. This phase does not enable solving or expose recommendations. The remaining model decisions and child-document approval still gate service/model behavior. After those decisions are recorded, scaffold the service contracts, implement the compatibility engine and LP, add optional MIP rules, connect result views and OPT run history, and finish with independent validation and as-built evidence. Follow the pinned Agent Skills throughout.
 
 Separately, the owner approved a synthetic proof-of-concept showcase (SPEC § SU-SIM). It runs the
-illustrative lexicographic transport LP in the browser against a fixed SIM book. It is clearly
-labelled and independently verified. It is not the production service, and it does not resolve or
-encode any open decision.
+illustrative penalised, balanced transportation LP in the browser against a fixed SIM book. It is
+clearly labelled and independently verified. It is not the production service, and it does not
+resolve or encode any open decision.
+
+**Production path stays as planned above.** The browser solver
+(`src/lib/optimization/simplex.ts`) is showcase-only. Production solving belongs in
+`services/sources_uses_api` on `services/optimization_core`, following owner decision 1 in
+`docs/handoff.md`. The showcase's hand-computable cases and verifier checks should be reused as
+golden and acceptance fixtures for that service.
 
 See [HANDOFF.md](HANDOFF.md) for the current branch checkpoint, verified commands, implementation boundary, open decisions, and ordered next steps.

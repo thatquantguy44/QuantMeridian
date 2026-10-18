@@ -73,6 +73,20 @@ export function provenanceMeta(source: string): ProvenanceMeta {
 }
 
 /**
+ * The source a badge should display. Global SIM mode gates SIM data that stands in for a
+ * real series, so SIM renders as ERR while it is off. A module that explicitly selected its
+ * own labelled SIM data (`simSelected`) stays SIM regardless of the global switch.
+ */
+export function resolveBadgeSource(
+  source: string,
+  state: { simEnabled: boolean; snapshotFallbackEnabled: boolean; simSelected?: boolean },
+): string {
+  if (source === "SIM") return state.simEnabled || state.simSelected ? "SIM" : "ERR";
+  if (source === "SNAPSHOT") return state.snapshotFallbackEnabled ? "SNAPSHOT" : "ERR";
+  return source;
+}
+
+/**
  * Freshness of a dated observation, independent of its source tier. A live
  * pipeline can still serve stale data (no recent ingestion), and a committed
  * snapshot is fresh on the day it was cut — so freshness is classified from the

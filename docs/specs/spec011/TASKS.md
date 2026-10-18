@@ -2,6 +2,8 @@
 
 - **Spec:** spec011-money-market-execution (`SPEC.md`, `PLAN.md`)
 - **Status:** Draft — implementation in progress; owner review pending
+- **Last updated:** 2026-10-18
+- **Checkpoint:** See [HANDOFF.md](HANDOFF.md) for branch state, local run steps and ordered next steps
 - **Parent requirements:** 0018 REQ-016–020, REQ-027–030, REQ-041
 
 | ID | Task | Covers | Status | Evidence / definition of done |

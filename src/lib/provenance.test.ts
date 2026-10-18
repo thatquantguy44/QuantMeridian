@@ -1,5 +1,5 @@
 import { describe, it, expect, test } from "vitest";
-import { classifyFreshness, PROVENANCE_META, provenanceMeta, worstSource, type ProvenanceSource, PROVENANCE_TONE_CLASS } from "./provenance";
+import { classifyFreshness, PROVENANCE_META, provenanceMeta, resolveBadgeSource, worstSource, type ProvenanceSource, PROVENANCE_TONE_CLASS } from "./provenance";
 
 const NOW = new Date("2026-06-23T12:00:00Z");
 
@@ -120,5 +120,21 @@ describe("worstSource", () => {
     expect(worstSource(["ETL", "SNAPSHOT"])).toBe("SNAPSHOT");
     expect(worstSource(["SNAPSHOT", "ECON"])).toBe("ECON");
     expect(worstSource(["ECON", "SIM"])).toBe("SIM");
+  });
+});
+
+describe("resolveBadgeSource", () => {
+  const off = { simEnabled: false, snapshotFallbackEnabled: false };
+  test("SIM shows as ERR while global SIM mode is off", () => {
+    expect(resolveBadgeSource("SIM", off)).toBe("ERR");
+    expect(resolveBadgeSource("SIM", { ...off, simEnabled: true })).toBe("SIM");
+  });
+  test("a module's explicitly selected SIM stays SIM regardless of the global switch", () => {
+    expect(resolveBadgeSource("SIM", { ...off, simSelected: true })).toBe("SIM");
+  });
+  test("simSelected does not affect other sources", () => {
+    expect(resolveBadgeSource("SNAPSHOT", { ...off, simSelected: true })).toBe("ERR");
+    expect(resolveBadgeSource("UNAVAILABLE", { ...off, simSelected: true })).toBe("UNAVAILABLE");
+    expect(resolveBadgeSource("DB", off)).toBe("DB");
   });
 });
