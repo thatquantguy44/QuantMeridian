@@ -144,8 +144,13 @@ export function computeReinvestmentKpis(positions: ReinvestmentPosition[]): Pick
   return { reinvestYieldBps, netSpreadBps, wamDays, t0Liquidity, monthlyIncome: (cashCollateral * netSpreadBps) / 10000 / 12 };
 }
 
-export function getReinvestmentScenarios(): ReinvestmentScenario[] {
-  const summary = getReinvestmentSummary();
+/**
+ * Rate-move scenarios. Pass the book actually on screen (live-merged yields) so scenarios match the KPI strip;
+ * without it the simulated summary is used. The 0.82 and 0.42 pass-through factors are illustrative
+ * constants carried over from the original dashboard; they are not calibrated.
+ */
+export function getReinvestmentScenarios(book: Pick<ReinvestmentSummary, "cashCollateral" | "netSpreadBps"> = getReinvestmentSummary()): ReinvestmentScenario[] {
+  const summary = book;
   const defs: [string, number, number, string][] = [
     ["Hold", 0, 0, "#3B9DFF"],
     ["25bp Cut", -25, -0.9, "#FF8C00"],

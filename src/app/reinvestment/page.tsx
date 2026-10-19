@@ -62,7 +62,6 @@ function formatConstraint(c: ReinvestmentConstraint, v: number): string {
 export default function ReinvestmentPage() {
   const simPositions = getReinvestmentPositions();
   const summary = getReinvestmentSummary();
-  const scenarios = getReinvestmentScenarios();
   const constraints = getReinvestmentConstraints();
   const recommendations = getReinvestmentRecommendations();
 
@@ -70,14 +69,18 @@ export default function ReinvestmentPage() {
   const anyLive = REINV_FRED_IDS.some((id) => isRealEconSource(reinvFred[id]?.source));
   const positions = useMemo(() => mergeLiveYields(simPositions, reinvFred), [simPositions, reinvFred]);
   const liveKpis = useMemo(() => computeReinvestmentKpis(positions), [positions]);
+  // Every figure below uses the same book as the KPI strip: live-merged yields when FRED is available.
+  const scenarios = useMemo(() => getReinvestmentScenarios({ cashCollateral: summary.cashCollateral, netSpreadBps: liveKpis.netSpreadBps }), [summary.cashCollateral, liveKpis.netSpreadBps]);
   const [shockBps, setShockBps] = useState(-25);
 
   const weightedFedBeta = useMemo(
     () => positions.reduce((a, p) => a + p.allocation * p.fedBeta, 0) / summary.cashCollateral,
     [positions, summary.cashCollateral]
   );
-  const shockCarry = (summary.cashCollateral * (shockBps * weightedFedBeta * 0.42)) / 10000 / 100;
-  const stressedSpread = summary.netSpreadBps + shockBps * (weightedFedBeta / 100) * 0.42;
+  // Illustrative pass-through: weighted beta × 0.42 (an uncalibrated constant from the original dashboard).
+  // Shown per month so it sits beside monthly carry on the same basis.
+  const shockCarryMonthly = (summary.cashCollateral * (shockBps * weightedFedBeta * 0.42)) / 10000 / 100 / 12;
+  const stressedSpread = liveKpis.netSpreadBps + shockBps * (weightedFedBeta / 100) * 0.42;
 
   const positionCols: Column<ReinvestmentPosition>[] = [
     { key: "instrument", header: "Instrument", render: (r) => <span className="font-semibold text-term-text">{r.instrument}</span>, sortVal: (r) => r.instrument },
@@ -119,11 +122,11 @@ export default function ReinvestmentPage() {
   ];
 
   const donutSegments = positions.map((p, i) => ({ value: p.allocation, color: DONUT_COLORS[i % DONUT_COLORS.length], label: p.instrument }));
-  const incomeSeries = scenarios.map((s) => summary.monthlyIncome + s.incomeImpact / 12);
+  const incomeSeries = scenarios.map((s) => liveKpis.monthlyIncome + s.incomeImpact / 12);
 
   return (
     <div className="flex min-h-full flex-col">
-      <PageHeader code="REINV" title="Cash Collateral Reinvestment" desc="Yield ladder, Fed beta, liquidity and constraints" right={<span className="flex items-center gap-1"><ProvenanceBadge source={anyLive ? "FRED" : "SIM"} />{!anyLive && <Tag tone="amber">FRED/YAHOO READY</Tag>}</span>} />
+      <PageHeader code="REINV" title="Cash Collateral Reinvestment" desc="Yield ladder, Fed beta, liquidity and constraints" right={<span className="flex items-center gap-1"><ProvenanceBadge source={anyLive ? "FRED" : "SIM"} />{!anyLive && <Tag tone="amber">FRED READY</Tag>}</span>} />
 
       <KpiStrip>
         <Stat label="Cash Collateral" value={fmtUsdAbbr(summary.cashCollateral)} sub="reinvestment pool" />
@@ -173,8 +176,8 @@ export default function ReinvestmentPage() {
               <div className="mt-2 grid grid-cols-2 gap-px bg-term-border">
                 <Stat label="Fed Beta" value={fmtPct(weightedFedBeta, 0)} className="bg-term-panel" />
                 <Stat label="Stressed Spread" value={fmtBps(stressedSpread, 0)} tone={stressedSpread >= 0 ? "up" : "down"} className="bg-term-panel" />
-                <Stat label="Monthly Carry" value={fmtUsdAbbr(summary.monthlyIncome)} className="bg-term-panel" />
-                <Stat label="Shock Impact" value={fmtUsdAbbr(shockCarry)} tone={shockCarry >= 0 ? "up" : "down"} className="bg-term-panel" />
+                <Stat label="Monthly Carry" value={fmtUsdAbbr(liveKpis.monthlyIncome)} className="bg-term-panel" />
+                <Stat label="Shock Impact /mo" value={fmtUsdAbbr(shockCarryMonthly)} tone={shockCarryMonthly >= 0 ? "up" : "down"} className="bg-term-panel" />
               </div>
             </div>
             <div>
@@ -187,11 +190,12 @@ export default function ReinvestmentPage() {
                   </div>
                 ))}
               </div>
+              <p className="mt-1 text-3xs text-term-text-mute">Tiles show the annual income impact of each rate move. Scenario names label rate moves only; no market event is modeled.</p>
             </div>
           </div>
         </Panel>
 
-        <Panel title="Scenario Income Impact" code="SCEN">
+        <Panel title="Scenario Income Impact · annual" code="SCEN" right={<Tag tone="amber">RATE MOVES ONLY</Tag>}>
           <div className="p-2">
             <BarChart horizontal data={scenarios.map((s) => ({ label: s.scenario, value: s.incomeImpact, color: s.color }))} fmt={(n) => fmtUsdAbbr(n)} />
           </div>

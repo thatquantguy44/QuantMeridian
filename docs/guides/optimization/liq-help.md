@@ -84,12 +84,12 @@ Bars of post-shock buffer per filtered scenario (red when negative).
 | Column | Meaning |
 |---|---|
 | Signal | SOFR − EFFR spread, HY OAS 5d move, Equity drawdown proxy, HYG volume z-score, Available intraday cash, Contingent line usage |
-| Source | FRED, YAHOO or LOCAL |
+| Source | `FRED` when the value came from live data this load; `SIM` otherwise. The header counts live signals. |
 | Latest / Threshold | Current value and its alert threshold |
 | Status | OK, WATCH or RISK; the header counts signals not OK |
 | Desk Impact | Why the signal matters |
 
-Only the first two signals update from live data; the rest are fixed values.
+Only the first two signals can update from live data; each row's Source says whether it did.
 
 ## Assumptions and defaults
 
@@ -110,8 +110,8 @@ No. It is a simulated cockpit. The real liquidity model (forecasts, breach proba
 ### Why are there two different survival numbers?
 The KPI divides all liquid assets by today's outflows. The scenario column divides the buffer left after a shock by a stressed daily burn. They answer different questions.
 
-### Are the Yahoo signals live?
-No. The equity drawdown and HYG volume signals are labeled Yahoo but use fixed values. Only the SOFR − EFFR spread and the high-yield spread move are live.
+### Which signals are live?
+Only the SOFR − EFFR spread and the high-yield spread move, and only when FRED is reachable; they then show `FRED`. Every other signal is a fixed simulated value and shows `SIM`. Earlier versions labeled some fixed signals "YAHOO" or "LOCAL".
 
 ### Why is reliability below 90% for the contingent line?
 Reliability is simulated, and the contingent line is deliberately given a lower range (78–88%) to show that backstop lines are less certain under stress.

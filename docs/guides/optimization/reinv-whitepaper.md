@@ -52,14 +52,14 @@ When the terminal can read FRED data, instrument yields are replaced by market r
 | Net spread | Reinvest yield − rebate |
 | WAM | Allocation-weighted average WAM |
 | T+0 liquidity | Σ allocations in the T+0 bucket |
-| Monthly carry | Cash × net spread ÷ 10,000 ÷ 12 (simulated yields) |
+| Monthly carry | Cash × net spread ÷ 10,000 ÷ 12 (same yields as the KPI strip) |
 | Weighted Fed beta | Allocation-weighted average beta, % |
 | Stressed spread | Net spread + shock × beta ÷ 100 × 0.42 |
-| Shock impact | Cash × shock × beta ÷ 100 × 0.42 ÷ 10,000 (an **annual** dollar change) |
+| Shock impact /mo | Cash × shock × beta ÷ 100 × 0.42 ÷ 10,000 ÷ 12 (monthly, to match monthly carry) |
 | Scenario income impact | Cash × move × 0.82 × 0.42 ÷ 10,000 (annual; fixed beta 0.82) |
 | Limit use | Allocation ÷ (limit % × $36bn reference) × a random factor 0.88–1.04, capped at 99% |
 
-The 0.42 and 0.82 factors are fixed constants in the code; their basis is not documented.
+The 0.42 and 0.82 factors are uncalibrated constants carried over from the original dashboard; the code now says so where they are used. Replacing them with an explicit rebate-beta assumption is planned (Pass 2).
 
 ### Constraints
 
@@ -84,7 +84,7 @@ Four fixed suggestions (roll CP into bills, add 1–3 month bills, trim the cred
 | Positions, limits, recommendations | Seeded simulation (`src/data/reinvestment.ts`) | `SIM` |
 | Instrument yields | FRED `SOFR`, `DGS3MO`, `DCPF3M`, `DGS6MO`, `DGS1` when available | `FRED` |
 
-When the badge is `SIM`, an amber `FRED/YAHOO READY` tag means live yields would be used if the data were reachable.
+When the badge is `SIM`, an amber `FRED READY` tag means live yields would be used if the data were reachable.
 
 ## Assumptions
 
@@ -130,8 +130,7 @@ No model to validate. The data module is deterministic.
 - Positions and limit usage are simulated; nothing comes from a real book.
 - No optimization: recommendations are fixed text with fixed-fraction impacts.
 - Rebate cost is a fixed 388 bp and does not reprice with a rate shock.
-- "Shock Impact" is annual although it sits beside monthly carry.
-- When live yields are on, the KPI strip uses them, but monthly carry, stressed spread and scenarios still use the simulated yields.
+- Scenario names label rate moves only; the page tags them `RATE MOVES ONLY`. Modeling them as market events (separate repo, bill, CP and rebate shifts) is planned (Pass 2).
 - The credit ETF proxy is priced off the 1-year Treasury plus a fixed spread.
 
 ## Status and governance

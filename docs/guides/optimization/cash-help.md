@@ -28,8 +28,8 @@
 | Total Uses | Sum of the 8 obligations |
 | Funding Gap | Total sources − total uses; green "surplus" or red "deficit" |
 | Blended Rate | Usage-weighted cost of funds, bp |
-| Optimized Rate | **Placeholder:** blended rate minus a random 3.5–7 bp |
-| Savings | **Placeholder:** follows from the optimized rate |
+| Optimized Rate · illustrative | **Placeholder** ("placeholder · not solved"): blended rate minus a random 3.5–7 bp |
+| Savings · illustrative | **Placeholder** that follows from the optimized rate |
 
 ### Funding Sources panel (`SRC`)
 
@@ -65,21 +65,21 @@ A donut of available capacity by source, with the total in the middle and the si
 | Element | Meaning |
 |---|---|
 | Projected Need | **Placeholder** random-walk curve, 48 quarter-hour points from 09:00 |
-| LCR % gauge | **Placeholder** value 122–138%. Colors: green below 130, amber 130–150, red at 150 or more (see FAQ). |
-| NSFR % gauge | **Placeholder** value 108–119%, same colors |
+| LCR % · illus. gauge | **Placeholder** value 122–138%. Red below the 100% regulatory minimum, amber from 100% to 110%, green above. |
+| NSFR % · illus. gauge | **Placeholder** value 108–119%, same colors |
 | Intraday Peak | **Placeholder:** 60–85% of total uses |
 | Liquidity Buffer | **Placeholder:** 15–25% of total sources |
 
-### Cheapest Funding Path panel (`OPT`)
+### Illustrative Funding Path panel (`PATH`)
 
 | Column | Meaning |
 |---|---|
 | Use ← Matched Source | Each use and the source assigned to it |
 | Amount | 70–100% of the use (random) |
 | Rate | The assigned source's base rate (simulated rates, not the live overlay) |
-| Saved | **Random** 2–9 bp |
+| Saved (illus.) | **Random** 2–9 bp |
 
-The `OPTIMAL` tag is not the result of an optimizer. Uses are assigned to sources in turn, cheapest source first, with HIGH-priority uses first.
+The panel is tagged `ILLUSTRATIVE · NOT OPTIMIZED` and says so in its note. Uses are assigned to sources in turn, cheapest source first, with HIGH-priority uses first; amounts and savings are placeholders.
 
 ### Funding Recommendations panel (`REC`)
 
@@ -87,7 +87,7 @@ Five sentences generated from the numbers above:
 
 1. Shift funding to the cheapest source away from the dearest (tag: the rate difference).
 2. Cover the HIGH-priority uses first (tag: how many).
-3. Execute the path (tag: the path's summed "savings").
+3. The illustrative path (tag: its placeholder "savings", marked illus.).
 4. Deploy a surplus or raise term repo for a deficit (tag: the gap).
 5. Keep the buffer above the intraday peak (tag: the LCR placeholder).
 
@@ -107,20 +107,20 @@ A Sankey diagram of the path: sources on the left, uses on the right, link width
 
 ## FAQ
 
-### Is the "Cheapest Funding Path" really optimal?
-No. It assigns uses to sources in turn, cheapest first, and the amounts and savings include random values. It ignores capacity, tenor and deadlines. Use [Sources & Uses](/sources-uses) for a verified matching.
+### Is the "Illustrative Funding Path" optimal?
+No, and the page says so. It assigns uses to sources in turn, cheapest first, and its amounts and savings include random values. It ignores capacity, tenor and deadlines. Use [Sources & Uses](/sources-uses) for a verified matching.
 
 ### Where does the "Optimized Rate" come from?
-It is the blended rate minus a random 3.5–7 bp. It is a placeholder for a future connected model.
+It is the blended rate minus a random 3.5–7 bp, labeled "illustrative" and "placeholder · not solved" on the page. A verified solve is planned (Pass 2: CASH solved with the Sources & Uses model).
 
-### Why is my LCR gauge amber when the ratio looks healthy?
-The gauge uses generic thresholds (amber from 130%, red from 150%) that suit "lower is better" measures. For LCR and NSFR higher is safer, and the regulatory minimum is 100%. The values are placeholders anyway.
+### How do the LCR and NSFR gauge colors work?
+For LCR and NSFR higher is safer, so the gauges are red below the 100% regulatory minimum, amber from 100% to 110% and green above. The values themselves are placeholders; no balance sheet is connected.
 
 ### When the badge says FRED, is everything live?
 No. Only up to five source rates are live. Amounts, ratios and the path are still simulated, and the path still uses the simulated rates.
 
-### Why do the names include real firms?
-The simulated uses were written with real firm names. The amounts are fictional and no relationship is implied. This should be changed before an external demo.
+### Are the clients in the uses table real firms?
+No. The client draws and the prime margin call are labeled "Client A (hedge fund)", "Client B (hedge fund)" and "Client C (multi-manager)". The amounts are fictional.
 
 ### Can I change the inputs?
 Not on this page. Money Market and Sources & Uses have editable inputs.

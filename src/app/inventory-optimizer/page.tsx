@@ -42,6 +42,7 @@ import {
   type SyntheticConfig,
 } from "@/lib/inventoryOptimizer";
 import { SCENARIO_FAMILIES, buildScenarioParameters, defaultSizing, type SizingValues } from "@/lib/ibalScenarioSizing";
+import { DEFAULT_WHAT_IF_IDS, WHAT_IF_SCENARIOS, knownScenarioIds, scenarioSyntheticConfig, type WhatIfScenario, type WhatIfScenarioId } from "@/lib/ibalWhatIfs";
 import { compareBaseRuns, type BaseRunSnapshot, type DriverDelta, type DriverDimension } from "@/lib/ibalRunComparison";
 import { ScenarioSizingForm } from "./ScenarioSizingForm";
 import { StressSuitePanel } from "./StressSuitePanel";
@@ -88,18 +89,6 @@ const DATASET_TABS: { value: DatasetTab; label: string }[] = [
   { value: "entities", label: "Entities" },
   { value: "raw", label: "Raw" },
 ];
-
-type WhatIfScenarioId = string;
-
-interface WhatIfScenario {
-  id: WhatIfScenarioId;
-  label: string;
-  desc: string;
-  synthetic?: Partial<SyntheticConfig>;
-  runConfig?: Partial<RunConfig>;
-  seedOffset?: number;
-  isCustom?: boolean;
-}
 
 interface WhatIfResult {
   id: WhatIfScenarioId;
@@ -199,7 +188,7 @@ type WorkflowAction =
   | { type: "finish" }
   | { type: "reset" };
 
-const INITIAL_SELECTED_SCENARIOS: WhatIfScenarioId[] = ["base", "scarce", "specials", "concentration"];
+const INITIAL_SELECTED_SCENARIOS: WhatIfScenarioId[] = DEFAULT_WHAT_IF_IDS;
 
 const INITIAL_WORKFLOW_STATE: WorkflowState = {
   phase: "idle",
@@ -240,7 +229,7 @@ function readSessionPrefs(): IbalSessionPrefs {
 function initWorkflowState(prefs: IbalSessionPrefs): WorkflowState {
   return {
     ...INITIAL_WORKFLOW_STATE,
-    selectedScenarioIds: prefs.selectedScenarioIds?.length ? prefs.selectedScenarioIds : INITIAL_SELECTED_SCENARIOS,
+    selectedScenarioIds: knownScenarioIds(prefs.selectedScenarioIds, prefs.customScenarios),
   };
 }
 
@@ -272,14 +261,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
   }
 }
 
-const WHAT_IF_SCENARIOS: WhatIfScenario[] = [
-  { id: "base", label: "Base Case", desc: "Current synthetic settings and run config." },
-  { id: "scarce", label: "Scarce Supply", desc: "Higher utilization and tighter lendable supply.", synthetic: { profile: "scarce" }, seedOffset: 11 },
-  { id: "specials", label: "Specials Squeeze", desc: "Higher fee dispersion and special-borrow demand.", synthetic: { profile: "specials" }, seedOffset: 23 },
-  { id: "concentration", label: "Borrower Concentration", desc: "Demand concentrated into fewer parent groups.", synthetic: { profile: "concentrated" }, seedOffset: 37 },
-  { id: "confidence", label: "Strict Entity Confidence", desc: "Raises minimum entity confidence to 95%.", runConfig: { minimum_entity_confidence: 0.95 }, seedOffset: 41 },
-  { id: "capacity", label: "More Balance Sheet", desc: "Looser utilization cap and smaller reserve buffer.", synthetic: { utilization_cap: 0.98, reserve_fraction: 0.02 }, seedOffset: 53 },
-];
 
 function pctFromDecimal(value: number) {
   return fmtPct(value * 100, 2);
@@ -1173,14 +1154,8 @@ export default function InventoryOptimizerPage() {
       for (const scenario of scenarios) {
         setWhatIfResults((rows) => rows.map((row) => row.id === scenario.id ? { ...row, status: "running", message: "Solving..." } : row));
         try {
-          const scenarioSynthetic = {
-            ...synthetic,
-            ...(scenario.synthetic ?? {}),
-            // Presets carry a seedOffset and no explicit seed, so they derive one from the live
-            // form; a custom shock's captured synthetic snapshot already has its own seed, which
-            // must win so the shock always replays exactly what was captured.
-            seed: scenario.synthetic?.seed ?? synthetic.seed + (scenario.seedOffset ?? 0),
-          } as SyntheticConfig;
+          // Presets keep the live seed so only their shock differs; a custom shock replays its own seed.
+          const scenarioSynthetic = scenarioSyntheticConfig(synthetic, scenario);
           const scenarioRunConfig = { ...runConfig, ...(scenario.runConfig ?? {}) };
           const nextDataset = await generateSyntheticDataset(scenarioSynthetic);
           if (!nextDataset.validation.valid) {
@@ -1458,10 +1433,6 @@ export default function InventoryOptimizerPage() {
               <label className="grid gap-1 text-term-text-dim">
                 Time limit seconds
                 <input className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" type="number" min={1} max={capabilities?.limits.solve_timeout_seconds ?? 60} value={runConfig.solver_time_limit_seconds} onChange={(event) => updateNumber(setRunConfig, runConfig, "solver_time_limit_seconds", event.target.value)} />
-              </label>
-              <label className="grid gap-1 text-term-text-dim">
-                Minimum entity confidence
-                <input type="range" min={0} max={1} step={0.01} value={runConfig.minimum_entity_confidence} onChange={(event) => updateNumber(setRunConfig, runConfig, "minimum_entity_confidence", event.target.value)} />
               </label>
               <button
                 className="term-btn justify-center border-term-amber text-term-amber disabled:border-term-border disabled:text-term-text-mute"

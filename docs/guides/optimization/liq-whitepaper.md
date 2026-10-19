@@ -63,10 +63,10 @@ Each scenario subtracts a margin shock and a collateral shock from the stress bu
 |---|---|---|---|
 | SOFR − EFFR spread | FRED `SOFR`, `EFFR` | Yes, when available | RISK when the absolute spread is ≥ 20 bp; WATCH at ≥ 14 bp |
 | HY OAS 5-day move | FRED `BAMLH0A0HYM2` (change over the last 6 observations) | Yes, when available | RISK when the absolute move is ≥ 50 bp; WATCH at ≥ 35 bp |
-| Equity drawdown proxy | labeled Yahoo | No: fixed −3.8% | fixed |
-| HYG volume z-score | labeled Yahoo | No: fixed 1.9 | fixed |
-| Available intraday cash | local | No: fixed $11.2bn | fixed |
-| Contingent line usage | local | No: fixed 68% | fixed |
+| Equity drawdown proxy | simulated | No: fixed −3.8% | fixed |
+| HYG volume z-score | simulated | No: fixed 1.9 | fixed |
+| Available intraday cash | simulated | No: fixed $11.2bn | fixed |
+| Contingent line usage | simulated | No: fixed 68% | fixed |
 
 ## Data and provenance
 
@@ -117,7 +117,7 @@ No model to validate. The data module is deterministic.
 - All ladder, facility and scenario numbers are simulated.
 - No forecast model, uncertainty bands, breach probabilities or anomaly detection.
 - Scenario shocks are fixed amounts, not derived from market moves or positions.
-- Signals labeled Yahoo are static values.
+- Four of the six signals are fixed simulated values; each row is labeled `SIM` unless live FRED data replaced it.
 - Facility reliability scores are random.
 
 ## Status and governance

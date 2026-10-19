@@ -19,7 +19,7 @@
 | `REINV` / Cash Collateral Reinvestment | Module code and name ("Yield ladder, Fed beta, liquidity and constraints") |
 | **Guide** | Opens this help and the white paper |
 | `SIM` / `FRED` badge | `FRED` when any of the five yield series is live |
-| `FRED/YAHOO READY` | Shown with `SIM`: live yields would be used if available |
+| `FRED READY` | Shown with `SIM`: live yields would be used if available |
 
 ### KPI strip
 
@@ -54,15 +54,15 @@ Donut of allocations, total in the middle, six largest listed.
 |---|---|---|
 | **Policy Shock** slider | A change in policy rates | −150 to +75 bp in 25 bp steps; −25 bp |
 | Fed Beta | Allocation-weighted pass-through of a rate move, % | |
-| Stressed Spread | Net spread after the shock (simulated yields) | |
-| Monthly Carry | Cash × net spread ÷ 12 (simulated yields) | |
-| Shock Impact | **Annual** change in carry from the shock | |
+| Stressed Spread | Net spread after the shock (same yields as the KPI strip) | |
+| Monthly Carry | Cash × net spread ÷ 12 (same yields as the KPI strip) | |
+| Shock Impact /mo | Monthly change in carry from the shock | |
 | Monthly Income chart | Monthly income under each scenario | |
 | Scenario tiles | Annual income impact of each scenario | |
 
 ### Scenario Income Impact panel (`SCEN`)
 
-Horizontal bars of each scenario's annual income impact: Hold, 25bp Cut, 100bp Cut, Repo Squeeze, Bills Rally.
+Horizontal bars of each scenario's annual income impact: Hold, 25bp Cut, 100bp Cut, Repo Squeeze, Bills Rally. Tagged `RATE MOVES ONLY`: each scenario is a policy rate move, not a modeled market event.
 
 ### Liquidity And Investment Constraints panel (`CSTR`)
 
@@ -88,8 +88,8 @@ Horizontal bars of each scenario's annual income impact: Hold, 25bp Cut, 100bp C
 | Item | Value |
 |---|---|
 | Rebate | 388 bp, fixed |
-| Shock pass-through | Weighted beta × 0.42 (fixed constant) |
-| Scenario pass-through | 0.82 × 0.42 (fixed constants) |
+| Shock pass-through | Weighted beta × 0.42 (an uncalibrated constant, documented in code) |
+| Scenario pass-through | 0.82 × 0.42 (uncalibrated constants) |
 | Live yield map | Repo ← SOFR; bills and agency ← 3-month Treasury (agency −5 bp); CP ← 3-month AA financial CP +15 bp; bank deposits ← 6-month Treasury; credit proxy ← 1-year Treasury +28 bp |
 | Inputs you can change | Only the policy shock slider |
 
@@ -102,10 +102,10 @@ No. Positions are simulated and the actions are fixed suggestions. See [MMKT](/m
 The scenario impact depends only on the rate move, and Repo Squeeze is modeled as a +35 bp rise, which raises reinvestment yield. The scenario names are labels for rate moves.
 
 ### Is "Shock Impact" monthly?
-No, it is annual, although it sits next to monthly carry.
+Yes. It is shown per month ("Shock Impact /mo") to match monthly carry. The scenario tiles and the Scenario Income Impact panel are annual and labeled so.
 
 ### When FRED is live, is everything live?
-Only instrument yields. Allocations, limits and actions remain simulated, and monthly carry, stressed spread and scenarios still use the simulated yields.
+Only instrument yields. Allocations, limits and actions remain simulated, but every yield-based figure (KPIs, monthly carry, stressed spread, scenarios) uses the same live-merged yields.
 
 ### Why does a cut hurt so much?
 Overnight repo has a beta near 100%, so a cut flows straight into yield while the rebate here stays fixed at 388 bp.

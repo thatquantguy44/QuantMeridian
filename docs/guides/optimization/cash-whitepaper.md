@@ -1,6 +1,6 @@
 # Cash Optimizer (CASH): white paper and business guide
 
-> **Status:** illustrative dashboard on simulated data. CASH is **not connected to an optimization model**. Its "optimized" figures, "OPTIMAL" path and liquidity ratios are generated placeholders that show the intended layout. Do not quote them as results. The verified optimizers for funding questions are [Sources & Uses](/guides/SXU/whitepaper) (proof of concept) and [Money Market](/guides/MMKT/whitepaper).
+> **Status:** illustrative dashboard on simulated data. CASH is **not connected to an optimization model**. Its "optimized" figures, funding path and liquidity ratios are generated placeholders that show the intended layout, and the page labels each of them illustrative. Do not quote them as results. The verified optimizers for funding questions are [Sources & Uses](/guides/SXU/whitepaper) (proof of concept) and [Money Market](/guides/MMKT/whitepaper).
 
 ## Executive summary
 
@@ -34,7 +34,7 @@ The *right* answer to the matching question is an optimization problem: a transp
 | Blended rate | Usage-weighted average of source rates: Σ(used × rate) ÷ Σ used | Computed from the above |
 | Optimized rate | Blended rate minus a random 3.5–7 bp | **Placeholder, not optimized** |
 | Savings | (min(total sources, total uses) × (blended − optimized)) ÷ 10,000 | **Follows from the placeholder** |
-| Cheapest funding path | Sources sorted by rate; uses ordered with HIGH priority first; each use assigned to the next source in turn; amount 70–100% of the use (random); "saved" 2–9 bp (random) | **Heuristic with random values, not optimal** |
+| Illustrative funding path | Sources sorted by rate; uses ordered with HIGH priority first; each use assigned to the next source in turn; amount 70–100% of the use (random); "saved" 2–9 bp (random) | **Heuristic with random values, not optimal** |
 | LCR, NSFR | Random draws, 122–138% and 108–119% | **Placeholder** |
 | Intraday peak, liquidity buffer | 60–85% of total uses; 15–25% of total sources (random) | **Placeholder** |
 | Projected need curve | Seeded random walk of 48 quarter-hour points starting at half of total uses | **Placeholder** |
@@ -81,14 +81,14 @@ The same simulated funding data also feeds the AI Copilot's desk context, labele
 |---|---|---|---|---|
 | LCH IM Posting | Margin call | 490 bp | 11:00 ET | HIGH |
 | DTC Settlement Net | Settlement | — | 15:30 ET | HIGH |
-| Client Financing Draw (client A) | Client financing | 540 bp | Intraday | HIGH |
-| Prime Margin Call (client B) | Margin call | 495 bp | 14:00 ET | HIGH |
+| Client Financing Draw — Client A (hedge fund) | Client financing | 540 bp | Intraday | HIGH |
+| Prime Margin Call — Client B (hedge fund) | Margin call | 495 bp | 14:00 ET | HIGH |
 | Money Market Investment | Treasury invest | 474 bp | EOD | LOW |
 | Fund Redemption Payout | Redemption | — | 16:00 ET | MED |
 | Triparty Collateral Sub | Settlement | — | 13:00 ET | MED |
-| Client Financing Draw (client C) | Client financing | 525 bp | Intraday | MED |
+| Client Financing Draw — Client C (multi-manager) | Client financing | 525 bp | Intraday | MED |
 
-The code labels the client draws and the prime margin call with the names of real firms. They are fictional amounts; no relationship is implied.
+The clients are fictional ("Client A", "Client B", "Client C"); earlier versions used real firm names.
 
 ## Outputs and how to read them
 
@@ -96,7 +96,7 @@ Read CASH as a **layout and vocabulary**, not as numbers:
 
 - **Funding gap** shows whether total capacity exceeds total obligations, using simulated amounts.
 - **Blended rate** is the one KPI computed honestly from the inputs shown (and from live rates when the badge says `FRED`).
-- **Optimized rate, savings, the path's `OPTIMAL` tag and "saved" values, LCR, NSFR, peak and buffer** are placeholders.
+- **Optimized rate, savings, the path and its "saved" values, LCR, NSFR, peak and buffer** are placeholders. The page labels each of them illustrative.
 
 ## Validation
 
@@ -105,16 +105,15 @@ There is no model to validate. The data module is deterministic (same seed, same
 ## Limitations
 
 - No optimization: the "Cheapest Funding Path" ignores capacity, tenor, due time and cost trade-offs, and its savings are random.
-- The `OPTIMAL` tag on the path panel is misleading and should be read as "illustrative".
-- LCR and NSFR are not computed from any balance sheet. The gauge colors turn amber at 130% and red at 150%, which is the reverse of how these ratios work (higher is safer; the regulatory minimum is 100%).
+- The path panel is labeled `ILLUSTRATIVE · NOT OPTIMIZED`, and the optimized rate and savings KPIs are labeled illustrative.
+- LCR and NSFR are not computed from any balance sheet. Their gauges are red below the 100% minimum, amber to 110% and green above.
 - The funding gap compares total available capacity (not unused capacity) with total uses.
-- Real firm names appear in simulated data.
 
 ## Status and governance
 
 - **Spec:** none of its own. Spec015 describes `/cash-optimizer` as "a funding view, not a connected money market execution optimizer".
 - **Intended evolution:** source-to-use matching belongs to [SXU](/guides/SXU/whitepaper) once its production solver exists (Spec012); liquidity forecasting and stress belong to [LIQ](/guides/LIQ/whitepaper) (Spec014). CASH could then display their verified outputs instead of placeholders.
-- **Recommended fixes before any external demo:** relabel the path tag and "Optimized Rate" as illustrative, replace real firm names, and correct the LCR/NSFR gauge colors.
+- **Next:** solve the CASH book with the verified Sources & Uses model so the optimized rate, savings and path become real (planned as a small Spec012 addendum).
 
 ## References
 

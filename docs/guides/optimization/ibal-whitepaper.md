@@ -104,7 +104,7 @@ Every allocation carries reason codes explaining why it moved or did not. The mo
 
 | Feature | What changes | How it compares |
 |---|---|---|
-| **What If Scenarios** | The synthetic generator is re-run with a different profile, seed or run config, giving a different book | Each scenario is solved separately and compared with the Base Case on delta value, fill, utilization and binding rows |
+| **What If Scenarios** | The synthetic generator is re-run with one change (profile or setting) on the same seed | Each scenario is solved separately and compared with the Base Case on delta value, fill, utilization and binding rows |
 | **Engine Scenario Studio** | A registered engine shock is applied to the **same** dataset and its verified base run | The engine re-solves the shocked book and attributes the change to securities, borrowers, pools and routes |
 | **Ranked Stress Suite** | One default-sized shock per supported family | Outcomes ranked by objective change, worst first |
 
@@ -134,7 +134,7 @@ The service refuses to report ready unless the installed engine's source fingerp
 | Fractional shares | Allowed unless a route has a lot size |
 | Reinvestment income | Not implemented: reinvestment rate and collateral factor fields are accepted but unused |
 | Entity aggregation | Borrowers are rolled up to legal entities and parent groups for counterparty limits only when the relationship carries an approval reference. The vendor ownership-confidence score does not authorize aggregation. |
-| Minimum entity confidence | Accepted in the run config (default 0.80) and included in the config hash, but the pinned engine does not read it, so changing it alone does not change the allocation |
+| Minimum entity confidence | Accepted in the run config (default 0.80) and included in the config hash, but the pinned engine does not read it, so the page no longer offers it |
 | Point-in-time freshness | Inventory and demand stamped more than 24 hours before the request's as-of time, or after it, fail validation with `STALE_OR_FUTURE_AS_OF` |
 
 ### Synthetic generator defaults

@@ -100,7 +100,6 @@ Scale presets (securities / pools / borrowers / parent groups / routes per secur
 |---|---|
 | Run readiness | `READY`, `WAIT` (data missing or invalid, or another action running) or `BLOCKED` (engine not ready), with the reason |
 | **Time limit seconds** | Solver time limit, 1 to the service's maximum (60). Default 30. |
-| **Minimum entity confidence** | 0–1, default 0.80. Recorded in the config hash; the pinned engine does not use it to change the allocation (see FAQ). |
 | Run button | **Base Case Run** when ready. Otherwise reads Engine Not Ready, Load Data First, Fix Data Issues or Working…. |
 | **Export <view>** | Downloads a zip of result tables for whichever result is on screen (base case or selected what-if) |
 
@@ -108,16 +107,15 @@ Settings in Dataset Intake and Run Config persist for the browser tab session.
 
 ### What If Scenarios panel (`WIF`)
 
-Each ticked scenario re-generates a synthetic book from the current Dataset Intake settings plus the scenario's change, then solves it with the current Run Config.
+Each ticked scenario re-generates a synthetic book from the current Dataset Intake settings plus the scenario's change, on the **same seed**, then solves it with the current Run Config. So the difference from the Base Case comes from the scenario's change alone. A saved custom shock replays its own captured seed.
 
-| Scenario | Change | Seed |
-|---|---|---|
-| Base Case | none | seed |
-| Scarce Supply | profile *scarce* | seed + 11 |
-| Specials Squeeze | profile *specials* | seed + 23 |
-| Borrower Concentration | profile *concentrated* | seed + 37 |
-| Strict Entity Confidence | minimum entity confidence 0.95 | seed + 41 |
-| More Balance Sheet | utilization cap 98%, reserve fraction 2% | seed + 53 |
+| Scenario | Change |
+|---|---|
+| Base Case | none |
+| Scarce Supply | profile *scarce* |
+| Specials Squeeze | profile *specials* |
+| Borrower Concentration | profile *concentrated* |
+| More Balance Sheet | utilization cap 98%, reserve fraction 2% |
 
 Base Case, Scarce Supply, Specials Squeeze and Borrower Concentration are ticked by default. At least one must stay ticked.
 
@@ -278,7 +276,7 @@ Titled "<view> Results", with the run id. Tabs appear only if the pinned engine 
 | Verification tolerance | 1e-6 absolute |
 | Freshness | Inventory and demand no more than 24 hours older than the as-of time |
 | Binding test in the page | Slack within 1e-8 |
-| Minimum entity confidence | 0.80; recorded but not used by the pinned engine |
+| Minimum entity confidence | 0.80 in the run config; not shown on the page because the pinned engine does not use it |
 | Allocation stability penalty | 0 (no quadratic term) |
 
 The model's full assumptions are in the [IBAL white paper](/guides/IBAL/whitepaper).
@@ -289,10 +287,10 @@ The model's full assumptions are in the [IBAL white paper](/guides/IBAL/whitepap
 The shock did not touch anything the optimizer relies on. The sizing controls already size shocks against the base run's allocation; if you edited the JSON by hand or chose a tiny size, try a larger share or more routes.
 
 ### What is the difference between What If Scenarios and the Engine Scenario Studio?
-What-ifs generate a **different synthetic book** (different profile, seed or settings) and solve it from scratch. Engine scenarios shock the **same** book and its verified base run, and attribute the change to specific securities, borrowers, pools and routes.
+What-ifs regenerate the synthetic book with one change (a different profile or setting) on the same seed and solve it from scratch. Engine scenarios shock the **same** book and its verified base run, and attribute the change to specific securities, borrowers, pools and routes.
 
-### Does "Strict Entity Confidence" test entity confidence?
-Not on its own. The pinned engine does not read the minimum entity confidence setting, and like every preset this scenario also changes the seed (+41), so it solves a different synthetic book. Any difference you see comes from the different book, not from the confidence level.
+### Where did "Strict Entity Confidence" and the confidence slider go?
+They were removed. The pinned engine does not read the minimum entity confidence setting (it authorizes entity aggregation through an approval reference instead), so neither could change the result. The setting still travels in the run config at its default of 0.80.
 
 ### Why do two utilization numbers differ?
 The KPI strip's **Avg Utilization** is a simple average across positions. The Before / After **Utilization** is total on loan ÷ total lendable, so large positions count more.

@@ -55,7 +55,16 @@ export function Donut({
   );
 }
 
-export function Gauge({ value, max = 100, size = 120, label, danger = 90, warn = 75 }: { value: number; max?: number; size?: number; label?: string; danger?: number; warn?: number }) {
+/**
+ * Gauge color band. By default higher is worse (amber from `warn`, red from `danger`). With
+ * `higherIsBetter` (for example liquidity ratios) red is below `danger`, amber below `warn`.
+ */
+export function gaugeColor(value: number, { danger, warn, higherIsBetter = false }: { danger: number; warn: number; higherIsBetter?: boolean }): string {
+  if (higherIsBetter) return value < danger ? "#FF3B3B" : value < warn ? "#FF8C00" : "#2ECC71";
+  return value >= danger ? "#FF3B3B" : value >= warn ? "#FF8C00" : "#2ECC71";
+}
+
+export function Gauge({ value, max = 100, size = 120, label, danger = 90, warn = 75, higherIsBetter = false }: { value: number; max?: number; size?: number; label?: string; danger?: number; warn?: number; higherIsBetter?: boolean }) {
   const pct = Math.max(0, Math.min(1, value / max));
   const r = size / 2 - 10;
   const cx = size / 2;
@@ -71,7 +80,7 @@ export function Gauge({ value, max = 100, size = 120, label, danger = 90, warn =
     const large = Math.abs(to - from) > Math.PI ? 1 : 0;
     return `M${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2}`;
   };
-  const color = value >= danger ? "#FF3B3B" : value >= warn ? "#FF8C00" : "#2ECC71";
+  const color = gaugeColor(value, { danger, warn, higherIsBetter });
   return (
     <svg width={size} height={size * 0.7} viewBox={`0 0 ${size} ${size * 0.7}`}>
       <path d={arc(startA, endA)} fill="none" stroke="#1A1A1D" strokeWidth={9} strokeLinecap="round" />

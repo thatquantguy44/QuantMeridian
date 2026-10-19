@@ -1,5 +1,9 @@
 # Reading the Inventory Optimizer
 
+> **Superseded (2026-10-19).** IBAL is implemented. For how it works today read the as-built guides:
+> `docs/guides/optimization/ibal-whitepaper.md` and `docs/guides/optimization/ibal-help.md` (also in the
+> terminal under **Guide** on the InventoryBallast page). This page is kept as the original design note.
+
 **Status:** Design draft — pending spec013 approval; not implemented.
 **Parent:** InventoryBallast 0018 REQ-011–015 and REQ-041.
 
