@@ -23,6 +23,9 @@ export const DIAGNOSTIC_REASONS: Record<string, string> = {
   backend_does_not_report_ranging: "The installed solver backend does not report LP ranges.",
   formulation_has_no_integer_variables: "MIP progress applies only to a model with integer variables.",
   backend_does_not_report_mip_progress: "The installed solver backend does not report MIP progress.",
+  parameter_changes_the_model_shape: "Changing this parameter changes the model's shape, so no single range applies; use the scenario grid.",
+  parameter_moves_no_model_entry: "This parameter does not enter the solved model, so it has no range.",
+  parameter_moves_more_than_one_model_entry: "This parameter moves more than one model coefficient, so one LP range cannot describe it; use the scenario grid.",
 };
 
 const OUTCOMES: Record<IbalInfeasibilityExplanation["outcome"], string> = {

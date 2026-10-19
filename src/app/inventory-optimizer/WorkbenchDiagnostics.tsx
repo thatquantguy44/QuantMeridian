@@ -42,6 +42,8 @@ export function SweepPanel({ dataset, runConfig }: { dataset: DatasetEnvelope | 
   const [lower, setLower] = useState("0");
   const [upper, setUpper] = useState("0.05");
   const [points, setPoints] = useState("5");
+  // The engine refines toward a regime change until it spends this budget (at most 25 solves).
+  const [maxSolves, setMaxSolves] = useState("10");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<IbalParameterSweep | null>(null);
@@ -54,7 +56,7 @@ export function SweepPanel({ dataset, runConfig }: { dataset: DatasetEnvelope | 
     try {
       const sweep = mode === "local"
         ? { parameter, target_id: chosen, mode }
-        : { parameter, target_id: chosen, mode, lower: Number(lower), upper: Number(upper), points: Number(points) };
+        : { parameter, target_id: chosen, mode, lower: Number(lower), upper: Number(upper), points: Number(points), max_solves: Number(maxSolves) };
       setReport((await sweepIbal(dataset, runConfig, sweep)).sweep);
     } catch (err) {
       setReport(null);
@@ -88,6 +90,7 @@ export function SweepPanel({ dataset, runConfig }: { dataset: DatasetEnvelope | 
           <label className="text-term-text-dim">From<input aria-label="Sweep lower" value={lower} onChange={(event) => setLower(event.target.value)} className="mt-1 block w-20 rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" /></label>
           <label className="text-term-text-dim">To<input aria-label="Sweep upper" value={upper} onChange={(event) => setUpper(event.target.value)} className="mt-1 block w-20 rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" /></label>
           <label className="text-term-text-dim">Points<input aria-label="Sweep points" value={points} onChange={(event) => setPoints(event.target.value)} className="mt-1 block w-14 rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" /></label>
+          <label className="text-term-text-dim">Max solves<input aria-label="Sweep max solves" value={maxSolves} onChange={(event) => setMaxSolves(event.target.value)} className="mt-1 block w-14 rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" /></label>
         </>}
         <button type="button" className="term-btn" disabled={!dataset || !chosen || busy} onClick={() => void run()}>{busy ? "Sweeping…" : "Run sweep"}</button>
       </div>

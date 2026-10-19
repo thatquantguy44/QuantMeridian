@@ -25,6 +25,7 @@ describe("engine diagnostics views", () => {
       "MIP progress applies only to a model with integer variables. (formulation_has_no_integer_variables)",
     );
     expect(reasonText("a_future_code")).toBe("Unavailable. (a_future_code)");
+    expect(reasonText("parameter_moves_more_than_one_model_entry")).toContain("use the scenario grid");
     expect(reasonText(null)).toBe("Unavailable.");
   });
 
