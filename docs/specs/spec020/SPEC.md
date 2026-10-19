@@ -2,7 +2,7 @@
 
 - **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
-- **Status:** Draft — scoping only; not approved for implementation. Decision 1 resolved 2026-10-19; decisions 2–8 are open.
+- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–2 resolved 2026-10-19; decisions 3–8 are open.
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
 - **Last updated:** 2026-10-19
@@ -71,6 +71,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | IND-015 | Simulate the cash collateral reinvestment pool: each position's value under credit spread moves and issuer default, loan returns and recalls paid from the most liquid buckets first, and forced sales of term assets at a stressed liquidity cost. | must |
 | IND-016 | Value cash collateral at the pool's realizable value, not par, in the default close-out (IND-005). | must |
 | IND-017 | Report losses by channel (default shortfall, reinvestment loss) for every metric in IND-006, IND-008 and IND-011, and allocate reinvestment losses to beneficial owners pro rata to their share of the pool. | must |
+| IND-018 | Derive each borrower's default probabilities from an illustrative rating-to-PD table, unless the user enters a credit spread for that borrower, which then overrides the table. Show which source each borrower uses. | must |
 
 ## Acceptance Criteria
 
@@ -84,11 +85,12 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 - **AC-008:** The UI never shows a metric without its seed, path count, standard error and `SIM` or user-entered label.
 - **AC-009:** A pool held entirely in overnight cash-equivalent buckets has zero reinvestment loss. A pool with a single term asset and a hand-set spread shock and return wave matches a hand-computed forced-sale loss.
 - **AC-010:** Channel totals add up to the total loss on every path, and owner allocations of the reinvestment loss add up to the pool loss.
+- **AC-011:** A borrower with a user-entered spread s and recovery R gets hazard s / (1 − R) and PD(t) = 1 − exp(−t · s / (1 − R)), matching a hand calculation. Removing the spread falls back to the rating table, and the source label changes with it.
 
 ## Decisions required before implementation
 
 1. ~~**Indemnification scope.** Borrower-default shortfall only, or also cash collateral reinvestment losses?~~ **Resolved 2026-10-19:** both. See the decision log.
-2. **Credit inputs.** Rating-to-PD lookup table (recommended for the first release, labelled illustrative), user-entered spreads, or both? Any source of real credit data needs its own decision.
+2. ~~**Credit inputs.** Rating-to-PD lookup table, user-entered spreads, or both?~~ **Resolved 2026-10-19:** both; spreads override the table per borrower. See the decision log.
 3. **Dependence model.** One-factor Gaussian copula linking defaults to the equity factor (recommended), with a Student-t copula as a sensitivity? Default correlation and wrong-way parameters?
 4. **Close-out and liquidity.** Default close-out period by asset class (proposed: 5 business days for liquid equities and government bonds, 10 for others and hard-to-borrow names), and the liquidity cost formula and its parameters.
 5. **Horizon and paths.** Proposed horizon of 1 year with weekly steps; 50,000 paths for reported figures, with a smaller run for interactive sensitivities. Accept?
@@ -105,6 +107,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | Date | Decision | By |
 |---|---|---|
 | 2026-10-19 | **Decision 1 resolved — indemnification covers borrower-default shortfall and cash collateral reinvestment losses.** This goes beyond the market-standard agency indemnity, where reinvestment losses sit with the beneficial owner, and is a deliberate choice for this program. The service therefore models the reinvestment pool (IND-015), values cash collateral at the pool's realizable value at default (IND-016), and reports the two channels separately (IND-017) so each can be read and priced on its own. Reinvestment pool inputs follow the shape of `src/data/reinvestment.ts`. | Owner |
+| 2026-10-19 | **Decision 2 resolved — credit inputs use a rating-to-PD table, overridable per borrower by a user-entered credit spread.** Every borrower has a rating, and the table maps rating to a 1-year PD, extended to a term structure with a constant hazard rate. The table is a versioned fixture labelled illustrative. If the user enters a spread for a borrower, the hazard rate becomes spread / (1 − recovery) and replaces the table value for that borrower. Recovery is entered with the spread (default 40%, labelled illustrative). The first release takes one flat spread per borrower. Each borrower shows its source (`RATING_TABLE` or `USER_SPREAD`) in the UI and in the model card. A live source of credit data still needs its own decision. | Owner |
 
 ## Related documents
 

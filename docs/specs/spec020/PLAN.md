@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decision 1 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Draft — pending owner review; decisions 1–2 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-19
 
 ## Approach
@@ -18,7 +18,7 @@ The terminal builds a versioned, hashed snapshot of the lending book (loans, col
 
 ### 2. Default times
 
-- Each borrower has a hazard-rate term structure taken from its rating (decision 2), piecewise constant.
+- Each borrower has a constant hazard rate (decision 2). By default it comes from the illustrative rating-to-PD table: λ = −ln(1 − PD₁ᵧ). If the user enters a spread s with recovery R for that borrower, it overrides the table: λ = s / (1 − R). Each borrower's source (`RATING_TABLE` or `USER_SPREAD`) is carried into the results and the model card.
 - Dependence: a one-factor copula. Borrower i defaults by time t when Φ⁻¹(U_i) ≤ Φ⁻¹(PD_i(t)), with the latent variable X_i = ρ_W · Z_eq + √(ρ_D − ρ_W²) · Z_sys + √(1 − ρ_D) · ε_i. Z_eq is the simulated equity factor, which links defaults to market moves (wrong-way risk). Z_sys is a shared credit factor, which links defaults to each other.
 - Setting ρ_W = 0 gives the "no wrong-way" run (IND-007) with the same random numbers, so the difference is not Monte Carlo noise.
 - The Student-t copula is an optional sensitivity (decision 3).
