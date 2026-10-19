@@ -66,6 +66,26 @@ test("IBAL loads data, runs optimizer, and exposes results", async ({ page }) =>
   await expect(page.getByText("Demand Shortfall")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Export Base Case$/i })).toBeEnabled();
 
+  const secondRunResponsePromise = page.waitForResponse(
+    (response) => response.url().includes("/api/inventory-optimizer/runs") && response.request().method() === "POST",
+    { timeout: 30_000 }
+  );
+  await runButton.click();
+  const secondRunResponse = await secondRunResponsePromise;
+  expect(secondRunResponse.status(), apiEvents.join("\n")).toBe(200);
+  await expect(page.getByText("Base-Run Comparison")).toBeVisible();
+  const baselineSelector = page.getByLabel("Baseline run");
+  const comparisonSelector = page.getByLabel("Comparison run");
+  await expect(baselineSelector.locator("option")).toHaveCount(2);
+  await expect(comparisonSelector.locator("option")).toHaveCount(2);
+  await expect(baselineSelector).not.toHaveValue(await comparisonSelector.inputValue());
+  await expect(page.getByText(/Engine .* · backend/).first()).toBeVisible();
+  await expect(page.getByText("Security Drivers · ABSOLUTE SHARE DELTA")).toBeVisible();
+  await expect(page.getByText("Borrower / Parent Drivers · ABSOLUTE SHARE DELTA")).toBeVisible();
+  await expect(page.getByText("Inventory Drivers · ABSOLUTE SHARE DELTA")).toBeVisible();
+  await expect(page.getByText("Inventory Pool Drivers · ABSOLUTE SHARE DELTA")).toBeVisible();
+  await expect(page.getByText("Route Drivers · ABSOLUTE SHARE DELTA")).toBeVisible();
+
   const scenarioButton = page.getByRole("button", { name: /^Run Scenarios$/i });
   await expect(scenarioButton).toBeEnabled();
   await scenarioButton.click();
@@ -81,6 +101,9 @@ test("IBAL loads data, runs optimizer, and exposes results", async ({ page }) =>
   const body = await page.textContent("body");
   expect(body).not.toContain("REQUEST_HASH_MISMATCH");
   expect(pageErrors).toEqual([]);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Base-Run Comparison")).toHaveCount(0);
 
   test.info().attach("ibal-api-events", {
     body: apiEvents.join("\n"),

@@ -1,5 +1,6 @@
 
 import type { ReactNode } from "react";
+import { GuideButton } from "@/components/guides/GuideDrawer";
 import { useTick } from "@/lib/hooks";
 import { Tag } from "./Panel";
 
@@ -36,6 +37,7 @@ export function PageHeader({
             DATA AS OF {asOf}
           </span>
         )}
+        <GuideButton code={code} />
         {right}
         {showStreaming && (
           <Tag tone="up">

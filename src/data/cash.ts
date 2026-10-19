@@ -61,12 +61,12 @@ export function getFundingUses(): FundingUse[] {
   const defs: [string, FundingUse["type"], number, string, FundingUse["priority"]][] = [
     ["LCH IM Posting", "MARGIN_CALL", 4.9, "11:00 ET", "HIGH"],
     ["DTC Settlement Net", "SETTLEMENT", 0, "15:30 ET", "HIGH"],
-    ["Client Financing Draw — Citadel", "CLIENT_FINANCING", 5.4, "Intraday", "HIGH"],
-    ["Prime Margin Call — Marshall Wace", "MARGIN_CALL", 4.95, "14:00 ET", "HIGH"],
+    ["Client Financing Draw — Client A (hedge fund)", "CLIENT_FINANCING", 5.4, "Intraday", "HIGH"],
+    ["Prime Margin Call — Client B (hedge fund)", "MARGIN_CALL", 4.95, "14:00 ET", "HIGH"],
     ["Money Market Investment", "TREASURY_INVEST", 4.74, "EOD", "LOW"],
     ["Fund Redemption Payout", "REDEMPTION", 0, "16:00 ET", "MED"],
     ["Triparty Collateral Sub", "SETTLEMENT", 0, "13:00 ET", "MED"],
-    ["Client Financing Draw — Point72", "CLIENT_FINANCING", 5.25, "Intraday", "MED"],
+    ["Client Financing Draw — Client C (multi-manager)", "CLIENT_FINANCING", 5.25, "Intraday", "MED"],
   ];
   return defs.map(([use, type, rate, dueBy, priority]) => ({
     use, type, amount: rng.float(0.2, 6) * 1e9, rateBps: rate * 100, dueBy, priority,
@@ -136,7 +136,10 @@ export function computeCashKpis(sources: FundingSource[], uses: FundingUse[]): P
   };
 }
 
-/** Optimal funding path: cheapest sources matched to highest-priority uses. */
+/**
+ * Illustrative funding path, NOT an optimization: uses (HIGH priority first) are assigned to sources in
+ * turn, cheapest first, with random amounts and "saved" basis points. A verified matching belongs to SXU.
+ */
 export interface FundingPath {
   use: string;
   source: string;

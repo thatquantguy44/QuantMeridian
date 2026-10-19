@@ -114,7 +114,8 @@ INVENTORY_OPTIMIZER_ENGINE_PATH="$ENGINE_DIR" INVENTORY_OPTIMIZER_ENGINE_COMMIT=
 say "MMKT money market optimizer (8014)"
 MMKT_DIR="$ROOT/services/money_market_api"
 venv "$MMKT_DIR/.venv" "$ROOT/services/optimization_core" "$MMKT_DIR"
-MONEY_MARKET_MODEL_BINDING="${MONEY_MARKET_MODEL_BINDING:-local-mmkt-lp-v1}" \
+# local-mmkt-execution-v2 enables the verified ticketed MIP (the page default); lp-v1 allows only the LP preview.
+MONEY_MARKET_MODEL_BINDING="${MONEY_MARKET_MODEL_BINDING:-local-mmkt-execution-v2}" \
   start mmkt 8014 "$MMKT_DIR" .venv/bin/uvicorn money_market_api.app:app --app-dir src --host 127.0.0.1 --port 8014
 
 # ── COLL (8017): wheel built from the reviewed InventoryBallast commit ──────

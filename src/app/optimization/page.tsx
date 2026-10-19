@@ -4,12 +4,18 @@ import { useEffect, useState } from "react";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
+import Link from "@/components/Link";
+import { NAV } from "@/lib/nav";
+import { guideHref, hasGuide } from "@/lib/moduleGuides";
 import { fmtUsdAbbr } from "@/lib/format";
 import { downloadCollateralRun, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
-type Connection = { family: "MMKT" | "COLL"; label: string; binding_status: string;
+type Connection = { family: "MMKT" | "COLL" | "IBAL"; label: string; binding_status: string;
   service_health: string; detail: string; model_status: string | null };
 type Connections = { approval: string; connections: Connection[] };
+
+/** Every other optimization model in the sidebar group; derived from NAV so it follows module gating. */
+const MODELS = NAV.filter(item => item.group === "OPTIMIZATION" && item.code !== "OPT");
 
 export default function OptimizationCenter() {
   const [connections, setConnections] = useState<Connections | null>(null);
@@ -56,6 +62,32 @@ export default function OptimizationCenter() {
       Model services have separate health. No generated runs, duals, trades, or savings enter operational totals.
       The collateral solve below uses a fictional SIM book and has no persistent audit record.
     </div>
+    <div className="px-2">
+      <Panel title="Optimization models" code="MODELS">
+        <nav aria-label="Optimization models" className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+          {MODELS.map(item => {
+            const link = connections?.connections.find(c => c.family === item.code);
+            return <Link key={item.code} href={item.href}
+              className="flex items-start gap-2 border border-term-border p-2 text-xs hover:border-term-amber">
+              <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-term-amber" aria-hidden />
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-center gap-2">
+                  <strong>{item.code} · {item.label}</strong>
+                  {link && <Tag tone={link.service_health === "READY" ? "up" : "amber"}>SERVICE {link.service_health}</Tag>}
+                </span>
+                <span className="block text-term-text-dim">{item.desc}</span>
+              </span>
+            </Link>;
+          })}
+        </nav>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-term-border px-3 py-2 text-2xs" data-testid="opt-guides">
+          <span className="text-term-text-mute">Guides:</span>
+          <Link href="/guides" className="text-term-blue underline">All white papers and help</Link>
+          {[{ code: "OPT" }, ...MODELS].filter((item) => hasGuide(item.code)).map((item) =>
+            <Link key={item.code} href={guideHref(item.code)} className="text-term-blue underline">{item.code}</Link>)}
+        </div>
+      </Panel>
+    </div>
     <div className="grid gap-2 p-2 lg:grid-cols-2">
       <Panel title="Connections" code="CONN">
         <div className="space-y-2 p-3">
@@ -66,7 +98,7 @@ export default function OptimizationCenter() {
             <div className="flex flex-wrap items-center gap-2">
               <strong>{item.family} · {item.label}</strong>
               <Tag tone={item.service_health === "READY" ? "up" : "amber"}>SERVICE {item.service_health}</Tag>
-              <Tag tone="amber">BINDING {item.binding_status}</Tag>
+              <Tag tone={item.binding_status === "ENGINE_PINNED" ? "up" : "amber"}>BINDING {item.binding_status}</Tag>
             </div>
             <p className="mt-1 text-term-text-dim">{item.detail}</p>
             {item.model_status && <p className="text-term-text-mute">Model: {item.model_status}</p>}

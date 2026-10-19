@@ -90,7 +90,7 @@ export default function CashOptimizer() {
     { key: "source", header: "Matched Source", render: (r) => <span className="text-term-amber">{r.source}</span> },
     { key: "amount", header: "Amount", align: "right", sortVal: (r) => r.amount, render: (r) => <span className="text-term-text">{fmtUsdAbbr(r.amount)}</span> },
     { key: "rate", header: "Rate", align: "right", sortVal: (r) => r.rateBps, render: (r) => <span className="text-term-text-dim">{fmtNum(r.rateBps, 0)} bps</span> },
-    { key: "saved", header: "Saved", align: "right", sortVal: (r) => r.savedBps, render: (r) => <span className="text-term-up">-{fmtNum(r.savedBps, 1)} bps</span> },
+    { key: "saved", header: "Saved (illus.)", align: "right", sortVal: (r) => r.savedBps, render: (r) => <span className="text-term-up">-{fmtNum(r.savedBps, 1)} bps</span> },
   ];
 
   // Source mix donut (by available)
@@ -117,7 +117,7 @@ export default function CashOptimizer() {
   const recs: { text: string; tone: "up" | "amber" | "down" | "blue"; tag: string }[] = [
     { text: `Shift incremental funding to ${cheapest.source} (${fmtNum(cheapest.rateBps, 0)} bps) away from ${dearest.source} (${fmtNum(dearest.rateBps, 0)} bps).`, tone: "up", tag: `${fmtNum(dearest.rateBps - cheapest.rateBps, 0)} bps` },
     { text: `Cover ${highUses.length} HIGH-priority uses first (${fmtUsdAbbr(highTotal)}) — margin & client financing due intraday.`, tone: "down", tag: `${highUses.length} HIGH` },
-    { text: `Execute cheapest funding path across ${path.length} legs to realize blended-rate savings.`, tone: "amber", tag: fmtUsdAbbr(totalSaved) },
+    { text: `Illustrative path across ${path.length} legs; its savings are placeholders until a verified solve is connected.`, tone: "amber", tag: `${fmtUsdAbbr(totalSaved)} illus.` },
     { text: liveKpis.fundingGap >= 0 ? `Surplus of ${fmtUsdAbbr(liveKpis.fundingGap)} — deploy excess into Money Market / Reverse Repo.` : `Deficit of ${fmtUsdAbbr(Math.abs(liveKpis.fundingGap))} — raise term repo to close gap.`, tone: liveKpis.fundingGap >= 0 ? "up" : "down", tag: fmtUsdAbbr(Math.abs(liveKpis.fundingGap)) },
     { text: `Maintain liquidity buffer of ${fmtUsdAbbr(sum.liquidityBuffer)} vs intraday peak ${fmtUsdAbbr(sum.intradayPeak)}.`, tone: "blue", tag: `LCR ${fmtNum(sum.lcr, 0)}` },
   ];
@@ -133,8 +133,8 @@ export default function CashOptimizer() {
         <Stat label="Total Uses" value={fmtUsdAbbr(sum.totalUses)} sub={`${uses.length} obligations`} />
         <Stat label="Funding Gap" value={fmtUsdAbbr(liveKpis.fundingGap)} sub={liveKpis.fundingGap >= 0 ? "surplus" : "deficit"} tone={liveKpis.fundingGap >= 0 ? "up" : "down"} />
         <Stat label="Blended Rate" value={`${fmtNum(liveKpis.blendedRateBps, 1)} bps`} sub="current cost of funds" />
-        <Stat label="Optimized Rate" value={`${fmtNum(liveKpis.optimizedRateBps, 1)} bps`} sub={<span className="text-term-up">-{fmtNum(liveKpis.savingsBps, 1)} bps</span>} tone="up" />
-        <Stat label="Savings" value={fmtUsdAbbr(liveKpis.savingsUsd)} sub={`${fmtNum(liveKpis.savingsBps, 1)} bps captured`} tone="amber" />
+        <Stat label="Optimized Rate · illustrative" value={`${fmtNum(liveKpis.optimizedRateBps, 1)} bps`} sub="placeholder · not solved" />
+        <Stat label="Savings · illustrative" value={fmtUsdAbbr(liveKpis.savingsUsd)} sub="placeholder · not solved" />
       </KpiStrip>
 
       <div className="grid flex-1 grid-cols-1 gap-2 p-2 xl:grid-cols-3">
@@ -164,8 +164,9 @@ export default function CashOptimizer() {
         </Panel>
 
         {/* Liquidity stress */}
-        <Panel title="Liquidity Stress" code="LIQ" accent>
+        <Panel title="Liquidity Stress" code="LIQ" accent right={<Tag tone="amber">ILLUSTRATIVE</Tag>}>
           <div className="p-2">
+            <p className="mb-1 text-3xs text-term-text-mute">Illustrative values: no balance sheet is connected. Gauges are red below the 100% regulatory minimum and amber below 110%.</p>
             <LineChart
               height={120}
               yFmt={(n) => fmtAbbr(n)}
@@ -174,10 +175,10 @@ export default function CashOptimizer() {
             />
             <div className="mt-1 grid grid-cols-2 gap-2">
               <div className="flex flex-col items-center">
-                <Gauge value={sum.lcr} max={200} size={104} label="LCR %" warn={130} danger={150} />
+                <Gauge value={sum.lcr} max={200} size={104} label="LCR % · illus." higherIsBetter danger={100} warn={110} />
               </div>
               <div className="flex flex-col items-center">
-                <Gauge value={sum.nsfr} max={200} size={104} label="NSFR %" warn={130} danger={150} />
+                <Gauge value={sum.nsfr} max={200} size={104} label="NSFR % · illus." higherIsBetter danger={100} warn={110} />
               </div>
             </div>
             <div className="grid grid-cols-2 divide-x divide-term-border border-t border-term-border">
@@ -188,7 +189,8 @@ export default function CashOptimizer() {
         </Panel>
 
         {/* Cheapest funding path */}
-        <Panel title="Cheapest Funding Path" code="OPT" className="xl:col-span-2" right={<Tag tone="up">OPTIMAL</Tag>}>
+        <Panel title="Illustrative Funding Path" code="PATH" className="xl:col-span-2" right={<Tag tone="amber">ILLUSTRATIVE · NOT OPTIMIZED</Tag>}>
+          <p className="px-2 pt-1.5 text-3xs text-term-text-mute">Uses are assigned to sources in turn, cheapest first, with HIGH priority first. Amounts and savings are placeholders, not a solve; see Sources &amp; Uses for a verified matching.</p>
           <DataGrid columns={pathCols} rows={path} rowKey={(r, i) => `${r.use}-${i}`} maxHeight="260px" zebra />
         </Panel>
 

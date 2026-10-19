@@ -113,7 +113,7 @@ export default function LiquidityPage() {
 
   const signalCols: Column<EarlyWarningSignal>[] = [
     { key: "signal", header: "Signal", render: (r) => <span className="font-semibold text-term-text">{r.signal}</span>, sortVal: (r) => r.signal },
-    { key: "source", header: "Source", align: "center", render: (r) => <Tag tone={r.source === "FRED" ? "up" : r.source === "YAHOO" ? "blue" : "neutral"}>{r.source}</Tag>, sortVal: (r) => r.source },
+    { key: "source", header: "Source", align: "center", render: (r) => <Tag tone={r.source === "FRED" ? "up" : "neutral"}>{r.source}</Tag>, sortVal: (r) => r.source },
     { key: "latest", header: "Latest", align: "right", render: (r) => <span className="text-term-text">{signalValue(r)}</span>, sortVal: (r) => r.latest },
     { key: "threshold", header: "Threshold", align: "right", render: (r) => <span className="text-term-text-dim">{r.unit === "$B" ? `$${fmtNum(r.threshold, 1)}B` : r.unit === "bps" ? fmtBps(r.threshold, 0) : r.unit === "%" ? fmtPct(r.threshold, 1) : fmtNum(r.threshold, 1)}</span>, sortVal: (r) => r.threshold },
     { key: "status", header: "Status", align: "center", render: (r) => <Tag tone={SIGNAL_TONE[r.status]}>{r.status}</Tag>, sortVal: (r) => r.status },
@@ -172,7 +172,7 @@ export default function LiquidityPage() {
           </div>
         </Panel>
 
-        <Panel title="Early Warning Signals" code="EWS" className="xl:col-span-3" right={<Tag tone="amber">{signals.filter((s) => s.status !== "OK").length} active</Tag>}>
+        <Panel title="Early Warning Signals" code="EWS" className="xl:col-span-3" right={<span className="flex items-center gap-1"><Tag tone="neutral">{signals.filter((s) => s.source === "FRED").length} live</Tag><Tag tone="amber">{signals.filter((s) => s.status !== "OK").length} active</Tag></span>}>
           <DataGrid columns={signalCols} rows={signals} rowKey={(r) => r.signal} maxHeight="285px" initialSort={{ key: "status", dir: "desc" }} zebra />
         </Panel>
       </div>

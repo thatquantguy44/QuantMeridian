@@ -137,29 +137,32 @@ export function bySymbol(ticker: string): Security | undefined {
   return UNIVERSE.find((s) => s.ticker === ticker);
 }
 
+// Fictional counterparties. Names, types, ratings and regions are invented for the simulated desk; no
+// relationship with, rating of, or event at any real firm is implied. Keep real names out (guard test:
+// src/data/fictionalCounterparties.test.ts).
 const CPTY_SEED: [string, string, Counterparty["type"], Counterparty["rating"], Counterparty["region"]][] = [
-  ["cp-cit", "Citadel Advisors", "HEDGE_FUND", "A", "AMER"],
-  ["cp-mil", "Millennium Mgmt", "HEDGE_FUND", "A", "AMER"],
-  ["cp-pdt", "Point72 Asset Mgmt", "HEDGE_FUND", "A", "AMER"],
-  ["cp-bal", "Balyasny Asset Mgmt", "HEDGE_FUND", "BBB", "AMER"],
-  ["cp-de", "D.E. Shaw Group", "HEDGE_FUND", "A", "AMER"],
-  ["cp-two", "Two Sigma", "HEDGE_FUND", "A", "AMER"],
-  ["cp-aqr", "AQR Capital", "HEDGE_FUND", "BBB", "AMER"],
-  ["cp-mar", "Marshall Wace", "HEDGE_FUND", "BBB", "EMEA"],
-  ["cp-bre", "Brevan Howard", "HEDGE_FUND", "BBB", "EMEA"],
-  ["cp-ela", "Elliott Mgmt", "HEDGE_FUND", "A", "AMER"],
-  ["cp-gs", "Goldman Sachs", "BANK", "A", "AMER"],
-  ["cp-ms", "Morgan Stanley", "BANK", "A", "AMER"],
-  ["cp-jpm", "J.P. Morgan", "BANK", "AA", "AMER"],
-  ["cp-baml", "Bank of America", "BANK", "A", "AMER"],
-  ["cp-ubs", "UBS Group", "BANK", "A", "EMEA"],
-  ["cp-bnp", "BNP Paribas", "BANK", "A", "EMEA"],
-  ["cp-blk", "BlackRock", "BENEFICIAL_OWNER", "AAA", "AMER"],
-  ["cp-van", "Vanguard Group", "BENEFICIAL_OWNER", "AAA", "AMER"],
-  ["cp-ssga", "State Street GA", "BENEFICIAL_OWNER", "AAA", "AMER"],
-  ["cp-calpers", "CalPERS", "PENSION", "AA", "AMER"],
-  ["cp-gpif", "GPIF Japan", "SOVEREIGN", "AA", "APAC"],
-  ["cp-norge", "Norges Bank IM", "SOVEREIGN", "AAA", "EMEA"],
+  ["cp-hf01", "Alderwood Capital", "HEDGE_FUND", "A", "AMER"],
+  ["cp-hf02", "Bramblecrest Partners", "HEDGE_FUND", "A", "AMER"],
+  ["cp-hf03", "Cobaltline Asset Mgmt", "HEDGE_FUND", "A", "AMER"],
+  ["cp-hf04", "Driftwood Global", "HEDGE_FUND", "BBB", "AMER"],
+  ["cp-hf05", "Emberfield Quant Advisors", "HEDGE_FUND", "A", "AMER"],
+  ["cp-hf06", "Foxglove Systematic", "HEDGE_FUND", "A", "AMER"],
+  ["cp-hf07", "Granite Arc Capital", "HEDGE_FUND", "BBB", "AMER"],
+  ["cp-hf08", "Harrowgate Partners", "HEDGE_FUND", "BBB", "EMEA"],
+  ["cp-hf09", "Ironbridge Macro", "HEDGE_FUND", "BBB", "EMEA"],
+  ["cp-hf10", "Juniperhall Event Fund", "HEDGE_FUND", "A", "AMER"],
+  ["cp-bk01", "Northwall Bank", "BANK", "A", "AMER"],
+  ["cp-bk02", "Eastbridge Securities", "BANK", "A", "AMER"],
+  ["cp-bk03", "Keystoneway National Bank", "BANK", "AA", "AMER"],
+  ["cp-bk04", "Lakeshore Bancorp", "BANK", "A", "AMER"],
+  ["cp-bk05", "Alpenrose Bank", "BANK", "A", "EMEA"],
+  ["cp-bk06", "Rhonevale Credit Bank", "BANK", "A", "EMEA"],
+  ["cp-bo01", "Summitline Index Partners", "BENEFICIAL_OWNER", "AAA", "AMER"],
+  ["cp-bo02", "Valleyford Fund Group", "BENEFICIAL_OWNER", "AAA", "AMER"],
+  ["cp-bo03", "Harborgate Global Advisors", "BENEFICIAL_OWNER", "AAA", "AMER"],
+  ["cp-pn01", "Pacific Coast Teachers Pension", "PENSION", "AA", "AMER"],
+  ["cp-sv01", "Sakura Public Reserve Fund", "SOVEREIGN", "AA", "APAC"],
+  ["cp-sv02", "Nordhaven Sovereign Fund", "SOVEREIGN", "AAA", "EMEA"],
 ];
 
 export const COUNTERPARTIES: Counterparty[] = CPTY_SEED.map(([id, name, type, rating, region]) => ({

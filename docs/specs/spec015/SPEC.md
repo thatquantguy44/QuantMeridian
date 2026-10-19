@@ -14,6 +14,12 @@
 - The POC is an explicit, temporary exception to the non-goal below. It is demo-only, uses synthetic inputs, has no independent verifier, and does not satisfy the approved external model binding, source lineage, or production recommendation requirements. Actual model mathematics will remain in its separate repository when identified and approved.
 - Tracking and detailed implementation sequencing remain in PLAN.md and TASKS.md.
 
+## Implementation status — 2026-10-19
+
+- MMKT now runs end to end: `services/money_market_api` solves an independently verified continuous LP on named SIM rate sets (spec011), so its run endpoint no longer returns `501 MODEL_NOT_IMPLEMENTED`. Its Spec015 binding is still unregistered; the Optimization Center shows `BINDING UNCONFIGURED`.
+- The Optimization Center and COLL read service results only: generated runs, duals, trades and the client-side collateral what-if estimate are removed from the connected path (spec016 COLL-007). OPT also reports IBAL, gated by its pinned engine (`ENGINE_PINNED`).
+- No durable run registry, schedules, comparisons or audit trail exist yet; those remain the open Spec015 deliverables.
+
 ## Summary
 
 Make QuantMeridian's Optimization Center the operating surface for independent money market and collateral model services. Each service can be connected to an approved existing model repository, whether supplied as a local checkout or a pinned Git repository, through a versioned adapter contract. Users can configure supported model inputs and policies, run each optimizer manually or on a schedule, inspect verified results and audit history, and compare baseline and changed configurations side by side. Provide a distinct Money Market Fund Optimizer workspace for fund allocation, separate from the CASH treasury funding view. Its current implementation is a synthetic proof of concept; the eventual fund model will be connected through its own approved repository binding. The UI must be useful before a model is connected, while clearly identifying setup, unavailable, simulated, failed, and verified states.
@@ -21,6 +27,8 @@ Make QuantMeridian's Optimization Center the operating surface for independent m
 ## Problem and current state
 
 `services/money_market_api` already validates a versioned request and advertises `solver_enabled: false`; its run endpoint currently returns `501 MODEL_NOT_IMPLEMENTED`. Spec011 defines the money market model goals but has open decisions. `src/app/optimization/page.tsx` reads generated runs, duals, and trades from `src/data/optimization.ts`; `src/app/collateral/page.tsx` presents generated data and a client-side what-if estimate. Neither is an auditable source of real solve results. The existing `/cash-optimizer` page is a funding view, not a connected money market execution optimizer.
+
+> **Update 2026-10-19:** the paragraph above records the state when this spec was written. MMKT and COLL now return verified service results and OPT and COLL no longer show generated data; see "Implementation status — 2026-10-19".
 
 This spec adds the connection and operating layer for actual, separately owned models. It does not implement either mathematical model. [Spec016](../spec016/SPEC.md) identifies the InventoryBallast collateral package and proposes its exact initial pin and native contract; that binding still needs review and conformance evidence before activation. The money market model repository remains unresolved. Spec011 remains the source for MMKT financial requirements.
 

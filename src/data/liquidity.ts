@@ -38,7 +38,8 @@ export interface LiquidityStressScenario {
 
 export interface EarlyWarningSignal {
   signal: string;
-  source: "FRED" | "YAHOO" | "LOCAL";
+  /** "FRED" only when the value was replaced by live data; every other value is simulated. */
+  source: "FRED" | "SIM";
   latest: number;
   threshold: number;
   unit: "bps" | "%" | "$B" | "z";
@@ -126,12 +127,12 @@ export function getLiquidityStressScenarios(): LiquidityStressScenario[] {
 
 export function getEarlyWarningSignals(): EarlyWarningSignal[] {
   return [
-    { signal: "SOFR - EFFR spread", source: "FRED", latest: 14, threshold: 20, unit: "bps", status: "WATCH", deskImpact: "Repo funding pressure into collateral calls" },
-    { signal: "HY OAS 5d move", source: "FRED", latest: 38, threshold: 50, unit: "bps", status: "WATCH", deskImpact: "Higher credit haircuts and client margin" },
-    { signal: "Equity drawdown proxy", source: "YAHOO", latest: -3.8, threshold: -6, unit: "%", status: "OK", deskImpact: "Prime margin and recall pressure" },
-    { signal: "HYG volume z-score", source: "YAHOO", latest: 1.9, threshold: 2.2, unit: "z", status: "WATCH", deskImpact: "Credit liquidity weakening" },
-    { signal: "Available intraday cash", source: "LOCAL", latest: 11.2, threshold: 8.5, unit: "$B", status: "OK", deskImpact: "Immediate settlement buffer" },
-    { signal: "Contingent line usage", source: "LOCAL", latest: 68, threshold: 75, unit: "%", status: "WATCH", deskImpact: "Backstop capacity becoming scarce" },
+    { signal: "SOFR - EFFR spread", source: "SIM", latest: 14, threshold: 20, unit: "bps", status: "WATCH", deskImpact: "Repo funding pressure into collateral calls" },
+    { signal: "HY OAS 5d move", source: "SIM", latest: 38, threshold: 50, unit: "bps", status: "WATCH", deskImpact: "Higher credit haircuts and client margin" },
+    { signal: "Equity drawdown proxy", source: "SIM", latest: -3.8, threshold: -6, unit: "%", status: "OK", deskImpact: "Prime margin and recall pressure" },
+    { signal: "HYG volume z-score", source: "SIM", latest: 1.9, threshold: 2.2, unit: "z", status: "WATCH", deskImpact: "Credit liquidity weakening" },
+    { signal: "Available intraday cash", source: "SIM", latest: 11.2, threshold: 8.5, unit: "$B", status: "OK", deskImpact: "Immediate settlement buffer" },
+    { signal: "Contingent line usage", source: "SIM", latest: 68, threshold: 75, unit: "%", status: "WATCH", deskImpact: "Backstop capacity becoming scarce" },
   ];
 }
 
@@ -153,14 +154,14 @@ export function mergeLiveEWS(signals: EarlyWarningSignal[], fred: LiveEWSData): 
       const effr = last("EFFR");
       if (sofr != null && effr != null) {
         const spread = (sofr - effr) * 100;
-        return { ...s, latest: Math.round(spread * 10) / 10, status: Math.abs(spread) >= s.threshold ? "RISK" : Math.abs(spread) >= s.threshold * 0.7 ? "WATCH" : "OK" };
+        return { ...s, source: "FRED", latest: Math.round(spread * 10) / 10, status: Math.abs(spread) >= s.threshold ? "RISK" : Math.abs(spread) >= s.threshold * 0.7 ? "WATCH" : "OK" };
       }
     }
     if (s.signal === "HY OAS 5d move") {
       const hist = lastN("BAMLH0A0HYM2", 6);
       if (hist) {
         const move = (hist[hist.length - 1] - hist[0]) * 100;
-        return { ...s, latest: Math.round(move * 10) / 10, status: Math.abs(move) >= s.threshold ? "RISK" : Math.abs(move) >= s.threshold * 0.7 ? "WATCH" : "OK" };
+        return { ...s, source: "FRED", latest: Math.round(move * 10) / 10, status: Math.abs(move) >= s.threshold ? "RISK" : Math.abs(move) >= s.threshold * 0.7 ? "WATCH" : "OK" };
       }
     }
     return s;

@@ -87,13 +87,14 @@ INVENTORY_OPTIMIZER_API_TOKEN=local-only-change-me
 
 Allocates forecast surplus cash across money-market instruments as a verified continuous LP for
 `/money-market`. The terminal builds the rate snapshot and passes it in; the service has no
-database access. Results are LP relaxations, not an execution blotter.
+database access. With the `local-mmkt-execution-v2` binding it solves a verified ticketed MIP and returns an
+indicative execution blotter (no orders are routed); `local-mmkt-lp-v1` allows only the continuous LP preview.
 
 ```bash
 python3.12 -m venv .venv-mmkt
 .venv-mmkt/bin/pip install ./services/optimization_core ./services/money_market_api
 cd services/money_market_api
-MONEY_MARKET_API_TOKEN=local-token MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1 \
+MONEY_MARKET_API_TOKEN=local-token MONEY_MARKET_MODEL_BINDING=local-mmkt-execution-v2 \
   ../../.venv-mmkt/bin/uvicorn money_market_api.app:app --app-dir src --port 8014
 ```
 
@@ -104,8 +105,9 @@ MONEY_MARKET_API_TOKEN=local-token
 # MONEY_MARKET_API_URL=http://127.0.0.1:8014          # the default
 ```
 
-- **Binding:** without `MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1` the service starts but
-  reports `UNCONFIGURED` and refuses to solve.
+- **Binding:** without `MONEY_MARKET_MODEL_BINDING` the service starts but reports `UNCONFIGURED` and
+  refuses to solve. `local-mmkt-lp-v1` allows only the LP preview; the page's default ticketed plan needs
+  `local-mmkt-execution-v2`.
 - **Check:** `curl http://127.0.0.1:8014/health` returns `"status":"ready"`. On `/money-market`,
   the **Model service** panel ticks off each setup step and names the one that is missing.
 - **Gotcha:** a stale `uvicorn` still holding port 8014 makes a new one fail to bind silently.

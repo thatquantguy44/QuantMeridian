@@ -1,5 +1,7 @@
 import { json } from "@/lib/server/http";
 import { collateralProxy } from "@/lib/server/collateralOptimizerProxy";
+import { inventoryOptimizerHealthSnapshot } from "@/lib/server/inventoryOptimizerProxy";
+import { ibalConnection } from "@/lib/server/ibalConnection";
 
 export const runtime = "nodejs";
 
@@ -100,9 +102,10 @@ async function probeCollateral() {
 
 export async function GET() {
   const mmktUrl = env("MONEY_MARKET_API_URL") ?? DEFAULT_MMKT_URL;
-  const [mmkt, collateral] = await Promise.all([
+  const [mmkt, collateral, ibal] = await Promise.all([
     probeService(mmktUrl),
     probeCollateral(),
+    inventoryOptimizerHealthSnapshot(2500),
   ]);
 
   return json(
@@ -128,6 +131,7 @@ export async function GET() {
           model_status: "model_status" in collateral ? collateral.model_status : null,
           api_schema_version: "api_schema_version" in collateral ? collateral.api_schema_version : null,
         },
+        ibalConnection(ibal),
       ],
     },
     { headers: { "cache-control": "no-store" } },
