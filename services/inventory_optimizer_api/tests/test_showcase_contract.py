@@ -29,7 +29,7 @@ class ShowcaseContract(unittest.TestCase):
         identity = engine_identity()
         self.assertTrue(identity["ready"])
         self.assertEqual(identity["engine_fingerprint"], manifest()["engine_fingerprint"])
-        self.assertEqual(manifest()["engine_commit"], "bb425cac10d1da29e74fe8f854fd41b31f460773")
+        self.assertEqual(manifest()["engine_commit"], "a42dad30dc3ebb80d2790fd8701e621af0a35fcb")
         info = catalog()
         self.assertEqual(info["data_label"], "SIM")
         self.assertEqual(info["governance_gates_granted"], [])
@@ -73,6 +73,12 @@ class ShowcaseContract(unittest.TestCase):
         self.assertTrue(diagnosis["coverage"])
         self.assertTrue(diagnosis["excluded_sources"])
         self.assertTrue(response["artifacts"]["repair_result"]["verification"]["passed"])
+        # Engine spec0020 (DIAG-003): hard client coverage is never relaxed, and the prime book has
+        # no utilization limits, so the elastic diagnostic names the cause rather than a repair.
+        explanation = diagnosis["infeasibility_explanation"]
+        self.assertEqual(explanation["original_status"], "infeasible")
+        self.assertEqual(explanation["outcome"], "no_relaxable_rows")
+        self.assertEqual(explanation["relaxations"], [])
 
     def test_unknown_book_is_refused(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unknown pinned showcase book"):

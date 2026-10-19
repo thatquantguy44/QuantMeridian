@@ -165,7 +165,7 @@ export function IbalShowcase({ health, capabilities }: { health: IbalHealth | nu
         {comparison && <CompareRows comparison={comparison} />}
         {step === "compare" && <CompareRows comparison={run.artifacts.shock_comparison} />}
         <DomainDisclosures result={result ?? null} capabilities={capabilities} />
-        {step === "diagnose" && <details open={result?.status === "infeasible"} className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Infeasibility and sensitivity limits</summary><ul className="mt-1 list-inside list-disc text-term-text-mute">{(run.artifacts.diagnosis?.warnings ?? []).concat(run.artifacts.diagnosis?.not_yet_available ?? []).map((item) => <li key={item}>{item}</li>)}</ul></details>}
+        {step === "diagnose" && <details open={result?.status === "infeasible"} className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Infeasibility and sensitivity limits</summary><ul className="mt-1 list-inside list-disc text-term-text-mute">{(run.artifacts.diagnosis?.warnings ?? []).map((item) => <li key={item}>{item}</li>)}</ul></details>}
       </>}
     </div>
   </Panel>;
