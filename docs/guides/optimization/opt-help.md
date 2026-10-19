@@ -98,7 +98,7 @@ They have no separate model service connected to OPT. Each module's guide explai
 |---|---|
 | Every row says "Connection status is unavailable. Retry." | The terminal's API is not running. Start it with `npm run dev` or `npm run dev:all`. |
 | `SERVICE UNAVAILABLE` | That service is not running or is on another port. Start it (see `docs/services.md`). |
-| `SERVICE UNCONFIGURED` for MMKT | The service started without `MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1`, or the terminal lacks `MONEY_MARKET_API_TOKEN`. |
+| `SERVICE UNCONFIGURED` for MMKT | The service started without `MONEY_MARKET_MODEL_BINDING` (use `local-mmkt-execution-v2`), or the terminal lacks `MONEY_MARKET_API_TOKEN`. |
 | `SERVICE UNCONFIGURED` for IBAL | The terminal lacks `INVENTORY_OPTIMIZER_API_TOKEN`. Add it to `.env.local` and restart the terminal. |
 | `SERVICE INCOMPATIBLE` for IBAL | The installed engine is not the pinned commit. Start IBAL against the pinned engine (`scripts/dev-all.sh` does this). |
 | `SERVICE INCOMPATIBLE` for COLL | The collateral wheel, lock or schema drifted from `binding-manifest.json`. Rebuild with `scripts/build-collateral-wheel.py`. |

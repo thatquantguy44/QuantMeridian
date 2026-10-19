@@ -110,6 +110,18 @@ Every allocation carries reason codes explaining why it moved or did not. The mo
 
 Engine shocks are sized against the base run's actual allocation (for example a recall of 50% of what the optimizer placed on the three largest routes). A shock sized against the pre-optimization book can miss the routes the optimizer actually uses and show no effect.
 
+### Guided showcase
+
+Besides the synthetic books, the pinned engine ships three checked-in SIM books with a deterministic `run_demo` sequence: **base → shock → diagnose → repair → compare**. The terminal only renders what the engine returns; it does not compute an objective, allocation, binding status or repair itself.
+
+| Book | What it shows |
+|---|---|
+| Principal | A supply shock makes the `INV-AAA` inventory-balance row bind at 40 shares (100 in base). The verified repair raises value and adds a new entity driver; matched and new entities stay separate. |
+| Agency | Owner economics, bound mandates and indemnification disclosures |
+| Prime | A deliberately infeasible shock (no allocation), then a verified repair; the diagnosis shows coverage and excluded-source evidence |
+
+The mixed-integer showcase books return no LP ranging or sensitivity intervals, and the engine does not yet provide an IIS or feasibility relaxation for infeasible runs (InventoryBallast spec0020). The terminal shows those as unavailable and never estimates MIP shadow prices. The as-built note is `docs/whitepapers/ibal_showcase.md`.
+
 ## Data and provenance
 
 | Source | What it is | Badge |
@@ -192,8 +204,9 @@ On the default synthetic book (balanced, small, seed 1701) the base case solves 
 
 ## Status and governance
 
-- **Spec:** Spec013 (approved 2026-10-17). IBAL-005 (Scenario Studio) and IBAL-006 (presenter mode) are in progress; diagnostics tabs, governance verification and the as-built paper remain.
-- **Engine pin:** InventoryBallast commit `e84801b65a4d1c23b19cb34b0de1e217f6b345f9`, package 0.1.0. Bumping the pin to a newer reviewed commit is task IBAL-002.
+- **Spec:** Spec013 (approved 2026-10-17). Done: decisions, engine pin (IBAL-002), contract parity, Scenario Studio (IBAL-005) and provenance and gates (IBAL-007). In progress: diagnostic tabs (IBAL-004), presenter mode and guided showcase (IBAL-006) and the as-built evidence (IBAL-008).
+- **Engine pin:** InventoryBallast commit `bb425cac10d1da29e74fe8f854fd41b31f460773` (InventoryBallast PR #39), package 0.1.0, checked at readiness against a source fingerprint. The pin is a commit, never a branch name.
+- **Gates:** no G2D, G2E or G3 governance gate is granted; every showcase response says so.
 - **Production:** disabled unless an operator sets `IBAL_PRODUCTION_ENABLED` and a trusted access boundary.
 
 ## References
@@ -201,5 +214,6 @@ On the default synthetic book (balanced, small, seed 1701) the base case solves 
 - Help & FAQ: [IBAL help](/guides/IBAL/help)
 - Engine documents (InventoryBallast repository): `docs/model_overview.md` (plain English), `docs/whitepaper.md` (mathematical reference)
 - Specs: `docs/specs/spec013/SPEC.md`, `docs/specs/spec013/TASKS.md`
-- Code: `src/app/inventory-optimizer/`, `src/lib/inventoryOptimizer.ts`, `src/lib/ibalScenarioSizing.ts`, `src/lib/ibalPresenter.ts`, `services/inventory_optimizer_api/`
+- As-built showcase note: `docs/whitepapers/ibal_showcase.md`
+- Code: `src/app/inventory-optimizer/` (including `Showcase.tsx`), `src/lib/inventoryOptimizer.ts`, `src/lib/ibalScenarioSizing.ts`, `src/lib/ibalPresenter.ts`, `services/inventory_optimizer_api/`
 - Related: [Optimization Center](/guides/OPT/whitepaper), [Collateral](/guides/COLL/whitepaper)

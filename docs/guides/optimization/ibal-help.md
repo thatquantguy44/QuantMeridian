@@ -60,6 +60,28 @@ The bar moves to the first unfinished step automatically after each step complet
 
 The grey line below the strip shows the latest action's message, for example "Run inv-opt-… returned optimal."
 
+### Guided InventoryBallast showcase panel (`SIM`)
+
+Directly under the engine status strip. It runs the pinned engine's own checked-in SIM books through **base → shock → diagnose → repair → compare**. It is independent of the dataset you build below.
+
+| Element | Meaning |
+|---|---|
+| Amber banner | SIMULATED DATA: local service, no live positions, orders or governance gate |
+| `LOCAL SIM` / `VERIFIED SIM` tag | `VERIFIED SIM` once a run met the engine's verified outcome contract; red on error |
+| **Showcase book** | Principal, agency or prime book from the engine catalog; its behavior, shock and repair are described underneath |
+| **Start guided run** | Runs the whole sequence once. The response must match the catalog's engine commit and fingerprint, or nothing is shown. |
+| Engine line | Package version, commit, source version and "G2D/G2E/G3 ungranted" |
+| Step buttons and **Next →** | Move through the five steps; each step's headline comes from the engine |
+| Trust strip | Solve and verification status, objective (only when optimal and verified, otherwise "No recommendation"), termination reason, run id, input hash, engine pin |
+| Binding model rows | Up to 12 rows with zero slack: constraint, scope, activity, shadow price ("Unavailable for this formulation" when the engine returns none) |
+| Route allocations | Current and target shares, increase and decrease per route; hidden for an infeasible or unverified step |
+| Solver and formulation | Backend, native status, relative gap, best bound, formulation variant, integer variable count |
+| Disclosures | Economics components, demand and unfilled flow, availability buffers, concentration; agency (owners, mandates, indemnification) and prime (coverage, external borrows, excluded sources) when the engine advertises them |
+| Diagnose step | Unfilled demand, excluded sources, coverage and reason-code counts, plus the infeasibility and sensitivity limits |
+| Compare step | Verified comparison flag, objective change (USD), allocation drivers, driver reconciliation and economic attribution; matched, new and unmatched entities stay separate |
+
+If the panel says "Showcase unavailable", the service is not ready or the pinned engine does not advertise showcase output; use **Recheck** on the status strip.
+
 ### Dataset Intake panel (`DATA`)
 
 | Control | What it does | Range and default |
@@ -282,6 +304,12 @@ Titled "<view> Results", with the run id. Tabs appear only if the pinned engine 
 The model's full assumptions are in the [IBAL white paper](/guides/IBAL/whitepaper).
 
 ## FAQ
+
+### What is the guided showcase, and how is it different from Present mode?
+The showcase panel runs the engine's own three SIM books and named repairs, unchanged, so a presenter can show shock, diagnosis and repair on books the engine authors vouch for. Present mode walks through your own generated or uploaded dataset in this page.
+
+### Why is the prime showcase shock infeasible?
+By design: it shows that an infeasible run returns no allocation, and that the diagnosis (coverage and excluded sources) explains why. The repair step then solves.
 
 ### Why did a stress show $0 change?
 The shock did not touch anything the optimizer relies on. The sizing controls already size shocks against the base run's allocation; if you edited the JSON by hand or chose a tiny size, try a larger share or more routes.
