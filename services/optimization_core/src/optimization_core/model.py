@@ -1,4 +1,4 @@
-"""Typed, solver-neutral representation of a continuous linear program."""
+"""Typed, solver-neutral representation of a linear or mixed-integer problem."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ class LinearProblem:
     objective_sense: ObjectiveSense = "minimize"
     variable_names: tuple[str, ...] = ()
     row_names: tuple[str, ...] = ()
+    variable_integrality: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         objective = np.asarray(self.objective, dtype=np.float64).copy()
@@ -57,6 +58,11 @@ class LinearProblem:
             raise ValueError("variable_names length must match variable count")
         if self.row_names and len(self.row_names) != matrix.shape[0]:
             raise ValueError("row_names length must match row count")
+        if self.variable_integrality and (
+            len(self.variable_integrality) != matrix.shape[1]
+            or any(value not in (0, 1) for value in self.variable_integrality)
+        ):
+            raise ValueError("variable_integrality must contain one 0/1 flag per variable")
 
         for array in (objective, row_lower, row_upper, variable_lower, variable_upper):
             array.flags.writeable = False
@@ -82,6 +88,9 @@ class LinearSolution:
     backend: str
     backend_version: str
     iterations: int | None = None
+    # One entry per original row. Values are derivatives of the caller's objective
+    # with respect to the named lower/upper/equality RHS, in original units.
+    row_marginals: tuple[tuple[str, float] | None, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,3 +100,4 @@ class VerificationReport:
     max_row_violation: float
     objective_delta: float
     passed: bool
+    max_integrality_violation: float = 0.0

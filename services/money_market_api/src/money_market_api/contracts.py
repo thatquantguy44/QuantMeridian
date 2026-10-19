@@ -122,7 +122,7 @@ class InstrumentCandidate(StrictModel):
     rating: str | None = Field(max_length=32)
     settlement_date: date
     maturity_date: date
-    cutoff_at: datetime | None
+    cutoff_at: AwareDatetime | None
     minimum_ticket_amount: FiniteFloat = Field(ge=0)
     lot_size_amount: FiniteFloat = Field(gt=0)
     maximum_amount: FiniteFloat | None = Field(ge=0)
@@ -175,6 +175,19 @@ class PolicyInputs(StrictModel):
     maximum_wal_days: FiniteFloat | None = Field(ge=0)
     maximum_ticket_count: int | None = Field(ge=1)
     exposure_limits: list[ExposureLimit] = Field(max_length=10_000)
+    execution_mode: Literal["continuous_preview", "ticketed_plan"] = "continuous_preview"
+    decision_at: AwareDatetime | None = None
+    frontier_multipliers: list[FiniteFloat] = Field(default_factory=list, max_length=5)
+
+    @model_validator(mode="after")
+    def ticketed_plan_needs_a_clock(self) -> PolicyInputs:
+        if self.execution_mode == "ticketed_plan" and self.decision_at is None:
+            raise ValueError("ticketed_plan requires an explicit decision_at timestamp")
+        if any(value < 0.5 or value > 1.5 for value in self.frontier_multipliers):
+            raise ValueError("frontier multipliers must be between 0.5 and 1.5")
+        if len(set(self.frontier_multipliers)) != len(self.frontier_multipliers):
+            raise ValueError("frontier multipliers must be unique")
+        return self
 
 
 class OptimizeRequest(StrictModel):
@@ -259,6 +272,44 @@ class VerificationResult(StrictModel):
     max_variable_bound_violation: FiniteFloat
     max_row_violation: FiniteFloat
     objective_delta: FiniteFloat
+    max_integrality_violation: FiniteFloat = 0.0
+
+
+class BlotterLine(StrictModel):
+    sequence: int = Field(ge=1)
+    candidate_id: str
+    legal_entity_id: str
+    account_id: str
+    currency: str
+    purchase_date: date
+    planned_at: AwareDatetime
+    cutoff_at: AwareDatetime | None
+    amount: FiniteFloat = Field(gt=0)
+    lot_size_amount: FiniteFloat = Field(gt=0)
+    minimum_ticket_amount: FiniteFloat = Field(ge=0)
+
+
+class CutoffEvent(StrictModel):
+    candidate_id: str
+    cutoff_at: AwareDatetime
+    status: Literal["planned", "available", "missed"]
+    planned_at: AwareDatetime | None
+
+
+class ShadowPrice(StrictModel):
+    row_name: str
+    label: str
+    bound: Literal["lower", "upper", "equality"]
+    objective_delta_usd_per_extra_mm: FiniteFloat
+    convention: Literal["LP_LOCAL", "FIXED_INTEGER_LP"]
+
+
+class FrontierPoint(StrictModel):
+    floor_multiplier: FiniteFloat = Field(ge=0)
+    input_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    status: Literal["optimal_verified", "infeasible"]
+    objective_value: FiniteFloat | None
+    minimum_cash_headroom: FiniteFloat | None
 
 
 class CurrencyResult(StrictModel):
@@ -270,6 +321,10 @@ class CurrencyResult(StrictModel):
     allocations: list[AllocationLine]
     cash_balances: list[CashBalance]
     verification: VerificationResult
+    blotter: list[BlotterLine] = []
+    cutoff_timeline: list[CutoffEvent] = []
+    shadow_prices: list[ShadowPrice] = []
+    frontier: list[FrontierPoint] = []
 
 
 class RunMetadata(StrictModel):
@@ -279,7 +334,7 @@ class RunMetadata(StrictModel):
     request_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     rate_snapshot_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     status: Literal["optimal_verified"]
-    model_family: Literal["continuous_lp_relaxation"]
+    model_family: Literal["continuous_lp_relaxation", "ticketed_mip"]
     rate_source: Literal["gold", "sim"]
     cash_forecast_case: Literal["p10", "p50", "p90"]
     rate_as_of_date: date
@@ -293,7 +348,7 @@ class RunResult(StrictModel):
     run: RunMetadata
     currency_results: list[CurrencyResult]
     excluded_currencies: list[str]
-    execution_ready: Literal[False] = False
+    execution_ready: bool = False
     assumptions: list[str]
 
 
@@ -301,7 +356,7 @@ class HealthResponse(StrictModel):
     status: Literal["ready", "unconfigured"]
     ready: bool
     api_schema_version: Literal["1.0.0"] = "1.0.0"
-    model_status: Literal["continuous_lp_relaxation", "not_configured"]
+    model_status: Literal["continuous_lp_relaxation", "ticketed_mip_available", "not_configured"]
     auth_configured: bool
     database_access: Literal[False] = False
     market_data_access: Literal[False] = False

@@ -65,6 +65,9 @@ export interface PolicyInputs {
   maximum_wal_days: number | null;
   maximum_ticket_count: number | null;
   exposure_limits: ExposureLimit[];
+  execution_mode?: "continuous_preview" | "ticketed_plan";
+  decision_at?: string | null;
+  frontier_multipliers?: number[];
 }
 
 /** Client body for /api/econ/mmkt-runs. The terminal attaches the rate snapshot. */
@@ -103,8 +106,21 @@ export interface CurrencyResult {
   iterations: number | null;
   allocations: AllocationLine[];
   cash_balances: CashBalance[];
-  verification: { passed: true; max_variable_bound_violation: number; max_row_violation: number; objective_delta: number };
+  verification: { passed: true; max_variable_bound_violation: number; max_row_violation: number; objective_delta: number; max_integrality_violation?: number };
+  blotter?: BlotterLine[];
+  cutoff_timeline?: CutoffEvent[];
+  shadow_prices?: ShadowPrice[];
+  frontier?: FrontierPoint[];
 }
+
+export interface BlotterLine {
+  sequence: number; candidate_id: string; legal_entity_id: string; account_id: string;
+  currency: string; purchase_date: string; planned_at: string; cutoff_at: string | null;
+  amount: number; lot_size_amount: number; minimum_ticket_amount: number;
+}
+export interface CutoffEvent { candidate_id: string; cutoff_at: string; status: "planned" | "available" | "missed"; planned_at: string | null }
+export interface ShadowPrice { row_name: string; label: string; bound: "lower" | "upper" | "equality"; objective_delta_usd_per_extra_mm: number; convention: "LP_LOCAL" | "FIXED_INTEGER_LP" }
+export interface FrontierPoint { floor_multiplier: number; input_hash: string; status: "optimal_verified" | "infeasible"; objective_value: number | null; minimum_cash_headroom: number | null }
 
 export interface MmktRunResult {
   api_schema_version: "1.0.0";
@@ -117,7 +133,7 @@ export interface MmktRunResult {
     request_hash: string;
     rate_snapshot_hash: string;
     status: "optimal_verified";
-    model_family: "continuous_lp_relaxation";
+    model_family: "continuous_lp_relaxation" | "ticketed_mip";
     rate_source: "gold" | "sim";
     cash_forecast_case: ForecastCase;
     rate_as_of_date: string;
@@ -125,7 +141,7 @@ export interface MmktRunResult {
   };
   currency_results: CurrencyResult[];
   excluded_currencies: string[];
-  execution_ready: false;
+  execution_ready: boolean;
   assumptions: string[];
 }
 
@@ -190,7 +206,7 @@ export const FAMILY_META: Record<Family, { label: string; color: string }> = {
 };
 
 const usd = (c: Omit<InstrumentCandidate, "currency" | "cutoff_at" | "minimum_ticket_amount" | "lot_size_amount"> & Partial<InstrumentCandidate>): InstrumentCandidate => ({
-  currency: "USD", cutoff_at: null, minimum_ticket_amount: 5, lot_size_amount: 1, ...c,
+  currency: "USD", cutoff_at: null, minimum_ticket_amount: 25, lot_size_amount: 25, ...c,
 });
 
 /** Candidate universe. Overnight RRP and tri-party repo roll daily as one candidate per day. */
@@ -204,16 +220,16 @@ export function demoCandidates(): InstrumentCandidate[] {
   });
   return [
     ...overnight,
-    usd({ candidate_id: "TB-4W-1117", rate_instrument_id: "DTB4WK", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-20", maturity_date: "2026-11-17", maximum_amount: null, explicit_cost_bps: 0.2 }),
-    usd({ candidate_id: "TB-3M-0121", rate_instrument_id: "DTB3", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-22", maturity_date: "2027-01-21", maximum_amount: null, explicit_cost_bps: 0.2 }),
-    usd({ candidate_id: "TB-6M-0422", rate_instrument_id: "DTB6", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-22", maturity_date: "2027-04-22", maximum_amount: null, explicit_cost_bps: 0.2 }),
-    usd({ candidate_id: "TB-52W-1014", rate_instrument_id: "DTB1YR", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-22", maturity_date: "2027-10-14", maximum_amount: null, explicit_cost_bps: 0.2 }),
-    usd({ candidate_id: "CP-1M-ACME", rate_instrument_id: "DCPF1M", instrument_type: "commercial_paper", issuer_id: "ACME-FIN", counterparty_id: "DEALER-B", rating: "A+", settlement_date: "2026-10-19", maturity_date: "2026-11-18", maximum_amount: 250, explicit_cost_bps: 1.0 }),
-    usd({ candidate_id: "CP-3M-BETA", rate_instrument_id: "DCPN3M", instrument_type: "commercial_paper", issuer_id: "BETA-IND", counterparty_id: "DEALER-B", rating: "AA-", settlement_date: "2026-10-19", maturity_date: "2027-01-19", maximum_amount: 200, explicit_cost_bps: 1.0 }),
-    usd({ candidate_id: "CD-3M-BANKA", rate_instrument_id: "CD.3M", instrument_type: "certificate_of_deposit", issuer_id: "BANK-A", counterparty_id: "BANK-A", rating: "AA-", settlement_date: "2026-10-19", maturity_date: "2027-01-19", maximum_amount: 300, explicit_cost_bps: 0.5 }),
-    usd({ candidate_id: "GMMF-USG", rate_instrument_id: "MMF.GOVT.7D", instrument_type: "government_mmf", issuer_id: "GOVT-FUND-1", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-19", maturity_date: "2026-10-30", maximum_amount: null, explicit_cost_bps: 0 }),
-    usd({ candidate_id: "PMMF-INST", rate_instrument_id: "MMF.PRIME.7D", instrument_type: "prime_mmf", issuer_id: "PRIME-FUND-X", counterparty_id: null, rating: "A", settlement_date: "2026-10-19", maturity_date: "2026-10-30", maximum_amount: 400, explicit_cost_bps: 0 }),
-    usd({ candidate_id: "DEP-BANKB", rate_instrument_id: "DEP.ON", instrument_type: "bank_deposit", issuer_id: "BANK-B", counterparty_id: "BANK-B", rating: "A", settlement_date: "2026-10-19", maturity_date: "2026-10-30", maximum_amount: null, explicit_cost_bps: 0 }),
+    usd({ candidate_id: "TB-4W-1117", rate_instrument_id: "DTB4WK", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-20", maturity_date: "2026-11-17", maximum_amount: null, explicit_cost_bps: 0.2, cutoff_at: "2026-10-20T15:00:00-04:00" }),
+    usd({ candidate_id: "TB-3M-0121", rate_instrument_id: "DTB3", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-22", maturity_date: "2027-01-21", maximum_amount: null, explicit_cost_bps: 0.2, cutoff_at: "2026-10-22T15:00:00-04:00" }),
+    usd({ candidate_id: "TB-6M-0422", rate_instrument_id: "DTB6", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-22", maturity_date: "2027-04-22", maximum_amount: null, explicit_cost_bps: 0.2, cutoff_at: "2026-10-22T15:00:00-04:00" }),
+    usd({ candidate_id: "TB-52W-1014", rate_instrument_id: "DTB1YR", instrument_type: "treasury_bill", issuer_id: "UST", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-22", maturity_date: "2027-10-14", maximum_amount: null, explicit_cost_bps: 0.2, cutoff_at: "2026-10-22T15:00:00-04:00" }),
+    usd({ candidate_id: "CP-1M-ACME", rate_instrument_id: "DCPF1M", instrument_type: "commercial_paper", issuer_id: "ACME-FIN", counterparty_id: "DEALER-B", rating: "A+", settlement_date: "2026-10-19", maturity_date: "2026-11-18", maximum_amount: 250, explicit_cost_bps: 1.0, cutoff_at: "2026-10-19T15:00:00-04:00" }),
+    usd({ candidate_id: "CP-3M-BETA", rate_instrument_id: "DCPN3M", instrument_type: "commercial_paper", issuer_id: "BETA-IND", counterparty_id: "DEALER-B", rating: "AA-", settlement_date: "2026-10-19", maturity_date: "2027-01-19", maximum_amount: 200, explicit_cost_bps: 1.0, cutoff_at: "2026-10-19T15:00:00-04:00" }),
+    usd({ candidate_id: "CD-3M-BANKA", rate_instrument_id: "CD.3M", instrument_type: "certificate_of_deposit", issuer_id: "BANK-A", counterparty_id: "BANK-A", rating: "AA-", settlement_date: "2026-10-19", maturity_date: "2027-01-19", maximum_amount: 300, explicit_cost_bps: 0.5, cutoff_at: "2026-10-19T15:00:00-04:00" }),
+    usd({ candidate_id: "GMMF-USG", rate_instrument_id: "MMF.GOVT.7D", instrument_type: "government_mmf", issuer_id: "GOVT-FUND-1", counterparty_id: null, rating: "AAA", settlement_date: "2026-10-19", maturity_date: "2026-10-30", maximum_amount: null, explicit_cost_bps: 0, cutoff_at: "2026-10-19T15:00:00-04:00" }),
+    usd({ candidate_id: "PMMF-INST", rate_instrument_id: "MMF.PRIME.7D", instrument_type: "prime_mmf", issuer_id: "PRIME-FUND-X", counterparty_id: null, rating: "A", settlement_date: "2026-10-19", maturity_date: "2026-10-30", maximum_amount: 400, explicit_cost_bps: 0, cutoff_at: "2026-10-19T15:00:00-04:00" }),
+    usd({ candidate_id: "DEP-BANKB", rate_instrument_id: "DEP.ON", instrument_type: "bank_deposit", issuer_id: "BANK-B", counterparty_id: "BANK-B", rating: "A", settlement_date: "2026-10-19", maturity_date: "2026-10-30", maximum_amount: null, explicit_cost_bps: 0, cutoff_at: "2026-10-19T15:00:00-04:00" }),
   ];
 }
 
@@ -233,7 +249,10 @@ export function demoPolicy(): PolicyInputs {
     weekly_liquidity_floors: [...qms.weekly, ...qmp.weekly],
     maximum_wam_days: 60,
     maximum_wal_days: 90,
-    maximum_ticket_count: null,
+    maximum_ticket_count: 12,
+    execution_mode: "ticketed_plan",
+    decision_at: "2026-10-19T09:00:00-04:00",
+    frontier_multipliers: [0.8, 1, 1.2],
     exposure_limits: [
       { dimension: "rating", key: "portfolio", currency: "USD", maximum_amount: null, maximum_portfolio_fraction: null, minimum_rating: "A-" },
       { dimension: "fed_rrp", key: "fed_rrp", currency: "USD", maximum_amount: 900, maximum_portfolio_fraction: null, minimum_rating: null },
@@ -494,15 +513,28 @@ export function analyzeCurrency(result: CurrencyResult, input: MmktRunInput): Ru
   };
 }
 
-/** CSV of the LP allocation lines exactly as returned (one row per line, stable order). */
+/** CSV of the allocation lines exactly as returned (one row per line, stable order). */
 export function allocationsCsv(result: MmktRunResult): string {
   const header = ["run_id", "rate_snapshot_hash", "rate_source", "sim_set_id", "cash_forecast_case", "currency", "purchase_date", "candidate_id", "rate_instrument_id", "legal_entity_id", "account_id", "settlement_date", "maturity_date", "amount", "mm_yield_pct", "explicit_cost_bps", "modeled_net_return_pct", "execution_ready"];
   const rows = result.currency_results.flatMap((cr) => cr.allocations.map((a) => [
     result.run.run_id, result.run.rate_snapshot_hash, result.run.rate_source, result.run.sim_set_id ?? "", result.run.cash_forecast_case,
     a.currency, a.purchase_date, a.candidate_id, a.rate_instrument_id, a.legal_entity_id, a.account_id, a.settlement_date, a.maturity_date,
-    a.amount, a.mm_yield_pct, a.explicit_cost_bps, a.modeled_net_return_pct, "false",
+    a.amount, a.mm_yield_pct, a.explicit_cost_bps, a.modeled_net_return_pct, String(result.execution_ready),
   ]));
   return [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\n");
+}
+
+/** CSV matches the visible, service-ordered indicative execution blotter. */
+export function blotterCsv(result: MmktRunResult): string {
+  const header = ["run_id", "request_hash", "rate_snapshot_hash", "rate_source", "sim_set_id", "sequence", "candidate_id", "legal_entity_id", "account_id", "currency", "purchase_date", "planned_at", "cutoff_at", "amount", "lot_size_amount", "minimum_ticket_amount", "execution_ready"];
+  const rows = result.currency_results.flatMap((cr) => (cr.blotter ?? []).map((line) => [
+    result.run.run_id, result.run.request_hash, result.run.rate_snapshot_hash,
+    result.run.rate_source, result.run.sim_set_id ?? "", line.sequence, line.candidate_id,
+    line.legal_entity_id, line.account_id, line.currency, line.purchase_date,
+    line.planned_at, line.cutoff_at ?? "", line.amount, line.lot_size_amount,
+    line.minimum_ticket_amount, String(result.execution_ready),
+  ]));
+  return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
 }
 
 function csvCell(v: unknown): string {
@@ -521,7 +553,8 @@ export function explainRunError(err: MmktRunError): { title: string; fix: string
   switch (err.code) {
     case "MMKT_TOKEN_MISSING": return { title: "The terminal has no service token", fix: "Set MONEY_MARKET_API_TOKEN in .env.local (same value as the service) and restart the dev server." };
     case "MMKT_SERVICE_UNAVAILABLE": return { title: "The MMKT service is not reachable", fix: "Start services/money_market_api on port 8014 (see the setup panel)." };
-    case "MODEL_NOT_CONFIGURED": return { title: "The service has no model binding", fix: "Start the service with MONEY_MARKET_MODEL_BINDING=local-mmkt-lp-v1." };
+    case "MODEL_NOT_CONFIGURED": return { title: "The service has no model binding", fix: "Start the service with MONEY_MARKET_MODEL_BINDING=local-mmkt-execution-v2." };
+    case "EXECUTION_BINDING_NOT_CONFIGURED": return { title: "Ticketed model is unavailable", fix: "Start the service with MONEY_MARKET_MODEL_BINDING=local-mmkt-execution-v2." };
     case "INFEASIBLE": return { title: "No feasible allocation", fix: "Cash floors cannot be met with this forecast and universe. No allocation is shown. Lower a floor or switch to a less severe forecast case." };
     case "RATE_CANDIDATES_INELIGIBLE": return { title: "A candidate has no eligible rate", fix: "Only status=ok rows with a normalized mm_yield_pct can be priced. Disable the flagged candidates." };
     case "SIM_SET_UNAVAILABLE": return { title: "SIM set not registered", fix: "Choose one of the registered SIM sets." };

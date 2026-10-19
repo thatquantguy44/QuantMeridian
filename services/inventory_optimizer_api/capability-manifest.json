@@ -4,8 +4,8 @@
   "generator_version": "synthetic-v1",
   "engine_package": "inventory-optimizer",
   "engine_package_version": "0.1.0",
-  "engine_commit": "e84801b65a4d1c23b19cb34b0de1e217f6b345f9",
-  "engine_fingerprint": "4312cd76ea171e4d88ac8510d86b208823b6b0f11bdc536bb1d965138c17d332",
+  "engine_commit": "bb425cac10d1da29e74fe8f854fd41b31f460773",
+  "engine_fingerprint": "349923fff7c03a1ce57cb237fc64697e847ff695145fdf3019c86769a60a9f1b",
   "problem_families": ["securities_lending_inventory"],
   "formulations": ["lp", "mip", "qp"],
   "upload_formats": ["xlsx", "json"],
@@ -33,6 +33,14 @@
     "solver",
     "verification",
     "warnings",
-    "scenario_stress"
+    "scenario_stress",
+    "scenario_comparison",
+    "concentration",
+    "agency",
+    "prime",
+    "schedules",
+    "collateral",
+    "desk",
+    "showcase"
   ]
 }

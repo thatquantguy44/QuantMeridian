@@ -4,11 +4,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import {
-  BASELINES, BASE_SET, DEFAULT_BASELINE, ENTITY_LABELS, MMKT_SCENARIOS, allocationsCsv, analyzeCurrency, buildBaselineInput,
+  BASELINES, BASE_SET, DEFAULT_BASELINE, ENTITY_LABELS, MMKT_SCENARIOS, allocationsCsv, blotterCsv, analyzeCurrency, buildBaselineInput,
   buildRunInput, compareToBaseline, dayDiff, demoBook, explainRunError, type BaselineKind, type BaselineOutcome,
   type BookInputs, type MmktRunError, type MmktRunInput, type MmktRunResult, type RateRow,
 } from "@/data/mmkt";
 import { FloorChart, HoldingsChart, MaturityLadder, YieldBars } from "./components/charts";
+import { CutoffTimeline, ExecutionBlotter, LiquidityFrontier, ScenarioPlanDelta, ShadowPrices } from "./components/execution";
 import {
   AllocationTable, BaselinePanel, CandidateTable, CsvButton, ForecastTable, Lineage, PolicyEditor, RateTable, ScenarioCompare, SetupGuide,
   VerificationBlock, type CompareRow, type ServiceStatus,
@@ -99,7 +100,8 @@ export default function MoneyMarket() {
   const runBaseline = useCallback(async (kind: BaselineKind, b: BookInputs, rows: RateRow[], c: NonNullable<RateChoice>, optimized: { input: MmktRunInput; result: MmktRunResult }): Promise<BaselineOutcome> => {
     const built = buildBaselineInput(kind, b, rows, c.source === "sim" ? c.simSetId : "", crypto.randomUUID());
     if ("unavailable" in built) return { kind, status: "unavailable", reason: built.unavailable };
-    const input = c.source === "sim" ? built.input : { ...built.input, rate_source: "gold" as const, sim_set_id: undefined };
+    const selected = c.source === "sim" ? built.input : { ...built.input, rate_source: "gold" as const, sim_set_id: undefined };
+    const input = { ...selected, policy: { ...selected.policy, frontier_multipliers: [] } };
     const { result, error } = await postRun(input);
     if (!result) return { kind, status: "error", reason: error ? `${explainRunError(error).title} (${error.code})` : "Baseline run failed." };
     const comparison = compareToBaseline(
@@ -137,12 +139,13 @@ export default function MoneyMarket() {
     setScenarioId(id);
     setBook(nextBook);
     setChoice(nextChoice);
-    if (!ready) return;
+    if (!ready || (nextBook.policy.execution_mode === "ticketed_plan" && status?.binding_id !== "local-mmkt-execution-v2")) return;
     const response = await fetch(`/api/econ/mmkt-rate-snapshot?source=sim&sim_set_id=${scenario.simSetId}`, { cache: "no-store" }).then((r) => r.json()).catch(() => null);
     if (response?.ok) await runNow(nextBook, nextChoice, response.rate_snapshot.rows, scenario.title);
   }
 
   async function runAllScenarios() {
+    if (!ready || !ticketedAvailable) return;
     setComparing(true);
     const rows: CompareRow[] = [];
     for (const scenario of MMKT_SCENARIOS) {
@@ -150,7 +153,8 @@ export default function MoneyMarket() {
       if (!snap?.ok) { rows.push({ id: scenario.id, title: scenario.title, analytics: null, error: "Rate set unavailable", hash: null, simSetId: scenario.simSetId, baseline: null }); continue; }
       const scenarioBook = scenario.apply(demoBook());
       const scenarioChoice = { source: "sim" as const, simSetId: scenario.simSetId };
-      const input = inputFor(scenarioBook, snap.rate_snapshot.rows, scenarioChoice);
+      const selected = inputFor(scenarioBook, snap.rate_snapshot.rows, scenarioChoice);
+      const input = { ...selected, policy: { ...selected.policy, frontier_multipliers: [] } };
       const { result, error } = await postRun(input);
       const baseline = result ? await runBaseline(baselineKind, scenarioBook, snap.rate_snapshot.rows, scenarioChoice, { input, result }) : null;
       rows.push({
@@ -158,6 +162,7 @@ export default function MoneyMarket() {
         analytics: result ? analyzeCurrency(result.currency_results[0], input) : null,
         error: error ? explainRunError(error).title : null,
         hash: result?.run.request_hash ?? null,
+        result: result ?? null,
         baseline: baseline?.status === "ok" ? { upliftMm: baseline.comparison.upliftMm, upliftBps: baseline.comparison.upliftBps } : baseline ? { reason: baseline.reason } : null,
       });
       setCompare([...rows]);
@@ -169,11 +174,12 @@ export default function MoneyMarket() {
   const primary = analytics[0] ?? null;
   const types = useMemo(() => new Map(book.candidates.map((c) => [c.candidate_id, c.instrument_type as string])), [book]);
   const sourceLabel = choice?.source === "gold" ? "Gold" : choice ? `SIM · ${choice.simSetId}` : "No rate source selected";
-  const canRun = ready && choice !== null && snapshot !== null && !running;
+  const ticketedAvailable = status?.binding_id === "local-mmkt-execution-v2";
+  const canRun = ready && (book.policy.execution_mode !== "ticketed_plan" || ticketedAvailable) && choice !== null && snapshot !== null && !running;
 
   return (
     <div className="flex min-h-full flex-col bg-term-bg">
-      <PageHeader code="MMKT" title="Money Market Optimizer" desc="Forecast cash deployment · continuous LP (spec011)" showStreaming={false}
+      <PageHeader code="MMKT" title="Money Market Optimizer" desc="Forecast cash deployment · verified ticketed plan (spec011)" showStreaming={false}
         right={<span className="flex items-center gap-2">
           {choice?.source === "gold" && snapshot ? <ProvenanceBadge source="DB" asOf={snapshot.asOf} /> : choice ? <Tag tone="blue">SIM</Tag> : null}
           <Tag tone={ready ? "up" : "amber"}>{statusLoading ? "CHECKING" : ready ? "MODEL READY" : status?.service_health ?? "OFFLINE"}</Tag>
@@ -181,8 +187,8 @@ export default function MoneyMarket() {
 
       <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-3 p-3 lg:p-5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-term-amber/30 bg-term-amber/5 px-3 py-2 text-[11px] text-term-text-dim" role="note">
-          <span className="rounded-sm border border-term-amber/40 px-1.5 py-px font-mono text-[9px] font-bold tracking-[0.2em] text-term-amber">LP RELAXATION</span>
-          <span>Allocations come from the MMKT service's verified continuous LP. Minimum tickets, lot sizes, ticket counts and cutoffs are not enforced yet, so results are <strong className="text-term-text">not execution-ready</strong> and are not trade recommendations. Cash forecasts and policy are illustrative user inputs.</span>
+          <span className="rounded-sm border border-term-amber/40 px-1.5 py-px font-mono text-[9px] font-bold tracking-[0.2em] text-term-amber">{book.policy.execution_mode === "ticketed_plan" ? "TICKETED PLAN" : "LP PREVIEW"}</span>
+          <span>{book.policy.execution_mode === "ticketed_plan" ? "The MMKT service enforces ticket, lot, count, and cutoff rules and independently verifies the resulting plan." : "The continuous LP does not enforce execution rules."} Cash forecasts and policy are illustrative inputs. The plan is for human review; no order is routed or live trade recommendation made.</span>
         </div>
 
         {/* Engine + rate source */}
@@ -198,7 +204,7 @@ export default function MoneyMarket() {
                 <dt className="text-term-text-mute">Terminal token</dt><dd className="text-right font-mono text-term-text">{status?.token_configured ? "configured" : "missing"}</dd>
               </dl>
               <p className="text-[10px] leading-relaxed text-term-text-dim">{status?.detail ?? "Checking the MMKT service…"}</p>
-              {!ready && !statusLoading && <SetupGuide status={status} />}
+              {(!ready || (book.policy.execution_mode === "ticketed_plan" && !ticketedAvailable)) && !statusLoading && <SetupGuide status={status} />}
             </div>
           </Panel>
 
@@ -266,7 +272,7 @@ export default function MoneyMarket() {
                   className="flex items-center gap-1.5 rounded-md bg-term-amber px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-[#ffa329] disabled:cursor-not-allowed disabled:opacity-40">
                   <Play size={13} /> {running ? "Solving…" : "Run optimizer"}
                 </button>
-                <span className="text-[10px] text-term-text-mute">{!ready ? "Service not ready" : !choice ? "Select a rate source" : !snapshot ? "Loading rates…" : sourceLabel}</span>
+                <span className="text-[10px] text-term-text-mute">{!ready ? "Service not ready" : book.policy.execution_mode === "ticketed_plan" && !ticketedAvailable ? "Ticketed model needs local-mmkt-execution-v2" : !choice ? "Select a rate source" : !snapshot ? "Loading rates…" : sourceLabel}</span>
               </div>
             </div>
           </Panel>
@@ -305,15 +311,21 @@ export default function MoneyMarket() {
             </div>
 
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-              <Panel title="LP allocation · continuous relaxation" code="ALLOC" className="rounded-lg" subtitle="not an execution blotter"
-                right={<CsvButton csv={allocationsCsv(run.result)} filename={`mmkt-${run.result.run.run_id.slice(0, 8)}.csv`} />}>
-                <div className="max-h-[420px] overflow-y-auto p-3"><AllocationTable result={run.result} types={types} /></div>
+              <Panel title={run.result.execution_ready ? "Verified execution blotter" : "LP allocation · continuous preview"} code="ALLOC" className="rounded-lg" subtitle={run.result.execution_ready ? "indicative order · no routing" : "not an execution blotter"}
+                right={<CsvButton csv={run.result.execution_ready ? blotterCsv(run.result) : allocationsCsv(run.result)} filename={`mmkt-${run.result.run.run_id.slice(0, 8)}.csv`} />}>
+                <div className="max-h-[420px] overflow-y-auto p-3">{run.result.execution_ready ? <ExecutionBlotter result={run.result} /> : <AllocationTable result={run.result} types={types} />}</div>
               </Panel>
               <div className="flex flex-col gap-3">
                 <Panel title="Maturity ladder" code="LADDER" className="rounded-lg"><div className="p-3"><MaturityLadder analytics={primary} /></div></Panel>
                 <Panel title="Verification" code="CERT" className="rounded-lg"><div className="p-3"><VerificationBlock result={run.result} /></div></Panel>
                 <Panel title="Lineage" code="RUN" className="rounded-lg"><div className="p-3"><Lineage result={run.result} /></div></Panel>
               </div>
+            </div>
+
+            <div className="grid gap-3 xl:grid-cols-3">
+              <Panel title="Cutoff timeline" code="CUTOFF" className="rounded-lg"><div className="p-3"><CutoffTimeline result={run.result} /></div></Panel>
+              <Panel title="Shadow prices" code="DUALS" className="rounded-lg"><div className="p-3"><ShadowPrices result={run.result} /></div></Panel>
+              <Panel title="Yield / liquidity frontier" code="FRONTIER" className="rounded-lg"><div className="p-3"><LiquidityFrontier result={run.result} /></div></Panel>
             </div>
 
             <Panel title="Baseline comparison" code="BASE" className="rounded-lg" subtitle="each side is its own verified run">
@@ -329,11 +341,14 @@ export default function MoneyMarket() {
         )}
 
         <Panel title="Scenario comparison" code="CMP" className="rounded-lg" subtitle="each scenario is a separate verified run"
-          right={<button type="button" disabled={!ready || comparing} onClick={() => void runAllScenarios()} className="flex items-center gap-1 rounded border border-term-border px-1.5 py-0.5 text-[10px] text-term-text-dim hover:text-term-amber disabled:opacity-40"><Layers size={11} /> {comparing ? "Running…" : "Run all scenarios"}</button>}>
+          right={<button type="button" disabled={!ready || !ticketedAvailable || comparing} onClick={() => void runAllScenarios()} className="flex items-center gap-1 rounded border border-term-border px-1.5 py-0.5 text-[10px] text-term-text-dim hover:text-term-amber disabled:opacity-40"><Layers size={11} /> {comparing ? "Running…" : "Run all scenarios"}</button>}>
           <div className="p-3">
             {compare ? <ScenarioCompare rows={compare} activeId={scenarioId} /> : <p className="text-[11px] text-term-text-mute">{ready ? "Run every named scenario against the service to compare modeled return, invested balance and mix." : "Available once the model service is ready."}</p>}
           </div>
         </Panel>
+        {compare && <Panel title="Base → rate cut → forecast miss" code="IMPACT" className="rounded-lg" subtitle="verified plan and liquidity changes">
+          <div className="p-3"><ScenarioPlanDelta rows={compare} /></div>
+        </Panel>}
       </div>
     </div>
   );
