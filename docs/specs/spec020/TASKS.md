@@ -1,6 +1,6 @@
 # Tasks: Borrower Default and Indemnification Risk (INDEM)
 
-- **Spec:** spec017-indemnification-risk (SPEC.md, PLAN.md)
+- **Spec:** spec020-indemnification-risk (SPEC.md, PLAN.md)
 - **Status:** Draft — pending owner review; no implementation authorized yet
 
 | ID | Task | Covers | Status | Evidence / definition of done |

@@ -1,6 +1,6 @@
-# Spec017: Borrower Default and Indemnification Risk (INDEM)
+# Spec020: Borrower Default and Indemnification Risk (INDEM)
 
-- **ID:** spec017-indemnification-risk
+- **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
 - **Status:** Draft — scoping only; not approved for implementation. Decisions 1–8 below are open.
 - **Author:** Joshua Lutkemuller, CFA

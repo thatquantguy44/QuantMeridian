@@ -1,6 +1,6 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
-- **Spec:** spec017-indemnification-risk (SPEC.md)
+- **Spec:** spec020-indemnification-risk (SPEC.md)
 - **Status:** Draft — pending owner review; parameters below are proposals until the SPEC decisions are resolved
 - **Last updated:** 2026-10-19
 
