@@ -80,6 +80,26 @@ class ShowcaseContract(unittest.TestCase):
         self.assertEqual(explanation["outcome"], "no_relaxable_rows")
         self.assertEqual(explanation["relaxations"], [])
 
+    def test_base_sensitivity_is_the_engines_own_ranging(self) -> None:
+        """The principal base book is an LP (spec0020 DIAG-002). Route ALPHA on SIM-AAA (2.50%,
+        lending 80) keeps the basis down to route BETA's coefficient (1.50%), below which BETA would
+        take the shares, and has no upper limit: 10 x 0.025 / 360 within [10 x 0.015 / 360, +inf)."""
+        response = run_book("principal")
+        base = response["artifacts"]["base_result"]
+        self.assertEqual(base["formulation"]["variant"], "lp")
+        self.assertEqual(base["formulation"]["integer_variable_count"], 0)
+        self.assertIsNone(base["sensitivity"])  # the guided steps solve without ranging
+        sensitivity = response["artifacts"]["base_sensitivity"]
+        self.assertTrue(sensitivity["available"])
+        alpha = next(item for item in sensitivity["objective_coefficients"]
+                     if item["variable"] == {"kind": "q", "scope_id": "RT-AAA-ALPHA"})
+        self.assertAlmostEqual(alpha["value"], 80.0)
+        self.assertAlmostEqual(alpha["coefficient"], 10 * 0.025 / 360)
+        self.assertAlmostEqual(alpha["coefficient_lower"], 10 * 0.015 / 360)
+        self.assertIsNone(alpha["coefficient_upper"])
+        self.assertIsNotNone(base["model_statistics"])
+        self.assertEqual(base["model_statistics"]["integer_variable_count"], 0)
+
     def test_unknown_book_is_refused(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unknown pinned showcase book"):
             run_book("main")

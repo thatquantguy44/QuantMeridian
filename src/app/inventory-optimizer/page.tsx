@@ -48,6 +48,8 @@ import { DEFAULT_WHAT_IF_IDS, WHAT_IF_SCENARIOS, knownScenarioIds, scenarioSynth
 import { compareBaseRuns, type BaseRunSnapshot, type DriverDelta, type DriverDimension } from "@/lib/ibalRunComparison";
 import { ScenarioSizingForm } from "./ScenarioSizingForm";
 import { StressSuitePanel } from "./StressSuitePanel";
+import { InfeasibilityTab, MipProgressView, SensitivityTab } from "./WorkbenchDiagnostics";
+import { ModelStatisticsView } from "./Diagnostics";
 import { PresenterBar, type PresenterStepView } from "./PresenterBar";
 import { PRESENTER_STEPS, currentStepIndex, warmUp } from "@/lib/ibalPresenter";
 import { fmtAbbr, fmtInt, fmtPct, fmtUsdAbbr } from "@/lib/format";
@@ -66,7 +68,7 @@ const MAX_SYNTHETIC_PARENT_GROUPS = 50;
 
 type PendingAction = { kind: "synthetic" } | { kind: "upload"; file: File };
 
-type ResultTab = "allocations" | "balances" | "demand" | "economics" | "constraints" | "diagnostics" | "raw";
+type ResultTab = "allocations" | "balances" | "demand" | "economics" | "constraints" | "sensitivity" | "infeasibility" | "diagnostics" | "raw";
 
 // `section` is the capability-manifest output section a tab renders; the tab shows only when the
 // pinned service advertises it (spec013 IBAL-002). Raw always shows the returned payload.
@@ -76,6 +78,8 @@ const RESULT_TABS: { value: ResultTab; label: string; section?: string }[] = [
   { value: "demand", label: "Demand", section: "demand" },
   { value: "economics", label: "Economics", section: "economics" },
   { value: "constraints", label: "Constraints", section: "constraints" },
+  { value: "sensitivity", label: "Sensitivity", section: "sensitivity" },
+  { value: "infeasibility", label: "Infeasibility", section: "infeasibility_explanation" },
   { value: "diagnostics", label: "Diagnostics", section: "solver" },
   { value: "raw", label: "Raw" },
 ];
@@ -470,7 +474,8 @@ export default function InventoryOptimizerPage() {
   const [capabilities, setCapabilities] = useState<IbalCapabilities | null>(null);
   const [synthetic, setSynthetic] = useState<SyntheticConfig>(() => sessionPrefs.synthetic ?? DEFAULT_SYNTHETIC_CONFIG);
   const [showAdvancedSynthetic, setShowAdvancedSynthetic] = useState(false);
-  const [runConfig, setRunConfig] = useState<RunConfig>(() => sessionPrefs.runConfig ?? DEFAULT_RUN_CONFIG);
+  // Saved preferences predate the diagnostics flags; defaults fill anything they do not set.
+  const [runConfig, setRunConfig] = useState<RunConfig>(() => ({ ...DEFAULT_RUN_CONFIG, ...(sessionPrefs.runConfig ?? {}) }));
   const [workflow, dispatchWorkflow] = useReducer(workflowReducer, sessionPrefs, initWorkflowState);
   const [baseRunHistory, setBaseRunHistory] = useState<BaseRunSnapshot[]>([]);
   const [baselineRunId, setBaselineRunId] = useState<string | null>(null);
@@ -1048,6 +1053,8 @@ export default function InventoryOptimizerPage() {
     try {
       const response = await runIbal(dataset, runConfig);
       setResult(response.result);
+      // Spec013 decision 2: an infeasible solve opens its explanation.
+      if (response.result.status === "infeasible") setResultTab("infeasibility");
       setBaseRunHistory((current) => current.some((run) => run.result.run_id === response.result.run_id)
         ? current
         : [...current, { dataset, result: response.result }]);
@@ -2080,6 +2087,10 @@ export default function InventoryOptimizerPage() {
               <DataGrid columns={constraintColumns} rows={viewResult?.constraints ?? []} rowKey={(row, i) => `${row.row.kind}-${row.row.scope_id}-${i}`} maxHeight="400px" initialSort={{ key: "slack", dir: "asc" }} zebra />
             )}
 
+            {shownResultTab === "sensitivity" && <SensitivityTab result={viewResult ?? null} dataset={viewDataset} runConfig={runConfig} />}
+
+            {shownResultTab === "infeasibility" && <InfeasibilityTab result={viewResult ?? null} dataset={viewDataset} runConfig={runConfig} />}
+
             {shownResultTab === "diagnostics" && (
               <div className="grid gap-2 p-2 text-2xs">
                 <div>
@@ -2102,6 +2113,14 @@ export default function InventoryOptimizerPage() {
                     <Stat label="Best Bound" value={viewResult?.solver?.best_bound != null ? fmtAbbr(viewResult.solver.best_bound) : "-"} />
                     <Stat label="Nodes" value={viewResult?.solver?.nodes != null ? fmtInt(viewResult.solver.nodes) : "-"} />
                   </div>
+                </div>
+                <div>
+                  <div className="term-label mb-1">Model</div>
+                  <div className="border border-term-border p-2"><ModelStatisticsView result={viewResult ?? null} /></div>
+                </div>
+                <div>
+                  <div className="term-label mb-1">MIP progress</div>
+                  <div className="border border-term-border p-2"><MipProgressView result={viewResult ?? null} /></div>
                 </div>
                 <div>
                   <div className="term-label mb-1">Verification</div>

@@ -10,10 +10,11 @@ from typing import Any
 from inventory_optimizer.config import InventoryOptimizerConfig
 from inventory_optimizer.demo.manifest import load_manifest
 from inventory_optimizer.demo.run import run_demo
+from inventory_optimizer.domain.requests import OptimizationRequest
+from inventory_optimizer.facade import InventoryOptimizer
 
 from .capabilities import manifest, require_compatible_engine
 from .engine_service import _optimizer
-
 
 ARTIFACTS = {
     "base_result": "01-base.result.json",
@@ -45,6 +46,14 @@ def catalog() -> dict[str, Any]:
     }
 
 
+def _base_sensitivity(optimizer: InventoryOptimizer, request_path: Path) -> dict[str, Any] | None:
+    if not request_path.is_file():
+        return None
+    request = OptimizationRequest.model_validate_json(request_path.read_text(encoding="utf-8"))
+    sensitivity = optimizer.optimize(request, run_id="demo-base-ranging", ranging=True).sensitivity
+    return sensitivity.model_dump(mode="json") if sensitivity is not None else None
+
+
 def run_book(book_id: str) -> dict[str, Any]:
     require_compatible_engine()
     source = load_manifest()
@@ -58,7 +67,11 @@ def run_book(book_id: str) -> dict[str, Any]:
         for label, filename in ARTIFACTS.items():
             path = Path(directory) / book_id / filename
             artifacts[label] = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
-    # No recomputed objective, feasibility, ranking or diagnosis is added here.
+        base_request = Path(directory) / book_id / "01-base.request.json"
+        artifacts["base_sensitivity"] = _base_sensitivity(optimizer, base_request)
+    # No recomputed objective, feasibility, ranking or diagnosis is added here. The one extra solve,
+    # `base_sensitivity`, re-solves the base book's own request with the engine's LP ranging on
+    # (spec0020 DIAG-002), because the guided demo steps solve without it.
     pin = manifest()
     return {
         "data_label": "SIM", "engine_commit": pin["engine_commit"],

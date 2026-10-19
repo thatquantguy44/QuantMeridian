@@ -60,7 +60,7 @@ InventoryBallast):
 
 | Workstream | Child spec (PR #151, merged; status as of 2026-10-18) | Code |
 | --- | --- | --- |
-| B — IBAL showcase: engine re-pin (merged InventoryBallast `main` `e84801b`), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` (approved 2026-10-17) | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
+| B — IBAL showcase: engine re-pin (now merged InventoryBallast `main` `a42dad3`, PR #40), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` (approved 2026-10-17) | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
 | C — Money market execution optimizer (`MMKT` module; terminal module and SIM path merged in PR #166) | `spec011` (approved 2026-10-18) | `services/money_market_api/` (port 8014), `src/app/money-market/` |
 | D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only and SU-SIM showcase in `main`, service not started) | `spec012` (approved 2026-10-18) | `services/sources_uses_api/` (port 8015, not yet created), `src/app/sources-uses/` |
 | E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` (draft, not approved) | `services/liquidity_api/` (port 8016), `/cash-optimizer/liquidity` (spec014 Q7) |
@@ -105,14 +105,14 @@ draft: **only owner approval remains** before liquidity code.
    1–4 and spec011 questions 1–3) and both specs were approved; the highest-value items are the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.
 
-**Current IBAL integration status (re-checked 2026-10-18):** InventoryBallast PR #34 is merged to
-`main`. The scenario integration (`codex/inventoryballast-scenario-integration`) is **merged in
-PR #154**: it pins engine commit `e84801b`, exposes the scenario catalog and stress runner, and
-surfaces driver deltas/reconciliations in Scenario Studio. The `spec013` owner decisions (IBAL-001,
-PR #158) and manifest gating plus contract parity (IBAL-003, PR #162) are also merged. Remaining
-`spec013` tasks: IBAL-002 (still `todo` in `TASKS.md`: the pin was bumped inside PR #154, but
-decision 1 requires a reviewed pin-only PR and the pin exposed through health), and IBAL-004–008
-(diagnostic tabs, Scenario Studio golden paths, presenter mode, provenance audit, white paper).
+**Current IBAL integration status (re-checked 2026-10-19):** the engine pin is InventoryBallast
+`main` `a42dad3` (PR #40, engine spec0020 solver diagnostics), bumped from `bb425cac` (PR #39) on the
+pin-only branch `feat/ibal-0020-pin` per spec013 decision 1. Stacked on it, `feat/ibal-0020-repin`
+adds `POST /v1/explain` and `POST /v1/sweep`, opt-in ranging and MIP progress on runs, the workbench
+Sensitivity and Infeasibility tabs, and model statistics, timings and MIP progress in Diagnostics
+(both branches pushed, no PR opened yet). `spec013` IBAL-001, -002, -003, -004, -005 and -007 are
+done; IBAL-006 (presenter mode: viewport/keyboard execution) and IBAL-008 (as-built evidence) are in
+progress. The showcase books are LPs, not MIPs; older notes saying otherwise were wrong.
 
 ## Cross-repo follow-up: EcoMedallion (MMKT rate feed) — tracked 2026-10-17
 

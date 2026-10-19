@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Panel, Tag } from "@/components/ui/Panel";
+import { ExplanationSummary, ModelStatisticsView, SensitivityView } from "@/app/inventory-optimizer/Diagnostics";
 import {
   getIbalShowcaseBooks, runIbalShowcase,
-  type IbalCapabilities, type IbalHealth, type IbalResult,
+  type IbalCapabilities, type IbalHealth, type IbalResult, type IbalSensitivity,
   type IbalShowcaseCatalog, type IbalShowcaseComparison, type IbalShowcaseRun,
 } from "@/lib/inventoryOptimizer";
 
@@ -80,7 +81,7 @@ function DomainDisclosures({ result, capabilities }: { result: IbalResult | null
   </div>;
 }
 
-function EngineDiagnostics({ result, capabilities }: { result: IbalResult | null; capabilities: IbalCapabilities | null }) {
+function EngineDiagnostics({ result, capabilities, sensitivity }: { result: IbalResult | null; capabilities: IbalCapabilities | null; sensitivity?: IbalSensitivity | null }) {
   if (!result || !capabilities) return null;
   return <div className="grid gap-2 text-[10px] sm:grid-cols-2">
     <details className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Solver and formulation</summary>
@@ -98,7 +99,8 @@ function EngineDiagnostics({ result, capabilities }: { result: IbalResult | null
       <DisclosureTable title="Demand and unfilled flow" value={result.demand} />
       <DisclosureTable title="Availability buffers" value={result.availability_buffers} />
       <DisclosureTable title="Concentration" value={result.concentration} />
-      <details className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Sensitivity scope</summary><p className="mt-1 text-term-text-mute">The pinned engine does not return LP ranging for these mixed integer showcase books. Shadow prices appear only when the engine supplies them; an unavailable value is never estimated in the terminal.</p></details>
+      <details className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Model statistics</summary><div className="mt-2"><ModelStatisticsView result={result} /></div></details>
+      {sensitivity !== undefined && <details className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Sensitivity ranges (base book)</summary><div className="mt-2"><SensitivityView sensitivity={sensitivity} maxRows={20} /></div></details>}
     </div>
   </div>;
 }
@@ -161,11 +163,11 @@ export function IbalShowcase({ health, capabilities }: { health: IbalHealth | nu
         <TrustStrip result={result ?? null} commit={run.engine_commit} />
         {step === "diagnose" && <div className="grid gap-2 sm:grid-cols-2"><DisclosureTable title="Unfilled demand" value={run.artifacts.diagnosis?.unfilled_demand} /><DisclosureTable title="Excluded sources" value={run.artifacts.diagnosis?.excluded_sources} /><DisclosureTable title="Coverage" value={run.artifacts.diagnosis?.coverage} /><DisclosureTable title="Reason codes" value={Object.entries(run.artifacts.diagnosis?.reason_codes ?? {}).map(([code, count]) => ({ code, count }))} /></div>}
         {(step === "base" || step === "shock" || step === "repair" || step === "diagnose") && <><BindingRows result={result ?? null} /><AllocationRows result={result ?? null} /></>}
-        <EngineDiagnostics result={result ?? null} capabilities={capabilities} />
+        <EngineDiagnostics result={result ?? null} capabilities={capabilities} sensitivity={step === "base" ? run.artifacts.base_sensitivity : undefined} />
         {comparison && <CompareRows comparison={comparison} />}
         {step === "compare" && <CompareRows comparison={run.artifacts.shock_comparison} />}
         <DomainDisclosures result={result ?? null} capabilities={capabilities} />
-        {step === "diagnose" && <details open={result?.status === "infeasible"} className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Infeasibility and sensitivity limits</summary><ul className="mt-1 list-inside list-disc text-term-text-mute">{(run.artifacts.diagnosis?.warnings ?? []).map((item) => <li key={item}>{item}</li>)}</ul></details>}
+        {step === "diagnose" && <details open={result?.status === "infeasible"} className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Infeasibility explanation</summary><ul className="mt-1 list-inside list-disc text-term-text-mute">{(run.artifacts.diagnosis?.warnings ?? []).map((item) => <li key={item}>{item}</li>)}</ul><ExplanationSummary explanation={run.artifacts.diagnosis?.infeasibility_explanation ?? null} /></details>}
       </>}
     </div>
   </Panel>;

@@ -104,6 +104,20 @@ aggregate solver budget. Borrower-default recovery is never inferred: omitted re
 The endpoint does not persist scenarios or results. Clients must retain the returned request,
 baseline, and generated scenario identities with any exported analysis.
 
+## Diagnostics API (engine spec0020)
+
+`POST /v1/runs` accepts `run_config.ranging` and `run_config.mip_progress` (both default false);
+the result then carries `sensitivity` and `mip_progress`, each with a stable `unavailable_reason`
+when the engine cannot produce it. Every result carries `model_statistics` and `timings`.
+
+`POST /v1/explain` takes a dataset and run configuration and returns the engine's elastic
+infeasibility explanation: which utilization limits must move, and how far, for the request to
+become feasible, or an outcome code saying why none does. It solves up to three models; nothing is
+applied to the request. `POST /v1/sweep` runs a one-parameter sweep (`route_fee_rate`,
+`demand_elasticity`, `utilization_minimum`, `utilization_maximum`) in `local` mode (LP ranging)
+or `scenario` mode (re-solve and verify each value, at most 25 solves). A sweep the engine refuses
+is a 422 `SWEEP_REJECTED` with the engine's message. Neither route needs an `Idempotency-Key`.
+
 To wire this into Market Terminal's own dev server: set the same
 `INVENTORY_OPTIMIZER_API_TOKEN` value in the repo root's `.env` (see `.env.example`), then
 (re)start `npm run dev` -- Vite only reads `.env` at startup, so an already-running dev server
