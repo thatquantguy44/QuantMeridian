@@ -5,13 +5,13 @@
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
-| IND-T01 | Resolve SPEC decisions 1–8 and record them in the decision log. | IND-001–018 | blocked | Decisions 1–2 recorded 2026-10-19; decisions 3–8 open |
+| IND-T01 | Resolve SPEC decisions 1–8 and record them in the decision log. | IND-001–019 | blocked | Decisions 1–3 recorded 2026-10-19; decisions 4–8 open |
 | IND-T02 | Rename "BlueCrest" in `econEnhancements.ts` and add it to the `REAL_FIRMS` pattern. | AC-007 | todo | Fictional-counterparty test fails before the rename and passes after |
 | IND-T03 | Define versioned snapshot, result and model-card contracts. | IND-001, IND-014 | todo | JSON schemas with TS/Python parity fixtures |
 | IND-T04 | Build the deterministic synthetic book: loans, collateral, margin and borrower credit inputs. | IND-002 | todo | Fixed-seed golden test; reconciles to SLAB if decision 8 is to extend it |
 | IND-T04a | Add the versioned illustrative rating-to-PD table and the per-borrower spread override, with source labels. | IND-018 | todo | Hand-computed hazard and PD for both sources; fallback when the override is removed (AC-011) |
 | IND-T05 | Implement factor market paths with jumps for hard-to-borrow names. | IND-003 | todo | Moment tests against analytic mean and variance; jump frequency test |
-| IND-T06 | Implement copula default times with the wrong-way term and a ρ_W = 0 run on the same random numbers. | IND-004, IND-007 | todo | Marginal PD recovered within standard error; correlation monotonicity |
+| IND-T06 | Implement Gaussian copula default times with the wrong-way term, a ρ_W = 0 run, and the Student-t sensitivity, all on the same random numbers. | IND-004, IND-007, IND-019 | todo | Marginal PD recovered within standard error; correlation monotonicity; Student-t checks (AC-012) |
 | IND-T06a | Implement the reinvestment pool: position revaluation, issuer default, return hazard, payment waterfall and forced sales. | IND-015 | todo | All-overnight pool has zero loss; single-asset hand case (AC-009) |
 | IND-T07 | Implement close-out with margin lag, MPOR, liquidity costs, FX, and cash collateral at realizable pool value. | IND-005, IND-016 | todo | Hand-computable single-path cases; zero-loss limit cases (AC-004) |
 | IND-T08 | Implement EE, EPE, PFE, EL, VaR, expected shortfall, standard errors and the convergence check. | IND-006 | todo | Closed-form single-loan match (AC-002); determinism (AC-001) |

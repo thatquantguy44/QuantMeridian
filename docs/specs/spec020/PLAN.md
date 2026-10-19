@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decisions 1–2 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Draft — pending owner review; decisions 1–3 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-19
 
 ## Approach
@@ -21,7 +21,8 @@ The terminal builds a versioned, hashed snapshot of the lending book (loans, col
 - Each borrower has a constant hazard rate (decision 2). By default it comes from the illustrative rating-to-PD table: λ = −ln(1 − PD₁ᵧ). If the user enters a spread s with recovery R for that borrower, it overrides the table: λ = s / (1 − R). Each borrower's source (`RATING_TABLE` or `USER_SPREAD`) is carried into the results and the model card.
 - Dependence: a one-factor copula. Borrower i defaults by time t when Φ⁻¹(U_i) ≤ Φ⁻¹(PD_i(t)), with the latent variable X_i = ρ_W · Z_eq + √(ρ_D − ρ_W²) · Z_sys + √(1 − ρ_D) · ε_i. Z_eq is the simulated equity factor, which links defaults to market moves (wrong-way risk). Z_sys is a shared credit factor, which links defaults to each other.
 - Setting ρ_W = 0 gives the "no wrong-way" run (IND-007) with the same random numbers, so the difference is not Monte Carlo noise.
-- The Student-t copula is an optional sensitivity (decision 3).
+- Starting values (decision 3, illustrative and configurable): ρ_D = 0.25, ρ_W = 0.30. Inputs must satisfy ρ_W² ≤ ρ_D.
+- Student-t sensitivity (IND-019): on each path, every X_i is divided by a shared √(W/ν), with W ~ χ²(ν) and ν = 5, and default thresholds use Student-t quantiles so that marginal PDs are unchanged. It reuses the Gaussian run's random draws, so the difference shows only the effect of tail dependence.
 
 ### 3. Close-out at default
 
@@ -91,6 +92,7 @@ Indemnification cost (bps per year) = (EL + cost of capital × capital measure) 
 - **Limits:** zero PD, zero volatility, full overcollateralization, and MPOR → 0 must give zero default loss. An all-overnight pool must give zero reinvestment loss.
 - **Reinvestment hand cases:** a single term asset with a set spread shock and return wave against a hand-computed forced-sale loss.
 - **Monotonicity:** in ρ_W, MPOR, margin and volatility, on a fixed seed.
+- **Copula checks:** the Student-t run recovers marginal PDs, has heavier joint-default tails than the Gaussian run, and converges to it as ν grows.
 - **Consistency:** Euler sum equals the total; channel losses sum to the total on every path; per-owner sums equal per-borrower sums; the same random numbers are used across the with and without wrong-way runs.
 - **Determinism:** golden outputs per seed; contract parity between the TypeScript and Python fixtures.
 - **Naming:** all fixtures pass the fictional-counterparty test.

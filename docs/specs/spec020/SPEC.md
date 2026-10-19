@@ -2,7 +2,7 @@
 
 - **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
-- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–2 resolved 2026-10-19; decisions 3–8 are open.
+- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–3 resolved 2026-10-19; decisions 4–8 are open.
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
 - **Last updated:** 2026-10-19
@@ -72,6 +72,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | IND-016 | Value cash collateral at the pool's realizable value, not par, in the default close-out (IND-005). | must |
 | IND-017 | Report losses by channel (default shortfall, reinvestment loss) for every metric in IND-006, IND-008 and IND-011, and allocate reinvestment losses to beneficial owners pro rata to their share of the pool. | must |
 | IND-018 | Derive each borrower's default probabilities from an illustrative rating-to-PD table, unless the user enters a credit spread for that borrower, which then overrides the table. Show which source each borrower uses. | must |
+| IND-019 | Run the Gaussian copula as the main model and a Student-t copula with the same marginal PDs as a sensitivity, and report the program loss quantiles and expected shortfall under both. | must |
 
 ## Acceptance Criteria
 
@@ -86,12 +87,13 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 - **AC-009:** A pool held entirely in overnight cash-equivalent buckets has zero reinvestment loss. A pool with a single term asset and a hand-set spread shock and return wave matches a hand-computed forced-sale loss.
 - **AC-010:** Channel totals add up to the total loss on every path, and owner allocations of the reinvestment loss add up to the pool loss.
 - **AC-011:** A borrower with a user-entered spread s and recovery R gets hazard s / (1 − R) and PD(t) = 1 − exp(−t · s / (1 − R)), matching a hand calculation. Removing the spread falls back to the rating table, and the source label changes with it.
+- **AC-012:** The Student-t run recovers each borrower's marginal PD within standard error, has heavier joint-default tails than the Gaussian run on the same seed, and converges to the Gaussian result as degrees of freedom grow. Parameters with ρ_W² > ρ_D are rejected with an explanation.
 
 ## Decisions required before implementation
 
 1. ~~**Indemnification scope.** Borrower-default shortfall only, or also cash collateral reinvestment losses?~~ **Resolved 2026-10-19:** both. See the decision log.
 2. ~~**Credit inputs.** Rating-to-PD lookup table, user-entered spreads, or both?~~ **Resolved 2026-10-19:** both; spreads override the table per borrower. See the decision log.
-3. **Dependence model.** One-factor Gaussian copula linking defaults to the equity factor (recommended), with a Student-t copula as a sensitivity? Default correlation and wrong-way parameters?
+3. ~~**Dependence model.** Gaussian, Gaussian plus Student-t sensitivity, or Student-t?~~ **Resolved 2026-10-19:** Gaussian main model with a Student-t sensitivity. See the decision log.
 4. **Close-out and liquidity.** Default close-out period by asset class (proposed: 5 business days for liquid equities and government bonds, 10 for others and hard-to-borrow names), and the liquidity cost formula and its parameters.
 5. **Horizon and paths.** Proposed horizon of 1 year with weekly steps; 50,000 paths for reported figures, with a smaller run for interactive sensitivities. Accept?
 6. **Capital and pricing.** Should IND-012 use the comprehensive approach exposure, Monte Carlo VaR99.9, or both for the capital charge? What illustrative cost-of-capital rate?
@@ -108,6 +110,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 |---|---|---|
 | 2026-10-19 | **Decision 1 resolved — indemnification covers borrower-default shortfall and cash collateral reinvestment losses.** This goes beyond the market-standard agency indemnity, where reinvestment losses sit with the beneficial owner, and is a deliberate choice for this program. The service therefore models the reinvestment pool (IND-015), values cash collateral at the pool's realizable value at default (IND-016), and reports the two channels separately (IND-017) so each can be read and priced on its own. Reinvestment pool inputs follow the shape of `src/data/reinvestment.ts`. | Owner |
 | 2026-10-19 | **Decision 2 resolved — credit inputs use a rating-to-PD table, overridable per borrower by a user-entered credit spread.** Every borrower has a rating, and the table maps rating to a 1-year PD, extended to a term structure with a constant hazard rate. The table is a versioned fixture labelled illustrative. If the user enters a spread for a borrower, the hazard rate becomes spread / (1 − recovery) and replaces the table value for that borrower. Recovery is entered with the spread (default 40%, labelled illustrative). The first release takes one flat spread per borrower. Each borrower shows its source (`RATING_TABLE` or `USER_SPREAD`) in the UI and in the model card. A live source of credit data still needs its own decision. | Owner |
+| 2026-10-19 | **Decision 3 resolved — one-factor Gaussian copula as the main model, with a Student-t copula as a sensitivity.** Each borrower's latent variable is X_i = ρ_W · Z_eq + √(ρ_D − ρ_W²) · Z_sys + √(1 − ρ_D) · ε_i, so ρ_D is the pairwise default correlation and ρ_W is the wrong-way link to the simulated equity factor. The Student-t run divides every X_i on a path by a shared √(W/ν), with W drawn from χ²(ν), and uses Student-t quantiles so that each borrower keeps its marginal PD. Starting values, all configurable and labelled illustrative: ρ_D = 0.25, ρ_W = 0.30, ν = 5. Inputs must satisfy ρ_W² ≤ ρ_D. Both runs use the same random draws. | Owner |
 
 ## Related documents
 
