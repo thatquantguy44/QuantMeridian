@@ -1053,6 +1053,8 @@ export default function InventoryOptimizerPage() {
     try {
       const response = await runIbal(dataset, runConfig);
       setResult(response.result);
+      // Spec013 decision 2: an infeasible solve opens its explanation.
+      if (response.result.status === "infeasible") setResultTab("infeasibility");
       setBaseRunHistory((current) => current.some((run) => run.result.run_id === response.result.run_id)
         ? current
         : [...current, { dataset, result: response.result }]);

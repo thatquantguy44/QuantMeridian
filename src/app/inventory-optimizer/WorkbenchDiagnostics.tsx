@@ -1,7 +1,7 @@
 // Workbench views for engine spec0020 diagnostics (spec013 IBAL-004): LP sensitivity ranges, the
 // one-parameter sweep, the elastic infeasibility explanation, and the MIP progress trace. Each
 // calls the pinned engine through the IBAL service and shows only what it returns.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   explainIbal,
   sweepIbal,
@@ -135,37 +135,52 @@ export function SensitivityTab({ result, dataset, runConfig }: { result: IbalRes
   );
 }
 
-/** The elastic infeasibility explanation (DIAG-003), on request. Nothing is applied. */
+// Explanations already fetched, by run id, so returning to the tab does not re-solve.
+const explained = new Map<string, IbalInfeasibilityExplanation>();
+
+/** The elastic infeasibility explanation (DIAG-003). Spec013 decision 2: it opens, and is fetched,
+ * automatically only when the run is infeasible. Nothing is applied. */
 export function InfeasibilityTab({ result, dataset, runConfig }: { result: IbalResult | null; dataset: DatasetEnvelope | null; runConfig: RunConfig }) {
-  const [explanation, setExplanation] = useState<IbalInfeasibilityExplanation | null>(null);
-  const [forRun, setForRun] = useState<string | null>(null);
+  const runId = result?.run_id ?? null;
+  const infeasible = result?.status === "infeasible";
+  const [shown, setShown] = useState<{ runId: string; explanation: IbalInfeasibilityExplanation | null; error: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  if (!result) return <p className="p-2 text-2xs text-term-text-mute">No run yet.</p>;
-  const current = forRun === result.run_id ? explanation : null;
+  const cached = runId ? explained.get(runId) ?? null : null;
+  const current = cached ?? (shown?.runId === runId ? shown?.explanation ?? null : null);
+  const error = shown?.runId === runId ? shown?.error ?? null : null;
+
   const explain = async () => {
-    if (!dataset) return;
+    if (!dataset || !runId) return;
     setBusy(true);
-    setError(null);
     try {
-      setExplanation((await explainIbal(dataset, runConfig)).explanation);
-      setForRun(result.run_id);
+      const explanation = (await explainIbal(dataset, runConfig)).explanation;
+      if (explained.size >= 20) explained.clear();
+      explained.set(runId, explanation);
+      setShown({ runId, explanation, error: null });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Explanation failed.");
+      setShown({ runId, explanation: null, error: err instanceof Error ? err.message : "Explanation failed." });
     } finally {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (infeasible && runId && dataset && !explained.has(runId)) void explain();
+    // Fetch once per infeasible run; a failure is shown with a retry button, not retried in a loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId, infeasible]);
+
+  if (!result) return <p className="p-2 text-2xs text-term-text-mute">No run yet.</p>;
   return (
     <div className="space-y-2 p-2 text-[10px]">
       <p className="text-term-text-dim">
-        {result.status === "infeasible"
-          ? "This run is infeasible. The engine can solve a separate diagnostic model in which only utilization limits may stretch, and report how far. It never changes the request or this result."
+        {infeasible
+          ? "This run is infeasible. The engine solves a separate diagnostic model in which only utilization limits may stretch, and reports how far. It never changes the request or this result."
           : `This run is ${result.status}; the explanation applies to infeasible runs.`}
       </p>
-      <button type="button" className="term-btn" disabled={!dataset || busy || result.status !== "infeasible"} onClick={() => void explain()}>
-        {busy ? "Explaining…" : "Explain infeasibility"}
-      </button>
+      {infeasible && (busy
+        ? <p className="text-term-text-mute">Explaining…</p>
+        : error && <button type="button" className="term-btn" disabled={!dataset} onClick={() => void explain()}>Retry explanation</button>)}
       {error && <p role="alert" className="text-term-down">{error}</p>}
       <ExplanationSummary explanation={current} />
     </div>

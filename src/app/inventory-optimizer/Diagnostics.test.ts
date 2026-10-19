@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { IbalInfeasibilityExplanation, IbalResult, IbalSensitivity } from "@/lib/inventoryOptimizer";
 import { ExplanationSummary, SensitivityView, reasonText } from "./Diagnostics";
-import { MipProgressView } from "./WorkbenchDiagnostics";
+import { InfeasibilityTab, MipProgressView } from "./WorkbenchDiagnostics";
 
 const sensitivity = (extra: Partial<IbalSensitivity> = {}): IbalSensitivity => ({
   available: true,
@@ -71,5 +71,14 @@ describe("engine diagnostics views", () => {
     expect(html).toContain("(formulation_has_no_integer_variables)");
     expect(html).not.toContain("<table");
     expect(renderToStaticMarkup(createElement(MipProgressView, { result: null }))).toContain("not requested");
+  });
+
+  it("offers the explanation only for an infeasible run, without a manual button", () => {
+    const render = (status: string) => renderToStaticMarkup(createElement(InfeasibilityTab, {
+      result: { run_id: `run-${status}`, status } as unknown as IbalResult, dataset: null, runConfig: {} as never,
+    }));
+    expect(render("infeasible")).toContain("This run is infeasible.");
+    expect(render("infeasible")).not.toContain("<button");
+    expect(render("optimal")).toContain("This run is optimal; the explanation applies to infeasible runs.");
   });
 });
