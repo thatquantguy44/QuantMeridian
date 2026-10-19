@@ -69,6 +69,7 @@ async function audit(page: Page, region: string, label: string) {
 /** Tab from the top of the page and report which controls of the region never receive focus. */
 async function unreachableByTab(page: Page, region: string, limit = 600): Promise<string[]> {
   const total = await page.evaluate(({ region, controls }) => {
+    document.querySelectorAll("[data-kb-probe]").forEach((el) => el.removeAttribute("data-kb-probe"));
     const items = [...(document.querySelector(region)?.querySelectorAll(controls) ?? [])]
       .filter((el) => !(el as HTMLButtonElement).disabled && el.getBoundingClientRect().width > 0);
     items.forEach((el, index) => el.setAttribute("data-kb-probe", String(index)));
@@ -82,9 +83,36 @@ async function unreachableByTab(page: Page, region: string, limit = 600): Promis
     const probe = await page.evaluate(() => document.activeElement?.closest("[data-kb-probe]")?.getAttribute("data-kb-probe") ?? null);
     if (probe !== null) reached.add(probe);
   }
-  return page.evaluate((seen) => [...document.querySelectorAll("[data-kb-probe]")]
+  return page.evaluate(({ region, seen }) => [...(document.querySelector(region)?.querySelectorAll("[data-kb-probe]") ?? [])]
     .filter((el) => !seen.includes(el.getAttribute("data-kb-probe")!))
-    .map((el) => (el.getAttribute("aria-label") || el.textContent || el.tagName).trim().slice(0, 40)), [...reached]);
+    .map((el) => (el.getAttribute("aria-label") || el.textContent || el.tagName).trim().slice(0, 40)), { region, seen: [...reached] });
+}
+
+/** Spec013 decision 3: after the guided sequence, edit the base request by hand (route BETA's fee
+ * to 3%), solve it, and see it labelled user-edited and compared with the base solve. */
+async function userEdited(page: Page, region: string) {
+  const panel = page.getByTestId("showcase-user-edited");
+  await panel.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  expect(await unreachableByTab(page, '[data-testid="showcase-user-edited"]'), "user-edited controls unreachable by Tab").toEqual([]);
+  await page.getByLabel("Edited request starting point").selectOption("base");
+  const editor = page.getByLabel("Edited request JSON");
+  await editor.fill("{ not json");
+  await page.getByRole("button", { name: "Solve edited request" }).click();
+  await expect(panel.getByRole("alert")).toContainText("not valid JSON");
+  await page.getByRole("button", { name: "Reset edit" }).click();
+  const request = JSON.parse(await editor.inputValue()) as { routes: { route_id: string; fee_rate: number }[] };
+  request.routes.find((route) => route.route_id === "RT-AAA-BETA")!.fee_rate = 0.03;
+  await editor.fill(JSON.stringify(request, null, 2));
+  const solve = page.getByRole("button", { name: "Solve edited request" });
+  await solve.focus();
+  await page.keyboard.press("Enter");
+  const result = page.getByTestId("showcase-user-edited-result");
+  await expect(result.getByRole("status")).toHaveText("USER-EDITED · optimal, verified", { timeout: 60_000 });
+  // 10 x (60 x 0.03 + 40 x 0.025 - 20 x 0.015 - 80 x 0.025) / 360 USD over the base solve.
+  await expect(result).toContainText("User-edited vs base:");
+  await expect(result).toContainText("objective Δ 0.013889 USD");
+  await audit(page, region, "principal · user-edited");
 }
 
 async function openWorkbench(page: Page) {
@@ -163,6 +191,7 @@ for (const viewport of VIEWPORTS) {
             await expect(showcase.getByText(/Elastic diagnostic:/)).toBeVisible();
           }
           await audit(page, region, `${book} · ${step}`);
+          if (book === "principal" && step === "compare") await userEdited(page, region);
           if (index < STEPS.length - 1) {
             await page.getByRole("button", { name: "Next →" }).focus();
             await page.keyboard.press("Enter");

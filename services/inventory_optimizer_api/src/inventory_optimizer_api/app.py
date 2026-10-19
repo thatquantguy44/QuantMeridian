@@ -41,6 +41,7 @@ from .engine_service import (  # noqa: E402
 )
 from .synthetic import generate_dataset  # noqa: E402
 from .showcase import catalog as showcase_catalog, run_book as run_showcase_book  # noqa: E402
+from .showcase import ShowcaseEditRejected, run_edited as run_showcase_edited  # noqa: E402
 from .templates import json_template, workbook_template  # noqa: E402
 from .upload import MAX_UPLOAD_BYTES, UploadValidationError, parse_upload  # noqa: E402
 
@@ -174,6 +175,58 @@ async def post_showcase_run(
     except TimeoutError:
         return _error(504, "SHOWCASE_TIMEOUT", "timeout", "Pinned showcase run timed out.", correlation_id=correlation_id)
     emit("showcase_run", correlation_id=correlation_id, book_id=payload["book_id"], passed=response["report"]["passed"])
+    return response
+
+
+@app.post("/v1/showcase/edited-runs", response_model=None)
+async def post_showcase_edited_run(
+    payload: dict[str, Any],
+    correlation_id: Annotated[str, Depends(require_service_auth)],
+    _: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+) -> dict[str, Any] | JSONResponse:
+    if (
+        set(payload) != {"book_id", "request"}
+        or not isinstance(payload.get("book_id"), str)
+        or not isinstance(payload.get("request"), dict)
+    ):
+        return _error(
+            422, "SHOWCASE_EDIT_INVALID", "validation",
+            "Send one pinned showcase book and one edited request.", correlation_id=correlation_id,
+        )
+    try:
+        async with SOLVE_SLOTS:
+            response = await asyncio.wait_for(
+                asyncio.to_thread(run_showcase_edited, payload["book_id"], payload["request"]),
+                timeout=120,
+            )
+    except ShowcaseEditRejected as error:
+        return _error(
+            422, "SHOWCASE_EDIT_REJECTED", "validation", "The engine rejected the edited request.",
+            issues=tuple(
+                LocatedIssue(code="SHOWCASE_EDIT_REJECTED", location="request", message=message)
+                for message in error.messages
+            ),
+            correlation_id=correlation_id,
+        )
+    except ValueError:
+        return _error(
+            422, "SHOWCASE_BOOK_UNKNOWN", "validation", "Unknown pinned showcase book.",
+            correlation_id=correlation_id,
+        )
+    except RuntimeError:
+        return _error(
+            503, "ENGINE_INCOMPATIBLE", "unavailable", "Pinned optimizer engine is not ready.",
+            correlation_id=correlation_id,
+        )
+    except TimeoutError:
+        return _error(
+            504, "SHOWCASE_TIMEOUT", "timeout", "Edited showcase run timed out.",
+            correlation_id=correlation_id,
+        )
+    emit(
+        "showcase_edited_run", correlation_id=correlation_id, book_id=payload["book_id"],
+        status=response["edited_result"]["status"],
+    )
     return response
 
 

@@ -620,6 +620,8 @@ export interface IbalShowcaseRun {
   report: { banner: string[]; data_label: "SIM"; passed: boolean; books: string[];
     governance_gates_granted: string[]; steps: IbalShowcaseStep[]; config_hash: string; solver_backend: string };
   artifacts: {
+    // The requests the base and repair steps solved: the starting points for a user-edited run.
+    base_request: Record<string, unknown> | null; repair_request: Record<string, unknown> | null;
     base_result: IbalResult | null; shock_result: IbalResult | null;
     shock_comparison: IbalShowcaseComparison | null;
     diagnosis: { feasible: boolean; binding_constraints: { kind: string; scope_id: string; slack: number; dual_value: number | null }[];
@@ -630,6 +632,15 @@ export interface IbalShowcaseRun {
     // A separate ranging solve of the base book's request (the guided steps solve without ranging).
     base_sensitivity: IbalSensitivity | null;
   };
+}
+
+/** Spec013 decision 3: a hand-edited request solved by the engine after the guided sequence and
+ * compared with the book's base solve the same way as the repair. Labelled user-edited. */
+export interface IbalShowcaseEditedRun {
+  data_label: "SIM"; label: "user-edited"; book_id: string;
+  engine_commit: string; engine_fingerprint: string; governance_gates_granted: string[];
+  base_result: IbalResult; edited_result: IbalResult;
+  comparison: IbalShowcaseComparison | null; comparison_skipped_reason: string | null;
 }
 
 export const DEFAULT_SYNTHETIC_CONFIG: SyntheticConfig = {
@@ -706,6 +717,13 @@ export async function runIbalShowcase(bookId: string): Promise<IbalShowcaseRun> 
   return parseJson<IbalShowcaseRun>(await fetch("/api/inventory-optimizer/showcase/runs", {
     method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
     body: JSON.stringify({ book_id: bookId }),
+  }));
+}
+
+export async function runIbalShowcaseEdited(bookId: string, request: Record<string, unknown>): Promise<IbalShowcaseEditedRun> {
+  return parseJson<IbalShowcaseEditedRun>(await fetch("/api/inventory-optimizer/showcase/edited-runs", {
+    method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
+    body: JSON.stringify({ book_id: bookId, request }),
   }));
 }
 

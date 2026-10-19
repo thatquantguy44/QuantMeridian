@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Panel, Tag } from "@/components/ui/Panel";
 import { ExplanationSummary, ModelStatisticsView, SensitivityView } from "@/app/inventory-optimizer/Diagnostics";
 import {
-  getIbalShowcaseBooks, runIbalShowcase,
+  getIbalShowcaseBooks, IbalRequestError, runIbalShowcase, runIbalShowcaseEdited,
   type IbalCapabilities, type IbalHealth, type IbalResult, type IbalSensitivity,
-  type IbalShowcaseCatalog, type IbalShowcaseComparison, type IbalShowcaseRun,
+  type IbalShowcaseCatalog, type IbalShowcaseComparison, type IbalShowcaseEditedRun, type IbalShowcaseRun,
 } from "@/lib/inventoryOptimizer";
 
 const STEPS = ["base", "shock", "diagnose", "repair", "compare"] as const;
@@ -105,6 +105,61 @@ function EngineDiagnostics({ result, capabilities, sensitivity }: { result: Ibal
   </div>;
 }
 
+/** Spec013 decision 3: after the guided sequence the presenter may edit a request by hand. The
+ * engine solves it and compares it with the book's base solve the same way as the repair; the run
+ * is labelled user-edited. The terminal only sends the edited JSON and renders what comes back. */
+function UserEditedRun({ run, bookId, commit }: { run: IbalShowcaseRun; bookId: string; commit: string }) {
+  const [from, setFrom] = useState<"repair" | "base">("repair");
+  const start = (which: "repair" | "base") => JSON.stringify((which === "repair" ? run.artifacts.repair_request : run.artifacts.base_request) ?? {}, null, 2);
+  const [text, setText] = useState(() => start("repair"));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ message: string; issues: string[] } | null>(null);
+  const [edited, setEdited] = useState<IbalShowcaseEditedRun | null>(null);
+  if (!run.artifacts.repair_request && !run.artifacts.base_request) return null;
+
+  async function solve() {
+    setBusy(true); setError(null); setEdited(null);
+    try {
+      let request: unknown;
+      try { request = JSON.parse(text); } catch { throw new IbalRequestError("The edited request is not valid JSON."); }
+      if (!request || typeof request !== "object" || Array.isArray(request)) throw new IbalRequestError("The edited request must be a JSON object.");
+      const response = await runIbalShowcaseEdited(bookId, request as Record<string, unknown>);
+      if (response.engine_commit !== commit) throw new IbalRequestError("The edited run does not match the reviewed engine pin.");
+      setEdited(response);
+    } catch (cause) {
+      setError({ message: cause instanceof Error ? cause.message : "The edited run failed.",
+        issues: cause instanceof IbalRequestError ? cause.issues.map((issue) => issue.message) : [] });
+    } finally { setBusy(false); }
+  }
+
+  return <details className="rounded border border-term-border p-2" data-testid="showcase-user-edited">
+    <summary className="cursor-pointer font-semibold text-term-text">Continue with your own edit <span className="font-mono text-term-amber">USER-EDITED</span></summary>
+    <div className="mt-2 space-y-2">
+      <p className="text-term-text-mute">Edit the request below and solve it. The engine compares the result with this book&apos;s base solve, as it compared the repair. The run is labelled user-edited; it is not one of the pinned guided steps.</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-term-text-dim">Start from
+          <select aria-label="Edited request starting point" value={from} onChange={(event) => { const next = event.target.value as "repair" | "base"; setFrom(next); setText(start(next)); setEdited(null); setError(null); }} className="mt-1 block rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text">
+            <option value="repair">Repaired request</option>
+            <option value="base">Base request</option>
+          </select>
+        </label>
+        <button type="button" className="term-btn" onClick={() => { setText(start(from)); setEdited(null); setError(null); }}>Reset edit</button>
+        <button type="button" className="rounded bg-term-amber px-3 py-1.5 font-semibold text-black disabled:opacity-40" disabled={busy} onClick={() => void solve()}>{busy ? "Solving edited request…" : "Solve edited request"}</button>
+      </div>
+      <textarea aria-label="Edited request JSON" value={text} onChange={(event) => setText(event.target.value)} spellCheck={false} rows={12} className="block w-full rounded border border-term-border bg-term-panel-2 p-2 font-mono text-[10px] text-term-text" />
+      {error && <div role="alert" className="rounded border border-term-down/40 bg-term-down/10 p-2 text-term-down">{error.message}{error.issues.length > 0 && <ul className="mt-1 list-inside list-disc">{error.issues.map((item) => <li key={item}>{item}</li>)}</ul>}</div>}
+      {edited && <div className="space-y-2" data-testid="showcase-user-edited-result">
+        <p role="status" className="text-term-text"><span className="font-mono text-term-amber">USER-EDITED</span> · {edited.edited_result.status}, {edited.edited_result.verification?.passed ? "verified" : "not verified"}</p>
+        <TrustStrip result={edited.edited_result} commit={edited.engine_commit} />
+        {edited.comparison ? <><p className="text-term-text-dim">User-edited vs base:</p><CompareRows comparison={edited.comparison} /></>
+          : <p className="text-term-text-mute">No comparison: {edited.comparison_skipped_reason}.</p>}
+        <BindingRows result={edited.edited_result} />
+        <AllocationRows result={edited.edited_result} />
+      </div>}
+    </div>
+  </details>;
+}
+
 export function IbalShowcase({ health, capabilities }: { health: IbalHealth | null; capabilities: IbalCapabilities | null }) {
   const [catalog, setCatalog] = useState<IbalShowcaseCatalog | null>(null);
   const [bookId, setBookId] = useState("principal");
@@ -166,6 +221,7 @@ export function IbalShowcase({ health, capabilities }: { health: IbalHealth | nu
         <EngineDiagnostics result={result ?? null} capabilities={capabilities} sensitivity={step === "base" ? run.artifacts.base_sensitivity : undefined} />
         {comparison && <CompareRows comparison={comparison} />}
         {step === "compare" && <CompareRows comparison={run.artifacts.shock_comparison} />}
+        {step === "compare" && run.report.passed && <UserEditedRun key={`${bookId}:${run.report.config_hash}`} run={run} bookId={bookId} commit={run.engine_commit} />}
         <DomainDisclosures result={result ?? null} capabilities={capabilities} />
         {step === "diagnose" && <details open={result?.status === "infeasible"} className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Infeasibility explanation</summary><ul className="mt-1 list-inside list-disc text-term-text-mute">{(run.artifacts.diagnosis?.warnings ?? []).map((item) => <li key={item}>{item}</li>)}</ul><ExplanationSummary explanation={run.artifacts.diagnosis?.infeasibility_explanation ?? null} /></details>}
       </>}

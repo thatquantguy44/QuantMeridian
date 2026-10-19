@@ -8,19 +8,25 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 from inventory_optimizer.config import InventoryOptimizerConfig
-from inventory_optimizer.demo.manifest import load_manifest
+from inventory_optimizer.demo.manifest import ShowcaseBook, load_book_request, load_manifest
 from inventory_optimizer.demo.run import run_demo
 from inventory_optimizer.domain.requests import OptimizationRequest
+from inventory_optimizer.domain.scenarios import Scenario
+from inventory_optimizer.exceptions import InputValidationError
 from inventory_optimizer.facade import InventoryOptimizer
+from inventory_optimizer.scenarios.compare import build_scenario_comparison
+from pydantic import ValidationError
 
 from .capabilities import manifest, require_compatible_engine
 from .engine_service import _optimizer
 
 ARTIFACTS = {
+    "base_request": "01-base.request.json",
     "base_result": "01-base.result.json",
     "shock_result": "02-shock.result.json",
     "shock_comparison": "02-shock.comparison.json",
     "diagnosis": "03-diagnose.json",
+    "repair_request": "04-repair.request.json",
     "repair_result": "04-repair.result.json",
     "repair_comparison": "05-compare.comparison.json",
 }
@@ -77,4 +83,76 @@ def run_book(book_id: str) -> dict[str, Any]:
         "data_label": "SIM", "engine_commit": pin["engine_commit"],
         "engine_fingerprint": pin["engine_fingerprint"],
         "report": report.model_dump(mode="json"), "artifacts": artifacts,
+    }
+
+
+EDITED_LABEL = "user-edited"
+
+
+class ShowcaseEditRejected(ValueError):
+    """The engine refused the hand-edited request; ``messages`` say why."""
+
+    def __init__(self, messages: list[str]) -> None:
+        super().__init__("; ".join(messages))
+        self.messages = messages
+
+
+def _book(book_id: str) -> ShowcaseBook:
+    book = next((item for item in load_manifest().books if item.book_id == book_id), None)
+    if book is None:
+        raise ValueError("Unknown pinned showcase book.")
+    return book
+
+
+def run_edited(book_id: str, request_payload: dict[str, Any]) -> dict[str, Any]:
+    """Spec013 decision 3: after the guided sequence the presenter may edit a request by hand. The
+    engine solves it and compares it with the book's base solve exactly as the demo compares the
+    repair (``build_scenario_comparison``). The run is labelled ``user-edited``; a run that is not
+    optimal and verified is returned without a comparison, as the demo skips one."""
+    require_compatible_engine()
+    book = _book(book_id)
+    try:
+        edited_request = OptimizationRequest.model_validate(request_payload)
+    except ValidationError as error:
+        raise ShowcaseEditRejected(
+            [
+                f"{'.'.join(str(part) for part in item['loc']) or 'request'}: {item['msg']}"
+                for item in error.errors()[:10]
+            ]
+        ) from error
+    optimizer = _optimizer(InventoryOptimizerConfig.model_validate({}))
+    base_request = load_book_request(book)
+    base = optimizer.optimize(base_request, run_id=f"demo-{book_id}-base")
+    try:
+        edited = optimizer.optimize(edited_request, run_id=f"demo-{book_id}-{EDITED_LABEL}")
+    except InputValidationError as error:
+        raise ShowcaseEditRejected([str(error)]) from error
+    comparable = edited.status.value == "optimal" and edited.verification.passed
+    comparison = (
+        build_scenario_comparison(
+            scenario=Scenario(scenario_id=EDITED_LABEL, name="User-edited request"),
+            baseline_request=base_request,
+            baseline_result=base,
+            scenario_request=edited_request,
+            scenario_result=edited,
+            config=optimizer.config,
+        )
+        if comparable
+        else None
+    )
+    pin = manifest()
+    return {
+        "data_label": "SIM", "label": EDITED_LABEL, "book_id": book_id,
+        "engine_commit": pin["engine_commit"], "engine_fingerprint": pin["engine_fingerprint"],
+        "governance_gates_granted": [],
+        # The engine's own JSON serialization, as for the guided artifacts
+        # (non-finite bounds become null).
+        "base_result": json.loads(base.model_dump_json()),
+        "edited_result": json.loads(edited.model_dump_json()),
+        "comparison": json.loads(comparison.model_dump_json()) if comparison is not None else None,
+        "comparison_skipped_reason": None if comparable else (
+            f"the edited request solved {edited.status.value} with verification "
+            f"{'passed' if edited.verification.passed else 'not passed'}; "
+            "only an optimal, verified run is compared"
+        ),
     }
