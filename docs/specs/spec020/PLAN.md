@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decisions 1–4 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Draft — pending owner review; decisions 1–5 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-19
 
 ## Approach
@@ -10,9 +10,23 @@ The terminal builds a versioned, hashed snapshot of the lending book (loans, col
 
 ## Model
 
+### 0. Run modes (decision 5)
+
+| | Desk view (default) | Annual view |
+|---|---|---|
+| Book | Today's actual loans. Term loans run to maturity; open loans follow the return assumption (section 4). | Constant book: at each roll date, matured and returned loans are replaced with the same positions, and margin is reset. |
+| Horizon | 1 month (21 business days) | 1 year |
+| Step | Daily | Weekly, with daily steps inside each close-out period |
+| Feeds | EE and PFE profile, stresses, reinvestment liquidity ladder | Annual EL, indemnification cost against fee (IND-012), capital charge, annual VaR and expected shortfall |
+
+- Both modes use the same random draws, settings and close-out profile, so differences come from the book and horizon alone.
+- Paths: 50,000 for reported figures and 5,000 for interactive previews, which are labelled as previews.
+- Configurable within limits: horizon 1 month to 5 years; daily, weekly or monthly steps; 1,000 to 500,000 paths. Values outside the limits are rejected before simulation.
+- Every result records its mode, horizon, step and path count.
+
 ### 1. Market paths
 
-- Factors: equity index, rates level, credit spread, and FX for each non-USD currency, as correlated Gaussian shocks over weekly steps.
+- Factors: equity index, rates level, credit spread, and FX for each non-USD currency, as correlated Gaussian shocks over the run mode's time grid (section 0).
 - Each loaned security or collateral asset has a factor beta and its own idiosyncratic volatility. Bonds are priced with duration and convexity against the rates and spread factors.
 - Hard-to-borrow names get a Merton jump component (upward jumps), so short squeezes appear in the tail of the loaned-security side.
 
@@ -107,6 +121,7 @@ Indemnification cost (bps per year) = (EL + cost of capital × capital measure) 
 
 ## UI (first release)
 
+- Mode switch between the desk view (default) and the annual view, with the horizon and path count always visible.
 - Program header: EL, PFE99 peak, VaR99.9, expected shortfall, the share of risk from wrong-way effects, and the split between default and reinvestment channels.
 - Borrower table: exposure, collateral, margin %, PD, EL, PFE99, Euler contribution, comprehensive approach E*, fee, indemnification cost, and flag.
 - EE and PFE profile chart for the selected borrower, with and without wrong-way risk.
@@ -125,6 +140,7 @@ Indemnification cost (bps per year) = (EL + cost of capital × capital measure) 
 - **Profile checks:** the default profile reproduces the decision 4 values; each override level changes only its own positions; precedence is respected; out-of-range and unknown settings are rejected.
 - **Copula checks:** the Student-t run recovers marginal PDs, has heavier joint-default tails than the Gaussian run, and converges to it as ν grows.
 - **Consistency:** Euler sum equals the total; channel losses sum to the total on every path; per-owner sums equal per-borrower sums; the same random numbers are used across the with and without wrong-way runs.
+- **Run modes:** a term loan stops contributing exposure after maturity in the desk view; book size and mix stay constant at each roll date in the annual view; both modes reuse the same random draws.
 - **Determinism:** golden outputs per seed; contract parity between the TypeScript and Python fixtures.
 - **Naming:** all fixtures pass the fictional-counterparty test.
 

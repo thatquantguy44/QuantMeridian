@@ -2,7 +2,7 @@
 
 - **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
-- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–4 resolved 2026-10-19; decisions 5–8 are open.
+- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–5 resolved 2026-10-19; decisions 6–8 are open.
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
 - **Last updated:** 2026-10-19
@@ -32,7 +32,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 
 ## Goals
 
-- Simulate correlated borrower defaults and market moves over a stated horizon.
+- Simulate correlated borrower defaults and market moves in two run modes: a short-horizon desk view of today's book and an annual view of a constant book.
 - Compute, for each borrower and at program level: expected exposure (EE) and expected positive exposure (EPE) profiles, PFE at 95% and 99%, expected indemnification loss (EL), and 99% and 99.9% loss quantiles and expected shortfall.
 - Make wrong-way risk explicit, and show results with and without it.
 - Model reinvestment pool losses on both default and non-default paths, and report them as a separate channel from the default shortfall.
@@ -65,7 +65,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | IND-009 | Compute a deterministic Basel comprehensive approach exposure (E* = max(0, E(1+He) − C(1−Hc−Hfx))) per netting set as an independent cross-check, with the haircut table labelled illustrative. | must |
 | IND-010 | Run sensitivities of EL and PFE99 to margin level, close-out period, correlation and collateral substitution, and to any other numeric parameter in the close-out profile (IND-020). | must |
 | IND-011 | Run named deterministic stress scenarios and report shortfall by borrower and owner. | must |
-| IND-012 | Express indemnification cost in bps per year per borrower (EL plus a capital charge at a configurable cost-of-capital rate) next to fee earned, and flag borrowers whose fee does not cover it. | should |
+| IND-012 | Using the annual view (IND-021), express indemnification cost in bps per year per borrower (EL plus a capital charge at a configurable cost-of-capital rate) next to fee earned, and flag borrowers whose fee does not cover it. | should |
 | IND-013 | Show results in the terminal with source, as-of date, seed, model version and `SIM` labels, and show missing inputs as unavailable, never filled with synthetic data. | must |
 | IND-014 | Record a model card for each run: version, input hash, seed, path count, convergence and validation results. | must |
 | IND-015 | Simulate the cash collateral reinvestment pool: each position's value under credit spread moves and issuer default, loan returns and recalls paid from the most liquid buckets first, and forced sales of term assets at a stressed liquidity cost. | must |
@@ -74,6 +74,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | IND-018 | Derive each borrower's default probabilities from an illustrative rating-to-PD table, unless the user enters a credit spread for that borrower, which then overrides the table. Show which source each borrower uses. | must |
 | IND-019 | Run the Gaussian copula as the main model and a Student-t copula with the same marginal PDs as a sensitivity, and report the program loss quantiles and expected shortfall under both. | must |
 | IND-020 | Take close-out and liquidity settings from a named, versioned close-out profile in which every parameter is user-configurable. Overrides apply in order (position, then borrower, then asset class or pool bucket, then global default), and stress scenarios can override any of them. Invalid values are rejected with an explanation, and every result reports the effective values it used. | must |
+| IND-021 | Support two run modes. The desk view (default) simulates today's actual book over 1 month in daily steps. The annual view simulates a constant book, rolled and re-margined, over 1 year in weekly steps with daily steps inside close-out periods. Horizon, step and path count are configurable within set limits, and every result states which mode, horizon, step and path count produced it. | must |
 
 ## Acceptance Criteria
 
@@ -90,6 +91,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 - **AC-011:** A borrower with a user-entered spread s and recovery R gets hazard s / (1 − R) and PD(t) = 1 − exp(−t · s / (1 − R)), matching a hand calculation. Removing the spread falls back to the rating table, and the source label changes with it.
 - **AC-012:** The Student-t run recovers each borrower's marginal PD within standard error, has heavier joint-default tails than the Gaussian run on the same seed, and converges to the Gaussian result as degrees of freedom grow. Parameters with ρ_W² > ρ_D are rejected with an explanation.
 - **AC-013:** The default profile reproduces the decision 4 values exactly. An override at each level changes only the positions it covers, a higher level wins over a lower one, and the effective values reported for each position match the precedence rule. Out-of-range values are rejected before any simulation runs.
+- **AC-014:** The two modes use the same random draws, settings and close-out profile. In the desk view a term loan stops contributing exposure after its maturity date. In the annual view, book size and mix stay constant at each roll date. Settings outside the limits are rejected before any simulation runs. Results never mix the two modes without labelling each figure.
 
 ## Decisions required before implementation
 
@@ -97,7 +99,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 2. ~~**Credit inputs.** Rating-to-PD lookup table, user-entered spreads, or both?~~ **Resolved 2026-10-19:** both; spreads override the table per borrower. See the decision log.
 3. ~~**Dependence model.** Gaussian, Gaussian plus Student-t sensitivity, or Student-t?~~ **Resolved 2026-10-19:** Gaussian main model with a Student-t sensitivity. See the decision log.
 4. ~~**Close-out and liquidity.** Close-out periods and the liquidity cost formula.~~ **Resolved 2026-10-19:** proposed values accepted as defaults, with every setting configurable. See the decision log.
-5. **Horizon and paths.** Proposed horizon of 1 year with weekly steps; 50,000 paths for reported figures, with a smaller run for interactive sensitivities. Accept?
+5. ~~**Horizon and paths.**~~ **Resolved 2026-10-19:** two run modes, desk view (1 month, default) and annual view (1 year). See the decision log.
 6. **Capital and pricing.** Should IND-012 use the comprehensive approach exposure, Monte Carlo VaR99.9, or both for the capital charge? What illustrative cost-of-capital rate?
 7. **Placement.** New service `services/indemnification_api` on port 8018 (8013–8017 are taken), and a route at `/securities-lending/indemnification` behind a new `INDEM` toggle, or a tab on the SLAB page?
 8. **Book source.** Build an INDEM-only synthetic book, or extend `src/data/securitiesLending.ts` with collateral holdings and margin (and link it to the reinvestment pool in `src/data/reinvestment.ts`) so SLAB, the reinvestment view and INDEM show the same book? Extending is recommended so the two views reconcile.
@@ -114,6 +116,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | 2026-10-19 | **Decision 2 resolved — credit inputs use a rating-to-PD table, overridable per borrower by a user-entered credit spread.** Every borrower has a rating, and the table maps rating to a 1-year PD, extended to a term structure with a constant hazard rate. The table is a versioned fixture labelled illustrative. If the user enters a spread for a borrower, the hazard rate becomes spread / (1 − recovery) and replaces the table value for that borrower. Recovery is entered with the spread (default 40%, labelled illustrative). The first release takes one flat spread per borrower. Each borrower shows its source (`RATING_TABLE` or `USER_SPREAD`) in the UI and in the model card. A live source of credit data still needs its own decision. | Owner |
 | 2026-10-19 | **Decision 3 resolved — one-factor Gaussian copula as the main model, with a Student-t copula as a sensitivity.** Each borrower's latent variable is X_i = ρ_W · Z_eq + √(ρ_D − ρ_W²) · Z_sys + √(1 − ρ_D) · ε_i, so ρ_D is the pairwise default correlation and ρ_W is the wrong-way link to the simulated equity factor. The Student-t run divides every X_i on a path by a shared √(W/ν), with W drawn from χ²(ν), and uses Student-t quantiles so that each borrower keeps its marginal PD. Starting values, all configurable and labelled illustrative: ρ_D = 0.25, ρ_W = 0.30, ν = 5. Inputs must satisfy ρ_W² ≤ ρ_D. Both runs use the same random draws. | Owner |
 | 2026-10-19 | **Decision 4 resolved — the proposed close-out and liquidity values are the defaults, and every setting is configurable.** Default close-out periods (business days): 5 for liquid equities and G7 government bonds; 10 for other bonds, smaller-company equities and emerging markets; 10 for hard-to-borrow or concentrated positions (over 25% of average daily volume); 5 for forced sales of TERM reinvestment assets. Default liquidity cost: k · σ_daily · (q / ADV)^α with k = 0.5 and α = 0.5. All defaults are labelled illustrative. The owner asked for the settings to be extremely customizable, so they live in a named, versioned close-out profile (IND-020, PLAN section 3a). The extra settings it adds (spread floor, cost cap, stress multiplier, unwind schedule, margin-call frequency, close-out add-on days) are neutral by default, so the default profile gives exactly the values above. | Owner |
+| 2026-10-19 | **Decision 5 resolved — two run modes, with the short-horizon desk view as the default.** A static one-year projection is unrealistic for a book of mostly open, recallable loans with daily margining, but annual figures are still needed for pricing and capital. **Desk view (default):** today's actual book over 1 month (21 business days) in daily steps; term loans run to maturity and open loans follow the return assumption. It drives the exposure profile, PFE, stress tests and the reinvestment liquidity ladder. **Annual view:** a constant book, rolled and re-margined so size and mix stay the same, over 1 year in weekly steps with daily steps inside each close-out period. It drives annual expected loss, indemnification cost against fees, the capital charge and annual tail loss. Both modes share random draws, settings and the close-out profile. Defaults: 50,000 paths for reported figures and 5,000 for interactive previews, which are labelled as previews. Configurable limits: horizon 1 month to 5 years; daily, weekly or monthly steps; 1,000 to 500,000 paths. Convergence check: halving the path count moves results by less than 2 standard errors. | Owner |
 
 ## Related documents
 
