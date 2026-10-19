@@ -57,9 +57,21 @@
 | Model line | Model package version and full commit, adapter version, and the input hash. |
 | **Export preview JSON** | Downloads the full run, snapshot, lineage and verifier result as a local file. |
 
-### Operational runs and audit panel (`RUNS`)
+### Session run log panel (`RUNS`)
 
-A placeholder. It will list runs, schedules and audit events once Spec015's registry exists.
+Every model run this terminal server forwarded to IBAL, MMKT or COLL since it started, newest first (the newest 200). It is tagged `NOT PERSISTED`.
+
+| Column | Meaning |
+|---|---|
+| **Model**, **Kind** | The service, and whether it was a single run, an IBAL stress batch or an IBAL showcase run |
+| **Run** | The service's run id (`showcase:<book>` for a showcase run); `—` when the run did not complete |
+| **Status** | The service's own status, or its error code with the HTTP status when it refused or failed (red) |
+| **Verified** | The service's own verification verdict; `—` when it returned none |
+| **Solve** | Solve time the service reported; `—` when it reports none (MMKT and COLL do not) |
+| **Round trip** | Time from this server to the service and back, measured here |
+| **Source**, **Input hash** | The run's source label (for example `synthetic`, `SIM`, `sim:<set>`) and the service's input hash |
+
+Only metadata is kept: no request rows, allocations or objective values. A request the terminal rejects before calling a service is not a run and is not listed; a timeout or unreachable service is. The log lives in server memory and is lost on restart. It is not an audit record: schedules, audit events and durable storage wait for Spec015's registry. S&U and liquidity runs appear once those services exist.
 
 ## Assumptions and defaults
 
@@ -85,6 +97,9 @@ Each model optimizes something different (lending value, collateral cost, money-
 
 ### The preview shows "Modeled savings: Unavailable". Is something broken?
 No. Savings are only shown against a valid current posting with a verified target. On the upstream baseline book you should see a saving; on a stressed book the current posting may be invalid.
+
+### Why did the run log empty itself?
+The terminal server restarted. The log is held in memory only.
 
 ### Is the exported JSON an audit record?
 No. It is a local preview file. There is no audited run store yet.

@@ -52,6 +52,10 @@ The terminal classifies each service into one of four health states:
 
 The preview sends one request to the collateral service: solve the upstream model's own synthetic book, scenario `baseline`. The service solves it with the pinned InventoryBallast collateral optimizer, then re-runs the model's independent verifier on the answer. OPT shows the target cost, modeled savings and coverage only if that verification passes.
 
+### The session run log
+
+The terminal's own server routes are the only path from the browser to a model service, so they record each model run they forward: IBAL runs, stress batches and showcase runs, MMKT runs and COLL runs. Each entry keeps the run id, the service's own status or error code, its verification verdict, the solve time it reports, the round trip measured by the terminal, the source label and the input hash. Nothing else from the request or result is kept. The log holds the newest 200 entries in server memory and is served at `GET /api/optimization/runs`. It satisfies "OPT lists the runs with their real status and timing" for a local demonstration; it is not the durable, audited registry Spec015 describes.
+
 ### The launcher
 
 The model list is built from the same navigation registry as the sidebar, so a module switched off by configuration disappears from both places. Where a service has a live connection row, its card carries the same health tag as the connections panel.
@@ -83,6 +87,7 @@ Service URLs and tokens stay on the terminal's server. The browser only calls sa
 - **Target cost:** the verified collateral cost over the modeled horizon, in USD.
 - **Modeled savings:** target cost compared with the book's current posting. Shown as `Unavailable` when the current posting is itself invalid or there is no verified target.
 - **Coverage:** the number of margin calls the verified answer covers.
+- **Session run log:** a red status is a service refusal or failure with its own code; `—` under Verified means the service returned no verdict, never that verification passed.
 
 ## Validation
 
@@ -92,7 +97,8 @@ Service URLs and tokens stay on the terminal's server. The browser only calls sa
 
 ## Limitations
 
-- No run history, schedules, queue, comparisons or audit trail yet. These are Spec015 deliverables.
+- The session run log is in memory, capped at 200 entries and lost on restart. Durable run history, schedules, queue, comparisons and audit trail are Spec015 deliverables.
+- MMKT and COLL report no solve time, so only the measured round trip is shown for them.
 - Health is a point-in-time probe. Press **Refresh status** to re-check.
 - The preview's exported JSON is a local file, not an audited record.
 

@@ -19,6 +19,7 @@
 - MMKT now runs end to end: `services/money_market_api` solves an independently verified continuous LP on named SIM rate sets (spec011), so its run endpoint no longer returns `501 MODEL_NOT_IMPLEMENTED`. Its Spec015 binding is still unregistered; the Optimization Center shows `BINDING UNCONFIGURED`.
 - The Optimization Center and COLL read service results only: generated runs, duals, trades and the client-side collateral what-if estimate are removed from the connected path (spec016 COLL-007). OPT also reports IBAL, gated by its pinned engine (`ENGINE_PINNED`).
 - No durable run registry, schedules, comparisons or audit trail exist yet; those remain the open Spec015 deliverables.
+- OPT now shows a **session run log** (InventoryBallast 0018 T-015): metadata of each IBAL, MMKT and COLL run the terminal's server routes forwarded, held in server memory (newest 200) and lost on restart. It is labelled `NOT PERSISTED` and is not this spec's registry: identity, immutable storage, authorization and append-only audit remain open.
 
 ## Summary
 

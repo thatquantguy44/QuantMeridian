@@ -69,6 +69,10 @@ InventoryBallast):
 
 The OPT page's fabricated "Gurobi"/"OR-Tools" runs are replaced by real run history from all
 four services (REQ-029). Every number shown must come from a verified solve or a labeled input.
+**2026-10-19:** the fabricated runs are gone, and OPT's `RUNS` panel is a session run log of every
+IBAL, MMKT and COLL run the terminal's server routes forward (metadata only, in memory, newest 200,
+`NOT PERSISTED`; `src/lib/server/runLog.ts`, `GET /api/optimization/runs`). S&U and liquidity join
+when their services exist; a durable, audited registry is still spec015 (draft).
 
 **Owner decisions (2026-10-17)** — do not re-open:
 

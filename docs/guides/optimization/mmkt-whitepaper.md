@@ -226,7 +226,7 @@ When the ticket cap binds (all 12 used), relaxing it may raise return; when a fl
 - WAM and WAL are maturity-date proxies; fund holdings are treated as maturing on 10-30.
 - Constant rates through the horizon; no forward curve.
 - Ticketed solves take seconds, not milliseconds (about 16 s for the base case).
-- Real Gold rates and current positions are not connected; there is no durable run history (OPT).
+- Real Gold rates and current positions are not connected; there is no durable run history (OPT lists each run's metadata in an in-memory session log only).
 
 ## Status and governance
 
