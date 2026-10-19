@@ -120,7 +120,17 @@ Besides the synthetic books, the pinned engine ships three checked-in SIM books 
 | Agency | Owner economics, bound mandates and indemnification disclosures |
 | Prime | A deliberately infeasible shock (no allocation), then a verified repair; the diagnosis shows coverage and excluded-source evidence |
 
-The mixed-integer showcase books return no LP ranging or sensitivity intervals, and the engine does not yet provide an IIS or feasibility relaxation for infeasible runs (InventoryBallast spec0020). The terminal shows those as unavailable and never estimates MIP shadow prices. The as-built note is `docs/whitepapers/ibal_showcase.md`.
+The showcase books are LPs. The base step shows the engine's LP sensitivity ranges for the principal book, and the prime book's planned infeasibility carries the engine's elastic explanation (`no_relaxable_rows`: the book has no utilization limit to relax, so the cause is the hard coverage requirement). The terminal never estimates a shadow price or range itself. The as-built note is `docs/whitepapers/ibal_showcase.md`.
+
+### Solver diagnostics (engine spec0020)
+
+| Where | What the engine returns |
+|---|---|
+| **Diagnostics tab** | Model statistics on every run: variable, row, nonzero and integer counts, the value ranges of the constraint matrix, objective, bounds and row limits (as HiGHS prints them), a warning when any range spans more than 10⁶, and compile, solve and verify timings. For a MIP, the incumbent and bound trace. |
+| **Sensitivity tab** | For an optimal LP, the interval each route coefficient and each row limit can move over with the current solution still optimal, and the objective at each end. A one-parameter sweep (route fee, demand elasticity, minimum or maximum utilization) gives the local range from the same ranging, or re-solves a grid of up to 25 values, refining where the binding rows change, and verifies every point. |
+| **Infeasibility tab** | For an infeasible run, opened automatically: the engine solves a separate model in which only utilization limits may stretch and reports which limits must move and how far, or why no such move restores feasibility. Nothing is applied to the request. |
+
+When a diagnostic does not apply, the engine says why with a stable reason code (for example `formulation_not_continuous_lp`, `formulation_has_no_integer_variables`, `parameter_moves_more_than_one_model_entry`); the terminal shows the code with a plain-language gloss.
 
 ## Data and provenance
 
@@ -182,6 +192,7 @@ On the default synthetic book (balanced, small, seed 1701) the base case solves 
 | **Balances** | Per position: lendable, reserved, committed, on loan before and after, available after, utilization. |
 | **Demand** | Per group: reference, raw (after elasticity) and effective cap, filled, unfilled and fill ratio. |
 | **Constraints** | Every row with its activity, slack and dual value. Slack of zero means binding. |
+| **Sensitivity range** | For an LP, how far a coefficient or limit can move before the solution changes. A narrow range on a route fee means a small repricing would move shares. |
 | **Dual value** | For an LP, the change in objective per unit of the row's limit. A binding counterparty limit with a large dual is worth renegotiating. |
 | **Before / After panel** | The same result as a story: on-loan bridge, demand fill, inventory concentration treemap, top route movers, inventory impact, demand shortfall and reason-code totals. |
 | **Engine stress results** | For each shock: status, verification, objective change and entity-level driver deltas, with a reconciliation residual per dimension. |
@@ -199,13 +210,14 @@ On the default synthetic book (balanced, small, seed 1701) the base case solves 
 - Synthetic books are illustrative. They establish that the pipeline works, not that the economics match any real desk.
 - Quote-expiry and balance-sheet-haircut shocks are unsupported for the securities-lending family and are hidden.
 - Reinvestment income, dynamic reserve buffers, richer collateral schedules, agency and prime variants, robust optimization and exact mixed-integer quadratic solving are not implemented in the pinned engine.
-- Dual values are meaningful for LP runs only.
+- Dual values and sensitivity ranges are meaningful for LP runs only; for a MIP the engine returns a reason code instead.
+- The infeasibility explanation relaxes only utilization limits. It is not an irreducible infeasible subsystem (IIS): when the cause is another rule, such as hard client coverage, it says no utilization change helps rather than naming the rule.
 - There is no run registry: results live in the browser session and in exported files.
 
 ## Status and governance
 
-- **Spec:** Spec013 (approved 2026-10-17). Done: decisions, engine pin (IBAL-002), contract parity, Scenario Studio (IBAL-005) and provenance and gates (IBAL-007). In progress: diagnostic tabs (IBAL-004), presenter mode and guided showcase (IBAL-006) and the as-built evidence (IBAL-008).
-- **Engine pin:** InventoryBallast commit `bb425cac10d1da29e74fe8f854fd41b31f460773` (InventoryBallast PR #39), package 0.1.0, checked at readiness against a source fingerprint. The pin is a commit, never a branch name.
+- **Spec:** Spec013 (approved 2026-10-17). Done: decisions, engine pin (IBAL-002), contract parity, diagnostic tabs (IBAL-004), Scenario Studio (IBAL-005) and provenance and gates (IBAL-007). In progress: presenter mode and guided showcase (IBAL-006) and the as-built evidence (IBAL-008).
+- **Engine pin:** InventoryBallast commit `a42dad30dc3ebb80d2790fd8701e621af0a35fcb` (InventoryBallast PR #40, solver diagnostics), package 0.1.0, checked at readiness against a source fingerprint. The pin is a commit, never a branch name.
 - **Gates:** no G2D, G2E or G3 governance gate is granted; every showcase response says so.
 - **Production:** disabled unless an operator sets `IBAL_PRODUCTION_ENABLED` and a trusted access boundary.
 
