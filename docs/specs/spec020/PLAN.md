@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; parameters below are proposals until the SPEC decisions are resolved
+- **Status:** Draft — pending owner review; decision 1 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-19
 
 ## Approach
@@ -28,22 +28,32 @@ The terminal builds a versioned, hashed snapshot of the lending book (loans, col
 At default time τ, for borrower b:
 
 - Loaned value at buy-in: Σ q · P(τ + MPOR) · (1 + liquidity cost). MPOR is the close-out period. Liquidity cost is a square-root impact term, k · σ · √(q / ADV).
-- Collateral proceeds: Σ c · C(τ + MPOR) · (1 − liquidity cost) · FX(τ + MPOR).
+- Collateral proceeds: Σ c · C(τ + MPOR) · (1 − liquidity cost) · FX(τ + MPOR). Cash collateral is valued at the pool's realizable value at τ + MPOR (section 4), not par (IND-016).
 - Shortfall_b = max(0, loaned value − collateral proceeds). The collateral is the amount held at the last margin call before τ, so the margin lag is modelled.
 - Losses are kept per beneficial owner as well as per borrower, so they can be traced to the client being indemnified.
 
-### 4. Metrics
+### 4. Reinvestment pool (decision 1)
+
+- Positions follow `src/data/reinvestment.ts`: liquidity bucket (T+0, T+1, T+7, TERM), credit bucket (HQLA, AGENCY, A1/P1, BANK, CREDIT), allocation, yield, WAM and WAL.
+- Each position is revalued every step with spread duration against the credit spread factor for its credit bucket. BANK and CREDIT issuers can also default, from a hazard rate with a fixed recovery.
+- Cash owed back: on every path, open loans are returned or recalled according to a return hazard, and more of them are returned when markets are stressed (tied to the equity and spread factors). Defaulted borrowers' cash collateral is also drawn at close-out.
+- Payment waterfall: returns are paid from T+0, then T+1, then T+7 buckets. Any excess forces a sale of TERM assets at the marked price less a liquidity cost that widens with the credit spread factor.
+- Reinvestment loss = par paid out − realized proceeds, plus the shortfall of the pool's mark-to-market against cash owed at the horizon.
+- Losses are allocated to beneficial owners pro rata to their share of the pool.
+- Every loss metric is reported by channel (default shortfall, reinvestment) and in total (IND-017).
+
+### 5. Metrics
 
 - **Exposure profile:** EE(t) = E[max(0, L(t) − C(t))] over the exposure grid, plus EPE and PFE95/99(t).
 - **Loss:** EL = E[Σ shortfall · 1{τ ≤ T}], VaR99, VaR99.9, and expected shortfall of the program loss.
 - **Allocation:** Euler contributions to expected shortfall, computed as each borrower's average loss on tail paths.
 - **Standard errors:** reported for EL and from batch means for the quantiles. A convergence check shows that halving the path count moves results by less than 2 standard errors.
 
-### 5. Regulatory cross-check
+### 6. Regulatory cross-check
 
 The Basel comprehensive approach for securities financing transactions: E* = max(0, E(1+He) − C(1−Hc−Hfx)), with supervisory haircuts scaled to the close-out period by √(MPOR/10). This is closed form and needs no simulation. It is shown next to Monte Carlo PFE99 as a reasonableness bound, not as capital.
 
-### 6. Sensitivities and stresses
+### 7. Sensitivities and stresses
 
 - **Sensitivity grid:** margin 102%–110%, MPOR 3–20 days, ρ_W 0–0.5, and collateral substitution (move one borrower from equity to government collateral). Uses common random numbers so the curves are smooth.
 - **Named stresses (deterministic):**
@@ -51,8 +61,9 @@ The Basel comprehensive approach for securities financing transactions: E* = max
   - Squeeze: +60% on the most concentrated hard-to-borrow loan, and its borrower defaults.
   - Rates shock: +150bp against government collateral.
   - FX shock: 15% move against cross-currency collateral.
+  - Reinvestment pool run: +200bp on BANK and CREDIT spreads, one BANK issuer default, and 30% of loans returned within one week.
 
-### 7. Pricing view
+### 8. Pricing view
 
 Indemnification cost (bps per year) = (EL + cost of capital × capital measure) / average loan value. It is shown next to the borrower's average fee. A borrower whose cost is above, say, half its fee is flagged for review. The threshold is configurable.
 
@@ -66,19 +77,21 @@ Indemnification cost (bps per year) = (EL + cost of capital × capital measure) 
 
 ## UI (first release)
 
-- Program header: EL, PFE99 peak, VaR99.9, expected shortfall, and the share of risk from wrong-way effects.
+- Program header: EL, PFE99 peak, VaR99.9, expected shortfall, the share of risk from wrong-way effects, and the split between default and reinvestment channels.
 - Borrower table: exposure, collateral, margin %, PD, EL, PFE99, Euler contribution, comprehensive approach E*, fee, indemnification cost, and flag.
 - EE and PFE profile chart for the selected borrower, with and without wrong-way risk.
 - Sensitivity tab: EL and PFE99 against margin, MPOR and ρ_W.
+- Reinvestment tab: pool composition by bucket, liquidity ladder against simulated return waves, and reinvestment loss by owner.
 - Stress tab: shortfall by borrower and beneficial owner for each named scenario.
 - Model card drawer: seed, paths, standard errors, convergence, input hash, version.
 
 ## Validation strategy
 
 - **Closed forms:** a single loan with independent default against PD × E[shortfall]; Gaussian gap moments; comprehensive approach hand cases.
-- **Limits:** zero PD, zero volatility, full overcollateralization, and MPOR → 0 must give zero loss.
+- **Limits:** zero PD, zero volatility, full overcollateralization, and MPOR → 0 must give zero default loss. An all-overnight pool must give zero reinvestment loss.
+- **Reinvestment hand cases:** a single term asset with a set spread shock and return wave against a hand-computed forced-sale loss.
 - **Monotonicity:** in ρ_W, MPOR, margin and volatility, on a fixed seed.
-- **Consistency:** Euler sum equals the total; per-owner sums equal per-borrower sums; the same random numbers are used across the with and without wrong-way runs.
+- **Consistency:** Euler sum equals the total; channel losses sum to the total on every path; per-owner sums equal per-borrower sums; the same random numbers are used across the with and without wrong-way runs.
 - **Determinism:** golden outputs per seed; contract parity between the TypeScript and Python fixtures.
 - **Naming:** all fixtures pass the fictional-counterparty test.
 
@@ -87,7 +100,7 @@ Indemnification cost (bps per year) = (EL + cost of capital × capital measure) 
 1. Resolve SPEC decisions 1–8 and fix the BlueCrest naming issue.
 2. Define snapshot and result contracts with fixtures.
 3. Build the synthetic book generator (extending SLAB, if decision 8 says so).
-4. Build market paths, then default times, then close-out, each with golden tests.
+4. Build market paths, then default times, then the reinvestment pool, then close-out, each with golden tests.
 5. Add metrics, standard errors, Euler allocation and the model card.
 6. Add the comprehensive approach cross-check, sensitivities and stresses.
 7. Add service auth, health, terminal route composition and UI.
