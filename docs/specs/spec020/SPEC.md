@@ -2,7 +2,7 @@
 
 - **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
-- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–3 resolved 2026-10-19; decisions 4–8 are open.
+- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–4 resolved 2026-10-19; decisions 5–8 are open.
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
 - **Last updated:** 2026-10-19
@@ -63,7 +63,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | IND-007 | Report every metric with wrong-way correlation on and with it set to zero, and show the difference. | must |
 | IND-008 | Allocate program expected shortfall to borrowers with Euler contributions that sum to the total within Monte Carlo tolerance. | must |
 | IND-009 | Compute a deterministic Basel comprehensive approach exposure (E* = max(0, E(1+He) − C(1−Hc−Hfx))) per netting set as an independent cross-check, with the haircut table labelled illustrative. | must |
-| IND-010 | Run sensitivities of EL and PFE99 to margin level, close-out period, correlation and collateral substitution. | must |
+| IND-010 | Run sensitivities of EL and PFE99 to margin level, close-out period, correlation and collateral substitution, and to any other numeric parameter in the close-out profile (IND-020). | must |
 | IND-011 | Run named deterministic stress scenarios and report shortfall by borrower and owner. | must |
 | IND-012 | Express indemnification cost in bps per year per borrower (EL plus a capital charge at a configurable cost-of-capital rate) next to fee earned, and flag borrowers whose fee does not cover it. | should |
 | IND-013 | Show results in the terminal with source, as-of date, seed, model version and `SIM` labels, and show missing inputs as unavailable, never filled with synthetic data. | must |
@@ -73,6 +73,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | IND-017 | Report losses by channel (default shortfall, reinvestment loss) for every metric in IND-006, IND-008 and IND-011, and allocate reinvestment losses to beneficial owners pro rata to their share of the pool. | must |
 | IND-018 | Derive each borrower's default probabilities from an illustrative rating-to-PD table, unless the user enters a credit spread for that borrower, which then overrides the table. Show which source each borrower uses. | must |
 | IND-019 | Run the Gaussian copula as the main model and a Student-t copula with the same marginal PDs as a sensitivity, and report the program loss quantiles and expected shortfall under both. | must |
+| IND-020 | Take close-out and liquidity settings from a named, versioned close-out profile in which every parameter is user-configurable. Overrides apply in order (position, then borrower, then asset class or pool bucket, then global default), and stress scenarios can override any of them. Invalid values are rejected with an explanation, and every result reports the effective values it used. | must |
 
 ## Acceptance Criteria
 
@@ -88,13 +89,14 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 - **AC-010:** Channel totals add up to the total loss on every path, and owner allocations of the reinvestment loss add up to the pool loss.
 - **AC-011:** A borrower with a user-entered spread s and recovery R gets hazard s / (1 − R) and PD(t) = 1 − exp(−t · s / (1 − R)), matching a hand calculation. Removing the spread falls back to the rating table, and the source label changes with it.
 - **AC-012:** The Student-t run recovers each borrower's marginal PD within standard error, has heavier joint-default tails than the Gaussian run on the same seed, and converges to the Gaussian result as degrees of freedom grow. Parameters with ρ_W² > ρ_D are rejected with an explanation.
+- **AC-013:** The default profile reproduces the decision 4 values exactly. An override at each level changes only the positions it covers, a higher level wins over a lower one, and the effective values reported for each position match the precedence rule. Out-of-range values are rejected before any simulation runs.
 
 ## Decisions required before implementation
 
 1. ~~**Indemnification scope.** Borrower-default shortfall only, or also cash collateral reinvestment losses?~~ **Resolved 2026-10-19:** both. See the decision log.
 2. ~~**Credit inputs.** Rating-to-PD lookup table, user-entered spreads, or both?~~ **Resolved 2026-10-19:** both; spreads override the table per borrower. See the decision log.
 3. ~~**Dependence model.** Gaussian, Gaussian plus Student-t sensitivity, or Student-t?~~ **Resolved 2026-10-19:** Gaussian main model with a Student-t sensitivity. See the decision log.
-4. **Close-out and liquidity.** Default close-out period by asset class (proposed: 5 business days for liquid equities and government bonds, 10 for others and hard-to-borrow names), and the liquidity cost formula and its parameters.
+4. ~~**Close-out and liquidity.** Close-out periods and the liquidity cost formula.~~ **Resolved 2026-10-19:** proposed values accepted as defaults, with every setting configurable. See the decision log.
 5. **Horizon and paths.** Proposed horizon of 1 year with weekly steps; 50,000 paths for reported figures, with a smaller run for interactive sensitivities. Accept?
 6. **Capital and pricing.** Should IND-012 use the comprehensive approach exposure, Monte Carlo VaR99.9, or both for the capital charge? What illustrative cost-of-capital rate?
 7. **Placement.** New service `services/indemnification_api` on port 8018 (8013–8017 are taken), and a route at `/securities-lending/indemnification` behind a new `INDEM` toggle, or a tab on the SLAB page?
@@ -111,6 +113,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | 2026-10-19 | **Decision 1 resolved — indemnification covers borrower-default shortfall and cash collateral reinvestment losses.** This goes beyond the market-standard agency indemnity, where reinvestment losses sit with the beneficial owner, and is a deliberate choice for this program. The service therefore models the reinvestment pool (IND-015), values cash collateral at the pool's realizable value at default (IND-016), and reports the two channels separately (IND-017) so each can be read and priced on its own. Reinvestment pool inputs follow the shape of `src/data/reinvestment.ts`. | Owner |
 | 2026-10-19 | **Decision 2 resolved — credit inputs use a rating-to-PD table, overridable per borrower by a user-entered credit spread.** Every borrower has a rating, and the table maps rating to a 1-year PD, extended to a term structure with a constant hazard rate. The table is a versioned fixture labelled illustrative. If the user enters a spread for a borrower, the hazard rate becomes spread / (1 − recovery) and replaces the table value for that borrower. Recovery is entered with the spread (default 40%, labelled illustrative). The first release takes one flat spread per borrower. Each borrower shows its source (`RATING_TABLE` or `USER_SPREAD`) in the UI and in the model card. A live source of credit data still needs its own decision. | Owner |
 | 2026-10-19 | **Decision 3 resolved — one-factor Gaussian copula as the main model, with a Student-t copula as a sensitivity.** Each borrower's latent variable is X_i = ρ_W · Z_eq + √(ρ_D − ρ_W²) · Z_sys + √(1 − ρ_D) · ε_i, so ρ_D is the pairwise default correlation and ρ_W is the wrong-way link to the simulated equity factor. The Student-t run divides every X_i on a path by a shared √(W/ν), with W drawn from χ²(ν), and uses Student-t quantiles so that each borrower keeps its marginal PD. Starting values, all configurable and labelled illustrative: ρ_D = 0.25, ρ_W = 0.30, ν = 5. Inputs must satisfy ρ_W² ≤ ρ_D. Both runs use the same random draws. | Owner |
+| 2026-10-19 | **Decision 4 resolved — the proposed close-out and liquidity values are the defaults, and every setting is configurable.** Default close-out periods (business days): 5 for liquid equities and G7 government bonds; 10 for other bonds, smaller-company equities and emerging markets; 10 for hard-to-borrow or concentrated positions (over 25% of average daily volume); 5 for forced sales of TERM reinvestment assets. Default liquidity cost: k · σ_daily · (q / ADV)^α with k = 0.5 and α = 0.5. All defaults are labelled illustrative. The owner asked for the settings to be extremely customizable, so they live in a named, versioned close-out profile (IND-020, PLAN section 3a). The extra settings it adds (spread floor, cost cap, stress multiplier, unwind schedule, margin-call frequency, close-out add-on days) are neutral by default, so the default profile gives exactly the values above. | Owner |
 
 ## Related documents
 

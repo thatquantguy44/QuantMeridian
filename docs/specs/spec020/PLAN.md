@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decisions 1–3 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Draft — pending owner review; decisions 1–4 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-19
 
 ## Approach
@@ -28,10 +28,39 @@ The terminal builds a versioned, hashed snapshot of the lending book (loans, col
 
 At default time τ, for borrower b:
 
-- Loaned value at buy-in: Σ q · P(τ + MPOR) · (1 + liquidity cost). MPOR is the close-out period. Liquidity cost is a square-root impact term, k · σ · √(q / ADV).
+- Loaned value at buy-in: Σ q · P(τ + MPOR) · (1 + liquidity cost). MPOR is the close-out period. Both come from the close-out profile (section 3a) for each position.
 - Collateral proceeds: Σ c · C(τ + MPOR) · (1 − liquidity cost) · FX(τ + MPOR). Cash collateral is valued at the pool's realizable value at τ + MPOR (section 4), not par (IND-016).
 - Shortfall_b = max(0, loaned value − collateral proceeds). The collateral is the amount held at the last margin call before τ, so the margin lag is modelled.
 - Losses are kept per beneficial owner as well as per borrower, so they can be traced to the client being indemnified.
+
+### 3a. Close-out profile (decision 4)
+
+Every close-out and liquidity setting comes from a named, versioned close-out profile included in the snapshot and its hash. The defaults are the decision 4 values, and the extra settings are neutral by default, so the default profile reproduces those values exactly.
+
+**Settings**
+
+| Setting | Default | Range | Can be set per |
+|---|---|---|---|
+| Close-out period (MPOR), business days | 5 liquid equities and G7 govts; 10 other bonds, smaller-company equities, EM; 10 hard-to-borrow or concentrated; 5 TERM pool forced sale | integer 1–60 | global, asset class, pool bucket, borrower, position |
+| Close-out add-on days (e.g. for a borrower with a history of disputes) | 0 | integer 0–40 | borrower, position |
+| Concentration threshold for the longer period | 25% of ADV | 0–1000% | global, asset class |
+| Hard-to-borrow uses the longer period | on | on / off | global, asset class |
+| Impact coefficient k | 0.5 | ≥ 0 | global, asset class, pool bucket, position |
+| Impact exponent α in (q / ADV)^α | 0.5 | 0 < α ≤ 1 | global, asset class |
+| Half-spread floor, bps | 0 | ≥ 0 | global, asset class, pool bucket |
+| Liquidity cost cap, bps | none | ≥ floor | global, asset class, pool bucket |
+| Stress multiplier on liquidity cost | 1, with no factor link | 1 + β · max(0, −factor shock), β ≥ 0, factor chosen per asset class | global, asset class, pool bucket |
+| Unwind schedule | single trade at the end of the period | end of period, or spread evenly over the period | global, asset class |
+| Margin-call frequency (sets the collateral lag) | daily | integer 1–20 business days | global, borrower |
+| ADV and daily volatility | from the snapshot | positive values | position (user override) |
+
+**Liquidity cost:** cost = min(cap, max(floor, k · σ_daily · (q / ADV)^α)) × stress multiplier, applied separately to buying back loaned securities and selling collateral or pool assets.
+
+**Override order:** position, then borrower, then asset class or pool bucket, then global default. A named stress scenario can override any setting for its own run. The service resolves the effective value for every position before simulating and returns those values with the results, so the UI can show what was used and where it came from.
+
+**Validation:** values are type- and range-checked against the profile schema, and a profile that fails is rejected before any simulation, with the failing settings named. Unknown setting names are rejected rather than ignored.
+
+**Profiles:** users can copy the default profile, edit it, name it and run it. Profiles are plain JSON that can be exported and imported. The UI shows how each profile differs from the default. Every run record and model card stores the full resolved profile and its hash. Where saved profiles persist is settled with decision 7.
 
 ### 4. Reinvestment pool (decision 1)
 
@@ -56,7 +85,7 @@ The Basel comprehensive approach for securities financing transactions: E* = max
 
 ### 7. Sensitivities and stresses
 
-- **Sensitivity grid:** margin 102%–110%, MPOR 3–20 days, ρ_W 0–0.5, and collateral substitution (move one borrower from equity to government collateral). Uses common random numbers so the curves are smooth.
+- **Sensitivity grid:** margin 102%–110%, MPOR 3–20 days, ρ_W 0–0.5, and collateral substitution (move one borrower from equity to government collateral). Any numeric setting in the close-out profile can also be swept over a user-chosen range. Uses common random numbers so the curves are smooth.
 - **Named stresses (deterministic):**
   - Largest-borrower default with a −20% equity move.
   - Squeeze: +60% on the most concentrated hard-to-borrow loan, and its borrower defaults.
@@ -81,7 +110,8 @@ Indemnification cost (bps per year) = (EL + cost of capital × capital measure) 
 - Program header: EL, PFE99 peak, VaR99.9, expected shortfall, the share of risk from wrong-way effects, and the split between default and reinvestment channels.
 - Borrower table: exposure, collateral, margin %, PD, EL, PFE99, Euler contribution, comprehensive approach E*, fee, indemnification cost, and flag.
 - EE and PFE profile chart for the selected borrower, with and without wrong-way risk.
-- Sensitivity tab: EL and PFE99 against margin, MPOR and ρ_W.
+- Sensitivity tab: EL and PFE99 against margin, MPOR, ρ_W or any close-out profile setting.
+- Close-out profile editor: global and asset-class tables, borrower and position overrides, validation messages, difference from the default, reset, save as named profile, and JSON export and import. Results show each position's effective settings and which level they came from.
 - Reinvestment tab: pool composition by bucket, liquidity ladder against simulated return waves, and reinvestment loss by owner.
 - Stress tab: shortfall by borrower and beneficial owner for each named scenario.
 - Model card drawer: seed, paths, standard errors, convergence, input hash, version.
@@ -91,7 +121,8 @@ Indemnification cost (bps per year) = (EL + cost of capital × capital measure) 
 - **Closed forms:** a single loan with independent default against PD × E[shortfall]; Gaussian gap moments; comprehensive approach hand cases.
 - **Limits:** zero PD, zero volatility, full overcollateralization, and MPOR → 0 must give zero default loss. An all-overnight pool must give zero reinvestment loss.
 - **Reinvestment hand cases:** a single term asset with a set spread shock and return wave against a hand-computed forced-sale loss.
-- **Monotonicity:** in ρ_W, MPOR, margin and volatility, on a fixed seed.
+- **Monotonicity:** in ρ_W, MPOR, margin, volatility, k, the stress multiplier and the concentration threshold (lowering it lengthens more close-outs), on a fixed seed.
+- **Profile checks:** the default profile reproduces the decision 4 values; each override level changes only its own positions; precedence is respected; out-of-range and unknown settings are rejected.
 - **Copula checks:** the Student-t run recovers marginal PDs, has heavier joint-default tails than the Gaussian run, and converges to it as ν grows.
 - **Consistency:** Euler sum equals the total; channel losses sum to the total on every path; per-owner sums equal per-borrower sums; the same random numbers are used across the with and without wrong-way runs.
 - **Determinism:** golden outputs per seed; contract parity between the TypeScript and Python fixtures.
