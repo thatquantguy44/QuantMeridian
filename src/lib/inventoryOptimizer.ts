@@ -194,6 +194,9 @@ export interface RunConfig {
   max_staleness_hours: number;
   minimum_entity_confidence: number;
   allocation_stability_penalty: number;
+  /** Opt-in engine diagnostics (spec0020); they never change the solve. */
+  ranging?: boolean;
+  mip_progress?: boolean;
 }
 
 export interface IbalAllocation {
@@ -343,6 +346,58 @@ export interface IbalInfeasibilityExplanation {
     required_utilization: number;
   }[];
   relaxed_model_status: string | null;
+}
+
+export type IbalSweepParameter = "route_fee_rate" | "demand_elasticity" | "utilization_minimum" | "utilization_maximum";
+
+export interface IbalSweepParameters {
+  parameter: IbalSweepParameter;
+  target_id: string;
+  mode?: "scenario" | "local";
+  values?: number[];
+  lower?: number;
+  upper?: number;
+  points?: number;
+  max_solves?: number;
+}
+
+/** The engine's one-parameter sweep (spec0020 DIAG-004). Describes; never recommends a value. */
+export interface IbalParameterSweep {
+  request_id: string;
+  parameter: IbalSweepParameter;
+  target_id: string;
+  field: string;
+  units: string;
+  domain_lower: number;
+  domain_upper: number;
+  baseline_value: number;
+  mode: "scenario" | "local";
+  max_solves: number;
+  solve_count: number;
+  points: {
+    value: number;
+    is_baseline: boolean;
+    refinement: boolean;
+    status: string | null;
+    verification_passed: boolean | null;
+    objective_usd: number | null;
+    objective_delta_usd: number | null;
+    allocation_changes: { route_id: string; baseline_shares: number; shares: number; delta_shares: number }[];
+    binding_added: string[];
+    binding_removed: string[];
+    error: string | null;
+  }[];
+  local: {
+    maps_to: string;
+    slope: number;
+    parameter_lower: number;
+    parameter_upper: number;
+    lower_bounded_by_domain: boolean;
+    upper_bounded_by_domain: boolean;
+    objective_at_lower: number | null;
+    objective_at_upper: number | null;
+  } | null;
+  unavailable_reason: string | null;
 }
 
 export interface IbalResult {
@@ -605,6 +660,10 @@ export const DEFAULT_RUN_CONFIG: RunConfig = {
   max_staleness_hours: 24,
   minimum_entity_confidence: 0.8,
   allocation_stability_penalty: 0,
+  // Ranges and MIP progress are cheap and only describe the solve; when one does not apply the
+  // engine returns its reason, which the Sensitivity tab shows.
+  ranging: true,
+  mip_progress: true,
 };
 
 /** Preserves the service's located-issue list (if any) alongside the error message, so callers
@@ -709,6 +768,33 @@ export async function runIbalScenarioStress(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ dataset, run_config, baseline_result, scenario_type, parameters }),
+    })
+  );
+}
+
+export async function explainIbal(
+  dataset: DatasetEnvelope,
+  run_config: RunConfig
+): Promise<{ source: DatasetEnvelope["source"]; request_hash: string; explanation: IbalInfeasibilityExplanation }> {
+  return parseJson(
+    await fetch("/api/inventory-optimizer/explain", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ dataset, run_config }),
+    })
+  );
+}
+
+export async function sweepIbal(
+  dataset: DatasetEnvelope,
+  run_config: RunConfig,
+  sweep: IbalSweepParameters
+): Promise<{ source: DatasetEnvelope["source"]; request_hash: string; sweep: IbalParameterSweep }> {
+  return parseJson(
+    await fetch("/api/inventory-optimizer/sweep", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ dataset, run_config, sweep }),
     })
   );
 }
