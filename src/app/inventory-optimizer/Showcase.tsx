@@ -27,7 +27,7 @@ function DisclosureTable({ title, value }: { title: string; value: unknown }) {
 
 function TrustStrip({ result, commit }: { result: IbalResult | null; commit: string }) {
   if (!result) return null;
-  return <dl className="grid gap-x-4 gap-y-1 rounded border border-term-border bg-term-panel-2 p-2 text-[10px] sm:grid-cols-2 xl:grid-cols-3">
+  return <dl className="grid grid-cols-1 gap-x-4 gap-y-1 rounded border border-term-border bg-term-panel-2 p-2 text-[10px] sm:grid-cols-2 xl:grid-cols-3 [&>div]:min-w-0">
     <div><dt className="text-term-text-mute">Solve / verification</dt><dd className="font-mono text-term-text">{result.status} / {result.verification?.passed ? "VERIFIED" : "NOT VERIFIED"}</dd></div>
     <div><dt className="text-term-text-mute">Objective USD</dt><dd className="font-mono text-term-text">{result.verification?.passed && result.status === "optimal" ? amount(result.economics?.total_value_usd) : "No recommendation"}</dd></div>
     <div><dt className="text-term-text-mute">Termination</dt><dd className="font-mono text-term-text">{result.termination_reason ?? result.solver?.termination_reason ?? "—"}</dd></div>
@@ -143,7 +143,7 @@ export function IbalShowcase({ health, capabilities }: { health: IbalHealth | nu
 
   return <Panel title="Guided InventoryBallast showcase" code="SIM" className="mx-2 mt-2" subtitle="base → shock → diagnose → repair → compare"
     right={<Tag tone={run?.report.passed ? "up" : error ? "down" : "neutral"}>{run?.report.passed ? "VERIFIED SIM" : "LOCAL SIM"}</Tag>}>
-    <div className="space-y-3 p-3 text-[11px]">
+    <div className="space-y-3 p-3 text-[11px]" data-testid="ibal-showcase">
       <p className="rounded border border-term-amber/30 bg-term-amber/5 p-2 text-term-text-dim">SIMULATED DATA · local service · no live positions, order, or governance gate. The presenter flow uses the pinned engine's checked-in books and named repairs.</p>
       {!enabled && <p role="status" className="text-term-amber">Showcase unavailable: {health?.error_category ?? (health?.ready ? "the pinned service does not advertise showcase output" : "optimizer service is not ready")}. Recheck service health above.</p>}
       {enabled && <div className="flex flex-wrap items-end gap-2">

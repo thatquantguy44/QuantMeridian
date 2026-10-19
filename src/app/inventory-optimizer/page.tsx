@@ -1329,7 +1329,7 @@ export default function InventoryOptimizerPage() {
         </div>
       )}
 
-      <div className="grid flex-1 grid-cols-1 gap-2 p-2 xl:grid-cols-[24rem_1fr]">
+      <div className="grid flex-1 grid-cols-1 gap-2 p-2 xl:grid-cols-[24rem_minmax(0,1fr)]">
         <div className="flex min-h-0 flex-col gap-2">
           <Panel
             title="Dataset Intake"
