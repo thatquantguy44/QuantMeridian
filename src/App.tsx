@@ -60,6 +60,7 @@ import EconFundingCost from "./app/economics/funding-cost/page";
 import EconRateAnalysis from "./app/economics/rate-analysis/page";
 import EconIQ from "./app/economics/ecoiq/page";
 
+import GuidesPage from "./app/guides/page";
 import NotFound from "./app/not-found";
 
 function on(code: string) {
@@ -142,6 +143,9 @@ export function App() {
           </Route>
         )}
 
+        <Route path="guides" element={<GuidesPage />} />
+        <Route path="guides/:code" element={<GuidesPage />} />
+        <Route path="guides/:code/:doc" element={<GuidesPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

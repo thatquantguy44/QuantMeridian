@@ -7,6 +7,8 @@ const BADGE_EXEMPT_PAGES = [
   "macro-chart/page.tsx",
   "market-chart/page.tsx",
   "economics/motion/page.tsx",
+  // Module guides are documentation only: no market, model or desk data is shown.
+  "guides/page.tsx",
 ];
 
 function findPages(dir: string): string[] {
