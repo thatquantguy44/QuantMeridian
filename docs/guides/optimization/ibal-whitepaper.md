@@ -122,6 +122,8 @@ Besides the synthetic books, the pinned engine ships three checked-in SIM books 
 
 The showcase books are LPs. The base step shows the engine's LP sensitivity ranges for the principal book, and the prime book's planned infeasibility carries the engine's elastic explanation (`no_relaxable_rows`: the book has no utilization limit to relax, so the cause is the hard coverage requirement). The terminal never estimates a shadow price or range itself. The as-built note is `docs/whitepapers/ibal_showcase.md`.
 
+After the guided sequence the presenter may edit the repaired or the base request by hand (spec013 decision 3). The engine solves the edited request and compares it with the book's base solve using the same comparison as the repair step; the run is labelled user-edited and is never mistaken for a pinned guided step. Only an optimal, verified edited run is compared.
+
 ### Solver diagnostics (engine spec0020)
 
 | Where | What the engine returns |
@@ -203,6 +205,7 @@ On the default synthetic book (balanced, small, seed 1701) the base case solves 
 - The engine's own test suite covers balance conservation, verification, attribution, statuses and the scenario registry.
 - The service checks request contracts strictly and returns located issues (for example a field above its allowed maximum).
 - Terminal tests cover the capability gate (which controls appear for the pinned engine), the result contract, the sizing logic (22 tests) and the guided demo (8 tests), plus Playwright walkthroughs at 1440, 1280 and 820 pixels wide.
+- The demo-path suite (`test/ibal-demo-path.spec.ts`, run locally against the live service) steps the header presenter by keyboard and runs all three showcase books through every step, plus a user-edited run, at 375×812, 768×1024 and 1440×900. Each step must show no horizontal scroll, no control past the viewport edge, no overlapping controls, Tab reach to every control on the path and zero console errors. A planted-defect control confirmed each check fails when it should.
 - Generated stress parameters were checked against the real engine: all six supported families are accepted, solve optimal and verify.
 
 ## Limitations
@@ -216,7 +219,7 @@ On the default synthetic book (balanced, small, seed 1701) the base case solves 
 
 ## Status and governance
 
-- **Spec:** Spec013 (approved 2026-10-17). Done: decisions, engine pin (IBAL-002), contract parity, diagnostic tabs (IBAL-004), Scenario Studio (IBAL-005) and provenance and gates (IBAL-007). In progress: presenter mode and guided showcase (IBAL-006) and the as-built evidence (IBAL-008).
+- **Spec:** Spec013 (approved 2026-10-17). Done: decisions, engine pin (IBAL-002), contract parity, diagnostic tabs (IBAL-004), Scenario Studio (IBAL-005), presenter mode and guided showcase (IBAL-006) and provenance and gates (IBAL-007). In progress: the as-built evidence (IBAL-008).
 - **Engine pin:** InventoryBallast commit `a42dad30dc3ebb80d2790fd8701e621af0a35fcb` (InventoryBallast PR #40, solver diagnostics), package 0.1.0, checked at readiness against a source fingerprint. The pin is a commit, never a branch name.
 - **Gates:** no G2D, G2E or G3 governance gate is granted; every showcase response says so.
 - **Production:** disabled unless an operator sets `IBAL_PRODUCTION_ENABLED` and a trusted access boundary.
