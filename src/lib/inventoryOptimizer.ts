@@ -573,6 +573,7 @@ export interface IbalShowcaseRun {
       warnings: string[]; infeasibility_explanation: IbalInfeasibilityExplanation | null } | null;
     repair_result: IbalResult | null; repair_comparison: IbalShowcaseComparison | null;
     // A separate ranging solve of the base book's request (the guided steps solve without ranging).
+    base_sensitivity: IbalSensitivity | null;
   };
 }
 
