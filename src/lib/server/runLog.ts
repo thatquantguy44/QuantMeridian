@@ -84,6 +84,8 @@ const IBAL_KINDS: Record<string, RunLogKind> = {
   "/v1/runs": "run",
   "/v1/scenarios/stress-test": "stress",
   "/v1/showcase/runs": "showcase",
+  // Spec013 decision 3: a hand-edited request solved after the guided showcase (user-edited).
+  "/v1/showcase/edited-runs": "showcase",
 };
 
 /** The IBAL paths that are model runs; diagnostics (explain, sweep) and reads are not logged. */
@@ -96,6 +98,17 @@ export function ibalLogEntry(kind: RunLogKind, httpStatus: number, payload: unkn
   const body = obj(payload) ?? {};
   const source = obj(body.source);
   const sourceLabel = str(source?.mode);
+  if (kind === "showcase" && str(body.label) === "user-edited") {
+    const edited = obj(body.edited_result) ?? {};
+    return {
+      ...base("IBAL", kind, httpStatus, roundTripMs),
+      run_id: str(edited.run_id),
+      status: str(edited.status) ?? "unknown",
+      verified: bool(obj(edited.verification)?.passed),
+      solve_ms: ms(num(obj(edited.timings)?.solve_seconds) ?? num(obj(edited.solver)?.runtime_seconds)),
+      source: "SIM user-edited", input_hash: str(edited.input_hash), model_version: str(body.engine_commit),
+    };
+  }
   if (kind === "showcase") {
     const report = obj(body.report);
     const passed = bool(report?.passed);

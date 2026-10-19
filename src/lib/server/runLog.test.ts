@@ -52,6 +52,13 @@ describe("OPT session run log", () => {
     expect(ibalLogEntry("showcase", 200, { data_label: "SIM", engine_commit: "a42dad3", report: { passed: true } }, { book_id: "prime" }, 5))
       .toMatchObject({ run_id: "showcase:prime", status: "passed", verified: true, source: "SIM", model_version: "a42dad3" });
     expect(ibalLogEntry("showcase", 200, {}, null, 5)).toMatchObject({ run_id: null, status: "unknown", verified: null });
+    expect(ibalRunKind("/v1/showcase/edited-runs")).toBe("showcase");
+    expect(ibalLogEntry("showcase", 200, {
+      label: "user-edited", engine_commit: "a42dad3",
+      edited_result: { run_id: "demo-principal-user-edited", status: "optimal", verification: { passed: true }, timings: { solve_seconds: 0.002 }, input_hash: HASH },
+    }, { book_id: "principal", request: {} }, 5)).toMatchObject({
+      run_id: "demo-principal-user-edited", status: "optimal", verified: true, solve_ms: 2, source: "SIM user-edited", input_hash: HASH,
+    });
   });
 
   it("keeps a failed run's own error code and claims no verification", () => {
