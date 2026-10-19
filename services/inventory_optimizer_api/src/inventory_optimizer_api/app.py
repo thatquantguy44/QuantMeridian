@@ -19,19 +19,24 @@ require_importable_engine()
 
 from .config_adapter import RunConfigurationError  # noqa: E402
 from .contracts import (  # noqa: E402
+    MAX_SWEEP_SOLVES,
     DatasetEnvelope,
+    ExplainRequest,
     ExportRequest,
     LocatedIssue,
     RunRequest,
     ScenarioStressRequest,
+    SweepRequest,
     SyntheticConfig,
 )
 from .engine_service import (  # noqa: E402
     DatasetValidationError,
+    explain,
     export_bundle,
     run_scenario_stress,
     scenario_catalog,
     solve,
+    sweep,
     validation_report,
 )
 from .synthetic import generate_dataset  # noqa: E402
@@ -335,6 +340,118 @@ async def create_scenario_stress_test(
             "SCENARIO_TIMEOUT",
             "timeout",
             "Scenario stress run exceeded the service deadline.",
+            correlation_id=correlation_id,
+        )
+
+
+@app.post("/v1/explain", response_model=None)
+async def create_explanation(
+    payload: ExplainRequest,
+    correlation_id: Annotated[str, Depends(require_service_auth)],
+) -> dict[str, Any] | JSONResponse:
+    """The engine's elastic infeasibility explanation (spec0020 DIAG-003). Read-only: it solves
+    the request and, if infeasible, a diagnostic model; nothing is applied or stored."""
+    # Up to three solves: the request, the elastic model, and the original with the limits moved.
+    deadline = 3 * payload.run_config.solver_time_limit_seconds + 5.0
+    try:
+        async with SOLVE_SLOTS:
+            async with asyncio.timeout(deadline):
+                with timed(
+                    "explain",
+                    correlation_id=correlation_id,
+                    source_mode=payload.dataset.source.mode,
+                ):
+                    response = await asyncio.to_thread(explain, payload)
+        emit(
+            "explain_completed",
+            correlation_id=correlation_id,
+            outcome=response.explanation.get("outcome"),
+        )
+        return response.model_dump(mode="json")
+    except (DatasetValidationError, RunConfigurationError) as exc:
+        emit(
+            "explain_rejected",
+            correlation_id=correlation_id,
+            issue_codes=[item.code for item in exc.issues],
+            issue_count=len(exc.issues),
+        )
+        return _error(
+            422,
+            "EXPLAIN_REJECTED",
+            "validation",
+            "Explanation request validation failed.",
+            correlation_id=correlation_id,
+            issues=exc.issues,
+        )
+    except RuntimeError:
+        return _error(
+            503,
+            "ENGINE_INCOMPATIBLE",
+            "unavailable",
+            "Pinned optimizer engine is not ready.",
+            correlation_id=correlation_id,
+        )
+    except TimeoutError:
+        return _error(
+            504,
+            "EXPLAIN_TIMEOUT",
+            "timeout",
+            "Explanation exceeded the service deadline.",
+            correlation_id=correlation_id,
+        )
+
+
+@app.post("/v1/sweep", response_model=None)
+async def create_sweep(
+    payload: SweepRequest,
+    correlation_id: Annotated[str, Depends(require_service_auth)],
+) -> dict[str, Any] | JSONResponse:
+    """A one-parameter sweep (spec0020 DIAG-004): every point solved and verified by the engine.
+    Read-only; it describes and never recommends or applies a value."""
+    deadline = min(MAX_SWEEP_SOLVES * payload.run_config.solver_time_limit_seconds + 5.0, 305.0)
+    try:
+        async with SOLVE_SLOTS:
+            async with asyncio.timeout(deadline):
+                with timed(
+                    "sweep", correlation_id=correlation_id, source_mode=payload.dataset.source.mode
+                ):
+                    response = await asyncio.to_thread(sweep, payload)
+        emit(
+            "sweep_completed",
+            correlation_id=correlation_id,
+            parameter=payload.sweep.parameter,
+            solve_count=response.sweep.get("solve_count"),
+        )
+        return response.model_dump(mode="json")
+    except (DatasetValidationError, RunConfigurationError) as exc:
+        emit(
+            "sweep_rejected",
+            correlation_id=correlation_id,
+            issue_codes=[item.code for item in exc.issues],
+            issue_count=len(exc.issues),
+        )
+        return _error(
+            422,
+            "SWEEP_REJECTED",
+            "validation",
+            "Sweep request validation failed.",
+            correlation_id=correlation_id,
+            issues=exc.issues,
+        )
+    except RuntimeError:
+        return _error(
+            503,
+            "ENGINE_INCOMPATIBLE",
+            "unavailable",
+            "Pinned optimizer engine is not ready.",
+            correlation_id=correlation_id,
+        )
+    except TimeoutError:
+        return _error(
+            504,
+            "SWEEP_TIMEOUT",
+            "timeout",
+            "Sweep exceeded the service deadline.",
             correlation_id=correlation_id,
         )
 

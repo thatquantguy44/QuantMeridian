@@ -102,6 +102,10 @@ class RunConfig(StrictModel):
     max_staleness_hours: float = Field(default=24.0, ge=0.0, le=168.0)
     minimum_entity_confidence: float = Field(default=0.80, ge=0.0, le=1.0)
     allocation_stability_penalty: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Opt-in engine diagnostics (InventoryBallast spec0020 DIAG-002, DIAG-005). They never change
+    # the solve; when one cannot be produced the result section carries the engine's reason code.
+    ranging: bool = False
+    mip_progress: bool = False
 
 
 class RunRequest(StrictModel):
@@ -114,6 +118,52 @@ class RunResponse(StrictModel):
     source: SourceDisclosure
     request_hash: str
     result: dict[str, Any]
+
+
+class ExplainRequest(StrictModel):
+    """Explain an infeasible dataset with the engine's elastic diagnostic (spec0020 DIAG-003)."""
+
+    dataset: DatasetEnvelope
+    run_config: RunConfig = Field(default_factory=RunConfig)
+
+
+class ExplainResponse(StrictModel):
+    api_schema_version: Literal["1.0.0"] = "1.0.0"
+    source: SourceDisclosure
+    request_hash: str
+    explanation: dict[str, Any]
+
+
+MAX_SWEEP_SOLVES = 25
+
+
+class SweepParameters(StrictModel):
+    """One engine catalog parameter on one record (spec0020 DIAG-004). The engine re-checks
+    every value against the parameter's own domain and refuses a sweep it will not run."""
+
+    parameter: Literal[
+        "route_fee_rate", "demand_elasticity", "utilization_minimum", "utilization_maximum"
+    ]
+    target_id: str = Field(min_length=1, max_length=200)
+    mode: Literal["scenario", "local"] = "scenario"
+    values: tuple[float, ...] = Field(default=(), max_length=MAX_SWEEP_SOLVES)
+    lower: float | None = Field(default=None, allow_inf_nan=False)
+    upper: float | None = Field(default=None, allow_inf_nan=False)
+    points: int | None = Field(default=None, ge=2, le=MAX_SWEEP_SOLVES)
+    max_solves: int = Field(default=MAX_SWEEP_SOLVES, ge=1, le=MAX_SWEEP_SOLVES)
+
+
+class SweepRequest(StrictModel):
+    dataset: DatasetEnvelope
+    run_config: RunConfig = Field(default_factory=RunConfig)
+    sweep: SweepParameters
+
+
+class SweepResponse(StrictModel):
+    api_schema_version: Literal["1.0.0"] = "1.0.0"
+    source: SourceDisclosure
+    request_hash: str
+    sweep: dict[str, Any]
 
 
 class ScenarioCatalogItem(StrictModel):

@@ -21,7 +21,9 @@
     "dynamic_buffers": false,
     "multi_period": false,
     "known_future_events": false,
-    "scenarios": true
+    "scenarios": true,
+    "sensitivity_ranging": true,
+    "mip_progress": true
   },
   "output_sections": [
     "allocations",
@@ -41,6 +43,12 @@
     "schedules",
     "collateral",
     "desk",
-    "showcase"
+    "showcase",
+    "model_statistics",
+    "timings",
+    "sensitivity",
+    "mip_progress",
+    "infeasibility_explanation",
+    "parameter_sweep"
   ]
 }

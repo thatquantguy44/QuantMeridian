@@ -22,13 +22,18 @@ from .capabilities import engine_identity, require_compatible_engine
 from .config_adapter import RunConfigurationError, engine_overrides
 from .contracts import (
     DatasetEnvelope,
+    ExplainRequest,
+    ExplainResponse,
     ExportRequest,
     LocatedIssue,
+    RunConfig,
     RunRequest,
     RunResponse,
     ScenarioCatalogResponse,
     ScenarioStressRequest,
     ScenarioStressResponse,
+    SweepRequest,
+    SweepResponse,
     ValidationReport,
 )
 from .datasets import summarize
@@ -108,12 +113,12 @@ def _optimizer(config: InventoryOptimizerConfig) -> InventoryOptimizer:
     raise RuntimeError("no supported optimizer solver backend is installed")
 
 
-def solve(run: RunRequest, *, correlation_id: str, idempotency_key: str) -> RunResponse:
+def _prepared(
+    dataset: DatasetEnvelope, run_config: RunConfig
+) -> tuple[OptimizationRequest, InventoryOptimizerConfig]:
+    """The validated engine request and frozen engine config for one service call."""
     require_compatible_engine()
-    request = validated_request(
-        run.dataset,
-        max_staleness_hours=run.run_config.max_staleness_hours,
-    )
+    request = validated_request(dataset, max_staleness_hours=run_config.max_staleness_hours)
     if request.config_overrides:
         raise RunConfigurationError(
             (
@@ -124,10 +129,14 @@ def solve(run: RunRequest, *, correlation_id: str, idempotency_key: str) -> RunR
                 ),
             )
         )
-    overrides = engine_overrides(request, run.run_config)
-    # The pinned 0.1.0 wheel does not include its repository-level default YAML. The public
-    # frozen config model carries the same defaults and still rejects every unknown key.
-    config = InventoryOptimizerConfig.model_validate(overrides)
+    overrides = engine_overrides(request, run_config)
+    # The service builds the engine config from the public frozen model rather than the engine's
+    # default YAML; it carries the same defaults and still rejects every unknown key.
+    return request, InventoryOptimizerConfig.model_validate(overrides)
+
+
+def solve(run: RunRequest, *, correlation_id: str, idempotency_key: str) -> RunResponse:
+    request, config = _prepared(run.dataset, run.run_config)
     context = PlatformInvocationContext(
         request_id=request.request_id,
         correlation_id=correlation_id,
@@ -139,11 +148,51 @@ def solve(run: RunRequest, *, correlation_id: str, idempotency_key: str) -> RunR
         platform_tenant_id=request.desk_context.platform_tenant_id if request.desk_context else None,
         actor_reference=None,
     )
-    result = _optimizer(config).optimize(request, platform=context)
+    result = _optimizer(config).optimize(
+        request,
+        platform=context,
+        ranging=run.run_config.ranging,
+        mip_progress=run.run_config.mip_progress,
+    )
     return RunResponse(
         source=run.dataset.source,
         request_hash=run.dataset.request_hash,
         result=result.model_dump(mode="json"),
+    )
+
+
+def explain(payload: ExplainRequest) -> ExplainResponse:
+    """The engine's elastic explanation of an infeasible request (spec0020 DIAG-003). It solves
+    the request, and only if it is infeasible solves a second model in which utilization limits
+    may stretch. Nothing is applied to the request."""
+    request, config = _prepared(payload.dataset, payload.run_config)
+    explanation = _optimizer(config).explain_infeasibility(request)
+    return ExplainResponse(
+        source=payload.dataset.source,
+        request_hash=payload.dataset.request_hash,
+        explanation=explanation.model_dump(mode="json"),
+    )
+
+
+def sweep(payload: SweepRequest) -> SweepResponse:
+    """A one-parameter sweep (spec0020 DIAG-004): every point solved and verified by the engine.
+    A sweep the engine will not run (unknown target, out-of-domain value, too many points) is a
+    validation rejection naming the engine's reason."""
+    from inventory_optimizer.domain.diagnostics import SweepRequest as EngineSweepRequest
+
+    request, config = _prepared(payload.dataset, payload.run_config)
+    try:
+        report = _optimizer(config).sweep(
+            request, EngineSweepRequest.model_validate(payload.sweep.model_dump())
+        )
+    except ValueError as exc:
+        raise RunConfigurationError(
+            (LocatedIssue(code="SWEEP_REJECTED", message=str(exc), location="sweep"),)
+        ) from exc
+    return SweepResponse(
+        source=payload.dataset.source,
+        request_hash=payload.dataset.request_hash,
+        sweep=report.model_dump(mode="json"),
     )
 
 
