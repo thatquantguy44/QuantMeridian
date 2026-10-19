@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { POST } from "./route";
+import { clearRunLog, listRuns } from "@/lib/server/runLog";
 
 const candidate = (id: string, rate: string) => ({ candidate_id: id, rate_instrument_id: rate });
 
@@ -27,6 +28,17 @@ describe("POST /api/econ/mmkt-runs (SIM path)", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    clearRunLog();
+  });
+
+  test("records a forwarded run in the OPT session run log, but not one rejected before the service", async () => {
+    await post({ rate_source: "sim", sim_set_id: "SIM-UNKNOWN", instrument_candidates: [candidate("A", "SOFR")] });
+    expect(listRuns().entries).toHaveLength(0);
+    const response = await post({ rate_source: "sim", sim_set_id: "SIM-MMKT-2026-10-BASE", instrument_candidates: [candidate("A", "SOFR")] });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ code: "SOLVE_COMPLETE" });   // the body still reaches the client
+    const [entry] = listRuns().entries;
+    expect(entry).toMatchObject({ model: "MMKT", kind: "run", http_status: 200, status: "unknown", verified: null });
   });
 
   test("attaches the registered SIM snapshot and forwards to the service", async () => {
