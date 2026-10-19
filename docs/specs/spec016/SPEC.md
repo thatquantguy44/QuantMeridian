@@ -4,7 +4,7 @@
 - **Parent:** [Spec015](../spec015/SPEC.md), especially OC-001–007, OC-009, OC-015–016
 - **Model authority:** [InventoryBallast spec 0023](https://github.com/thatquantguy44/InventoryBallast/tree/main/specs/0023-standalone-collateral-optimizer)
 - **Status:** Draft for review. The owner identified the model repository on 2026-10-18; no QuantMeridian model binding or production activation is approved by this document.
-- **Last updated:** 2026-10-18
+- **Last updated:** 2026-10-18 (amended: COLL-013, COLL-014, AC-011, AC-012; see "Decision log")
 
 ## Purpose and current state
 
@@ -69,6 +69,8 @@ reservations with IBAL. Those remain in the [upstream roadmap](https://github.co
 | COLL-010 | Surface source mode (`SIM`, validated upload, future governed book), as-of/freshness, input/parent hashes, package SHA/version, adapter version and result schema on each run and export. No silent source fallback. | must |
 | COLL-011 | Detect a newer merged upstream package release and prepare a QuantMeridian pin-update PR; never deploy from a moving branch. Promotion requires contract tests, source review and approval; rollback restores the prior exact binding. | must |
 | COLL-012 | Keep production book and execution actions disabled until spec015 governance plus source ownership, shared asset reservation and operational controls are separately approved. | must |
+| COLL-013 | QuantMeridian may generate deterministic demo books as native `1.0` snapshots to make demos realistic (concentrated issuers, mixed call deadlines, cross-currency agreements, denied issuers, named fictional counterparties). They are submitted only as `USER_UPLOAD`, pass the service's strict validation, and are labeled "Generated demo book (synthetic)" with their profile and sizing recorded. They are never labeled `SIM`. Agreement terms (haircuts, caps, deadlines) are illustrative and carry no legal authority. The browser builds inputs only; all economics, verification and savings come from the service. | should |
+| COLL-014 | Sizing controls (call scale, haircut shift, liquidity reserve, call deadline) produce a new validated snapshot from a generated book. Each solve shows the changed fields against the generated baseline and its comparability (COLL-008, AC-009). A ranked stress suite solves a default-sized scenario per control on the same base and orders them by verified target-cost change. Infeasible or unverified outcomes rank ahead of every feasible one, and no savings are claimed where the incumbent is invalid (COLL-009). | should |
 
 ## Acceptance criteria
 
@@ -84,6 +86,8 @@ reservations with IBAL. Those remain in the [upstream roadmap](https://github.co
 | AC-008 | A proposed upstream update opens a reviewable pin PR with old/new SHA, version, digest, contract diff and test evidence; no runtime branch fetch occurs. A rejected or rolled-back pin leaves historical runs tied to the old version. |
 | AC-009 | Same-snapshot comparisons carry hashes, changed fields, USD/horizon units and model version; differing snapshot or pin is flagged as non-comparable for a causal savings claim. |
 | AC-010 | A production-mode request is blocked until separately approved source, reservation, access, audit and execution boundaries are evidenced; local SIM remains plainly marked. |
+| AC-011 | Each generated profile passes native validation, solves `optimal` with native and adapter verification, and has the same input hash on every build. At least one profile shows a binding issuer cap, calls with different deadlines, and a cross-currency agreement that moves collateral through an FX quote. |
+| AC-012 | Changing a sizing control changes the input hash, lists the changed fields, and flags non-comparability if the base differs. The ranked suite orders infeasible or unverified outcomes first, shows no target or savings for an infeasible case, and never shows a `SIM` source label for a generated book. |
 
 ## Open approval gates
 
@@ -92,3 +96,11 @@ QuantMeridian binding, the owner must review the native `1.0` schema, the adapte
 check and tolerance, artifact provenance, and the validated-upload policy. Production activation
 also needs the source and operational gates in COLL-012. The separate money market repository and
 the broader spec015 storage/worker decisions remain open.
+
+## Decision log
+
+- **2026-10-18, owner direction:** prototype realistic demo books on the QuantMeridian side through the
+  validated-upload path (COLL-013, COLL-014). Once the profiles settle, propose them upstream in
+  InventoryBallast `projects/collateral_optimizer/src/collateral_optimizer/demo.py` as named books,
+  delivered by a normal reviewed pin update (COLL-011). The validated-upload policy gate above still
+  applies to any production use of uploads.

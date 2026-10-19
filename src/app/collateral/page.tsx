@@ -5,6 +5,8 @@ import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { fmtAbbr, fmtUsdAbbr } from "@/lib/format";
+import { GeneratedBooksPanel } from "./GeneratedBooks";
+import type { NativeSnapshot } from "@/lib/collateralBooks";
 import { changedSnapshotFields, comparableCollateralRuns, downloadCollateralRun, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
 const SCENARIOS = [
@@ -43,14 +45,14 @@ export default function CollateralPage() {
   const [error, setError] = useState<string | null>(null);
   const [upload, setUpload] = useState("");
 
-  async function solve(payload: unknown, selected: string) {
+  async function solve(payload: unknown, selected: string, options: { baseline?: boolean } = {}) {
     setBusy(true); setError(null); setRun(null);
     try {
       const data = await post("/api/collateral-optimizer/runs", payload);
       if (!isCollateralRun(data)) throw Error("Terminal result contract failed.");
       setRun(data);
       setScenario(selected);
-      if (selected === "baseline") setBaseline(data);
+      if (selected === "baseline" || options.baseline) setBaseline(data);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Collateral service unavailable.");
     } finally { setBusy(false); }
@@ -71,6 +73,17 @@ export default function CollateralPage() {
     void start();
     return () => { active = false; };
   }, []);
+
+  /** A generated book or stress goes through the validated-upload path and is shown like any other run. */
+  async function showGenerated(snapshot: NativeSnapshot, label: string, asBaseline: boolean) {
+    await solve({ source_mode: "USER_UPLOAD", snapshot }, label, { baseline: asBaseline });
+  }
+  /** Solve without touching the result area, for the ranked suite. */
+  async function quietSolve(snapshot: NativeSnapshot): Promise<CollateralRun> {
+    const data = await post("/api/collateral-optimizer/runs", { source_mode: "USER_UPLOAD", snapshot });
+    if (!isCollateralRun(data)) throw Error("Terminal result contract failed.");
+    return data;
+  }
 
   async function solveUpload() {
     try {
@@ -93,12 +106,15 @@ export default function CollateralPage() {
   return <div className="flex min-h-full flex-col">
     <PageHeader code="COLL" title="Collateral Management"
       desc="Pinned InventoryBallast model · local demonstration preview"
-      right={<><ProvenanceBadge source="SIM" simSelected /><Tag tone="amber">SIM / NO LIVE RECOMMENDATION</Tag></>} />
+      right={run?.source_mode === "USER_UPLOAD"
+        ? <><Tag tone="amber">{run.native_source.startsWith("GENERATED-DEMO") ? "GENERATED DEMO BOOK · SYNTHETIC" : "UPLOADED SNAPSHOT"}</Tag><Tag tone="amber">NO LIVE RECOMMENDATION</Tag></>
+        : <><ProvenanceBadge source="SIM" simSelected /><Tag tone="amber">SIM / NO LIVE RECOMMENDATION</Tag></>} />
     <div className="mx-2 mt-2 border border-term-amber/40 bg-term-panel p-3 text-xs text-term-text-dim" role="status">
       This is a deterministic synthetic book solved by the pinned model. Results are local previews, not governed inventory,
       production recommendations, booked movements, or audited operational runs.
     </div>
     <div className="grid gap-2 p-2 lg:grid-cols-[1fr_2fr]">
+      <div className="space-y-2">
       <Panel title="Binding and scenario" code="BIND">
         <div className="space-y-3 p-3 text-xs">
           <p>Service: <strong>{health?.readiness ?? "LOADING"}</strong> · {health?.detail ?? "Checking binding…"}</p>
@@ -128,6 +144,8 @@ export default function CollateralPage() {
           </button>
         </div>
       </Panel>
+      <GeneratedBooksPanel ready={health?.readiness === "READY"} busy={busy} onShow={showGenerated} quietSolve={quietSolve} />
+      </div>
       <div className="space-y-2">
         {busy && <Panel title="Solving" code="RUN"><p className="p-3 text-xs" role="status">Running the pinned optimizer…</p></Panel>}
         {error && <Panel title="Validation or service error" code="ERR"><p className="p-3 text-xs text-term-down" role="alert">{error}</p></Panel>}
