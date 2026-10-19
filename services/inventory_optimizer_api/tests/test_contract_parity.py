@@ -14,7 +14,8 @@ from inventory_optimizer_api.synthetic import generate_dataset
 
 # Fields that are expected to vary between two otherwise-identical invocations: a fresh run
 # identifier/timestamp per call, and the solver's wall-clock runtime.
-_NONDETERMINISTIC_TOP_LEVEL = {"run_id", "created_at"}
+# `timings` (engine 0020, DIAG-001) is per-phase wall clock, like created_at.
+_NONDETERMINISTIC_TOP_LEVEL = {"run_id", "created_at", "timings"}
 
 
 def _strip_nondeterministic(result: dict[str, Any]) -> dict[str, Any]:

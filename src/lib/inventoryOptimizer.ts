@@ -245,6 +245,106 @@ export interface IbalConstraint {
   dual_value: number | null;
 }
 
+// Engine spec0020 solver diagnostics (InventoryBallast PR #40). `model_statistics` and `timings`
+// are on every result; `sensitivity` and `mip_progress` only when a run asks for them, and then
+// either available or carrying the engine's stable reason code.
+export interface IbalCoefficientRange {
+  count: number;
+  min_abs: number | null;
+  max_abs: number | null;
+  ratio: number | null;
+}
+
+export interface IbalModelStatistics {
+  variable_count: number;
+  row_count: number;
+  nonzero_count: number;
+  integer_variable_count: number;
+  quadratic_nonzero_count: number;
+  matrix: IbalCoefficientRange;
+  objective: IbalCoefficientRange;
+  bounds: IbalCoefficientRange;
+  row_limits: IbalCoefficientRange;
+  quadratic_objective: IbalCoefficientRange | null;
+  scaling_warning_ratio: number;
+  scaling_warnings: string[];
+}
+
+export interface IbalPhaseTimings {
+  compile_seconds: number;
+  solve_seconds: number;
+  verify_seconds: number;
+}
+
+export interface IbalObjectiveCoefficientRange {
+  variable: { kind: string; scope_id: string };
+  value: number;
+  coefficient: number;
+  coefficient_lower: number | null;
+  coefficient_upper: number | null;
+  objective_at_lower: number | null;
+  objective_at_upper: number | null;
+}
+
+export interface IbalRowLimitRange {
+  row: { kind: string; scope_id: string };
+  activity: number;
+  binding: boolean;
+  limit: "upper" | "lower" | "equality";
+  limit_value: number;
+  limit_lower: number | null;
+  limit_upper: number | null;
+  objective_at_lower: number | null;
+  objective_at_upper: number | null;
+}
+
+export interface IbalSensitivity {
+  available: boolean;
+  unavailable_reason: string | null;
+  objective_coefficients: IbalObjectiveCoefficientRange[];
+  row_limits: IbalRowLimitRange[];
+}
+
+export interface IbalMipProgress {
+  available: boolean;
+  unavailable_reason: string | null;
+  points: { incumbent_objective: number; best_bound: number | null; relative_gap: number | null; nodes: number }[];
+}
+
+/** The engine's elastic explanation of an infeasible request (spec0020 DIAG-003). Only
+ * utilization limits are ever relaxed; nothing here is applied to the request. */
+export interface IbalInfeasibilityExplanation {
+  request_id: string;
+  original_status: string;
+  outcome:
+    | "original_is_feasible"
+    | "restorable"
+    | "not_restorable"
+    | "no_relaxable_rows"
+    | "no_normalization_scale"
+    | "elastic_solve_failed";
+  message: string;
+  relaxable_row_kinds: string[];
+  relaxable_row_count: number;
+  elastic_status: string | null;
+  elastic_verification_passed: boolean | null;
+  total_normalized_slack: number | null;
+  relaxations: {
+    row: { kind: string; scope_id: string };
+    inventory_id: string;
+    policy_id: string;
+    limit: "upper" | "lower";
+    original_limit_shares: number;
+    required_limit_shares: number;
+    slack_shares: number;
+    normalized_slack: number;
+    total_lendable_shares: number;
+    original_utilization: number;
+    required_utilization: number;
+  }[];
+  relaxed_model_status: string | null;
+}
+
 export interface IbalResult {
   request_id: string;
   run_id: string;
@@ -324,6 +424,10 @@ export interface IbalResult {
   schedules?: unknown | null;
   collateral?: unknown | null;
   sources?: unknown | null;
+  model_statistics?: IbalModelStatistics | null;
+  timings?: IbalPhaseTimings | null;
+  sensitivity?: IbalSensitivity | null;
+  mip_progress?: IbalMipProgress | null;
 }
 
 export interface IbalScenarioCatalogItem {
@@ -466,8 +570,9 @@ export interface IbalShowcaseRun {
     diagnosis: { feasible: boolean; binding_constraints: { kind: string; scope_id: string; slack: number; dual_value: number | null }[];
       reason_codes: Record<string, number>; unfilled_demand: Record<string, unknown>[];
       excluded_sources: Record<string, unknown>[]; coverage: Record<string, unknown>[];
-      warnings: string[]; not_yet_available: string[] } | null;
+      warnings: string[]; infeasibility_explanation: IbalInfeasibilityExplanation | null } | null;
     repair_result: IbalResult | null; repair_comparison: IbalShowcaseComparison | null;
+    // A separate ranging solve of the base book's request (the guided steps solve without ranging).
   };
 }
 

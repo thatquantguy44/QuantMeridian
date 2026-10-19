@@ -9,9 +9,16 @@ import type {
   DatasetEnvelope,
   IbalAllocation,
   IbalBalance,
+  IbalCoefficientRange,
   IbalConstraint,
   IbalDemand,
+  IbalMipProgress,
+  IbalModelStatistics,
+  IbalObjectiveCoefficientRange,
+  IbalPhaseTimings,
   IbalResult,
+  IbalRowLimitRange,
+  IbalSensitivity,
   RunResponse,
 } from "@/lib/inventoryOptimizer";
 
@@ -66,6 +73,60 @@ const CONSTRAINT: Fields<IbalConstraint> = {
   activity: null,
   slack: null,
   dual_value: null,
+};
+
+const RANGE: Fields<IbalCoefficientRange> = { count: null, min_abs: null, max_abs: null, ratio: null };
+
+const MODEL_STATISTICS: Fields<IbalModelStatistics> = {
+  variable_count: null,
+  row_count: null,
+  nonzero_count: null,
+  integer_variable_count: null,
+  quadratic_nonzero_count: null,
+  matrix: RANGE,
+  objective: RANGE,
+  bounds: RANGE,
+  row_limits: RANGE,
+  quadratic_objective: RANGE,
+  scaling_warning_ratio: null,
+  scaling_warnings: [null],
+};
+
+const TIMINGS: Fields<IbalPhaseTimings> = { compile_seconds: null, solve_seconds: null, verify_seconds: null };
+
+const OBJECTIVE_RANGE: Fields<IbalObjectiveCoefficientRange> = {
+  variable: { kind: null, scope_id: null },
+  value: null,
+  coefficient: null,
+  coefficient_lower: null,
+  coefficient_upper: null,
+  objective_at_lower: null,
+  objective_at_upper: null,
+};
+
+const ROW_RANGE: Fields<IbalRowLimitRange> = {
+  row: { kind: null, scope_id: null },
+  activity: null,
+  binding: null,
+  limit: null,
+  limit_value: null,
+  limit_lower: null,
+  limit_upper: null,
+  objective_at_lower: null,
+  objective_at_upper: null,
+};
+
+const SENSITIVITY: Fields<IbalSensitivity> = {
+  available: null,
+  unavailable_reason: null,
+  objective_coefficients: [OBJECTIVE_RANGE],
+  row_limits: [ROW_RANGE],
+};
+
+const MIP_PROGRESS: Fields<IbalMipProgress> = {
+  available: null,
+  unavailable_reason: null,
+  points: [{ incumbent_objective: null, best_bound: null, relative_gap: null, nodes: null }],
 };
 
 const RESULT: Fields<IbalResult> = {
@@ -152,6 +213,10 @@ const RESULT: Fields<IbalResult> = {
   schedules: "*",
   collateral: "*",
   sources: "*",
+  model_statistics: MODEL_STATISTICS,
+  timings: TIMINGS,
+  sensitivity: SENSITIVITY,
+  mip_progress: MIP_PROGRESS,
 };
 
 const RUN_RESPONSE: Fields<RunResponse> = {

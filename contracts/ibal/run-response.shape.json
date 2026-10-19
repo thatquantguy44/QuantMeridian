@@ -325,6 +325,98 @@
       "schema_version": null,
       "platform_tenant_id": null,
       "actor_reference": null
+    },
+    "model_statistics": {
+      "variable_count": null,
+      "row_count": null,
+      "nonzero_count": null,
+      "integer_variable_count": null,
+      "quadratic_nonzero_count": null,
+      "matrix": {
+        "count": null,
+        "min_abs": null,
+        "max_abs": null,
+        "ratio": null
+      },
+      "objective": {
+        "count": null,
+        "min_abs": null,
+        "max_abs": null,
+        "ratio": null
+      },
+      "bounds": {
+        "count": null,
+        "min_abs": null,
+        "max_abs": null,
+        "ratio": null
+      },
+      "row_limits": {
+        "count": null,
+        "min_abs": null,
+        "max_abs": null,
+        "ratio": null
+      },
+      "quadratic_objective": {
+        "count": null,
+        "min_abs": null,
+        "max_abs": null,
+        "ratio": null
+      },
+      "scaling_warning_ratio": null,
+      "scaling_warnings": [
+        null
+      ]
+    },
+    "timings": {
+      "compile_seconds": null,
+      "solve_seconds": null,
+      "verify_seconds": null
+    },
+    "sensitivity": {
+      "available": null,
+      "unavailable_reason": null,
+      "objective_coefficients": [
+        {
+          "variable": {
+            "kind": null,
+            "scope_id": null
+          },
+          "value": null,
+          "coefficient": null,
+          "coefficient_lower": null,
+          "coefficient_upper": null,
+          "objective_at_lower": null,
+          "objective_at_upper": null
+        }
+      ],
+      "row_limits": [
+        {
+          "row": {
+            "kind": null,
+            "scope_id": null
+          },
+          "activity": null,
+          "binding": null,
+          "limit": null,
+          "limit_value": null,
+          "limit_lower": null,
+          "limit_upper": null,
+          "objective_at_lower": null,
+          "objective_at_upper": null
+        }
+      ]
+    },
+    "mip_progress": {
+      "available": null,
+      "unavailable_reason": null,
+      "points": [
+        {
+          "incumbent_objective": null,
+          "best_bound": null,
+          "relative_gap": null,
+          "nodes": null
+        }
+      ]
     }
   }
 }
