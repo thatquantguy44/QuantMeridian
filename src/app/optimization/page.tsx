@@ -6,10 +6,11 @@ import { Panel, Stat, Tag } from "@/components/ui/Panel";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import Link from "@/components/Link";
 import { NAV } from "@/lib/nav";
+import { guideHref, hasGuide } from "@/lib/moduleGuides";
 import { fmtUsdAbbr } from "@/lib/format";
 import { downloadCollateralRun, isCollateralRun, type CollateralRun } from "@/lib/collateralOptimizer";
 
-type Connection = { family: "MMKT" | "COLL"; label: string; binding_status: string;
+type Connection = { family: "MMKT" | "COLL" | "IBAL"; label: string; binding_status: string;
   service_health: string; detail: string; model_status: string | null };
 type Connections = { approval: string; connections: Connection[] };
 
@@ -79,6 +80,12 @@ export default function OptimizationCenter() {
             </Link>;
           })}
         </nav>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-term-border px-3 py-2 text-2xs" data-testid="opt-guides">
+          <span className="text-term-text-mute">Guides:</span>
+          <Link href="/guides" className="text-term-blue underline">All white papers and help</Link>
+          {[{ code: "OPT" }, ...MODELS].filter((item) => hasGuide(item.code)).map((item) =>
+            <Link key={item.code} href={guideHref(item.code)} className="text-term-blue underline">{item.code}</Link>)}
+        </div>
       </Panel>
     </div>
     <div className="grid gap-2 p-2 lg:grid-cols-2">
@@ -91,7 +98,7 @@ export default function OptimizationCenter() {
             <div className="flex flex-wrap items-center gap-2">
               <strong>{item.family} · {item.label}</strong>
               <Tag tone={item.service_health === "READY" ? "up" : "amber"}>SERVICE {item.service_health}</Tag>
-              <Tag tone="amber">BINDING {item.binding_status}</Tag>
+              <Tag tone={item.binding_status === "ENGINE_PINNED" ? "up" : "amber"}>BINDING {item.binding_status}</Tag>
             </div>
             <p className="mt-1 text-term-text-dim">{item.detail}</p>
             {item.model_status && <p className="text-term-text-mute">Model: {item.model_status}</p>}

@@ -41,6 +41,12 @@ import {
   type RunConfig,
   type SyntheticConfig,
 } from "@/lib/inventoryOptimizer";
+import { SCENARIO_FAMILIES, buildScenarioParameters, defaultSizing, type SizingValues } from "@/lib/ibalScenarioSizing";
+import { compareBaseRuns, type BaseRunSnapshot, type DriverDelta, type DriverDimension } from "@/lib/ibalRunComparison";
+import { ScenarioSizingForm } from "./ScenarioSizingForm";
+import { StressSuitePanel } from "./StressSuitePanel";
+import { PresenterBar, type PresenterStepView } from "./PresenterBar";
+import { PRESENTER_STEPS, currentStepIndex, warmUp } from "@/lib/ibalPresenter";
 import { fmtAbbr, fmtInt, fmtPct, fmtUsdAbbr } from "@/lib/format";
 import {
   engineBlockReason,
@@ -275,77 +281,6 @@ const WHAT_IF_SCENARIOS: WhatIfScenario[] = [
   { id: "capacity", label: "More Balance Sheet", desc: "Looser utilization cap and smaller reserve buffer.", synthetic: { utilization_cap: 0.98, reserve_fraction: 0.02 }, seedOffset: 53 },
 ];
 
-function scenarioParametersDraft(scenarioType: string, dataset: DatasetEnvelope | null): Record<string, unknown> {
-  const request = (dataset?.request ?? {}) as Record<string, unknown>;
-  const routes = (Array.isArray(request.routes) ? request.routes : []) as IbalRouteRow[];
-  const inventory = (Array.isArray(request.inventory) ? request.inventory : []) as IbalInventoryRow[];
-  const demand = (Array.isArray(request.demand) ? request.demand : []) as IbalDemandRow[];
-  const limits = (Array.isArray(request.counterparty_limits) ? request.counterparty_limits : []) as IbalCounterpartyLimitRow[];
-  const quotes = (Array.isArray(request.external_borrow_quotes) ? request.external_borrow_quotes : []) as { quote_id: string; expires_at: string; observed_at?: string; effective_from?: string }[];
-  const budgets = (Array.isArray(request.balance_sheet_budgets) ? request.balance_sheet_budgets : []) as { budget_id: string }[];
-  const date = String(request.effective_date ?? dataset?.summary.effective_date ?? "2026-09-14");
-  const tradeDate = String(request.as_of ?? "2026-09-14T12:00:00Z").slice(0, 10);
-  const base = {
-    scenario_id: `qm-${scenarioType}-${dataset?.request_hash.slice(0, 8) ?? "draft"}`,
-    name: scenarioType.replaceAll("_", " "),
-    source: "QuantMeridian Scenario Studio",
-    source_version: "1.0.0",
-  };
-  const route = routes.find((row) => row.eligible) ?? routes[0];
-  const borrowerIds = [...new Set(routes.filter((row) => row.eligible && (row.maximum_quantity_shares > row.hard_minimum_quantity_shares || row.current_quantity_shares > row.hard_minimum_quantity_shares)).map((row) => row.borrower_id))];
-  const asOfDate = String(request.as_of ?? "2026-09-14T12:00:00Z").slice(0, 10);
-  const limit = limits.find((row) => row.effective_from <= asOfDate && (row.effective_to == null || asOfDate < row.effective_to));
-  const liveQuote = quotes.find((row) => Date.parse(row.expires_at) > Date.parse(String(request.as_of ?? "2026-09-14T12:00:00Z")));
-  const budget = budgets[0];
-  const eligibleInventory = inventory.find((row) => row.eligible && row.available_to_lend_shares > 0) ?? inventory.find((row) => row.eligible);
-  const quoteExpiryBeforeAsOf = (() => {
-    if (!liveQuote) return String(request.as_of ?? "2026-09-14T12:00:00Z");
-    const expiry = Date.parse(liveQuote.expires_at);
-    const asOf = Date.parse(String(request.as_of ?? liveQuote.expires_at));
-    const starts = [liveQuote.observed_at, liveQuote.effective_from].filter(Boolean).map((value) => Date.parse(String(value)));
-    const start = starts.length ? Math.max(...starts) : Number.NaN;
-    const end = Math.min(expiry, asOf);
-    return Number.isFinite(start) && end > start ? new Date(start + (end - start) / 2).toISOString() : liveQuote.expires_at;
-  })();
-  const reducibleRoute = routes.find((row) => row.eligible && row.maximum_quantity_shares > row.hard_minimum_quantity_shares);
-  switch (scenarioType) {
-    case "recall_wave":
-      return { ...base, targets: reducibleRoute ? [{ route_id: reducibleRoute.route_id, quantity_shares: Math.min(reducibleRoute.maximum_quantity_shares - reducibleRoute.hard_minimum_quantity_shares, Math.max(Number.EPSILON, reducibleRoute.current_quantity_shares - reducibleRoute.hard_minimum_quantity_shares || reducibleRoute.maximum_quantity_shares - reducibleRoute.hard_minimum_quantity_shares)) }] : [], trade_date: tradeDate, effective_date: date, settlement_date: date };
-    case "specials_squeeze":
-      return { ...base, route_ids: route ? [route.route_id] : [], spread_widening_bps: 25 };
-    case "quote_expiry":
-      return { ...base, quote_ids: liveQuote ? [liveQuote.quote_id] : [], expires_at: quoteExpiryBeforeAsOf };
-    case "borrower_limit_cut":
-      return { ...base, limit_ids: limit ? [limit.limit_id] : [], reduction_fraction: 0.25 };
-    case "borrower_default":
-      // Omitted recovery deliberately means zero capacity recovery in InventoryBallast.
-      return { ...base, borrower_ids: borrowerIds.slice(0, 1) };
-    case "balance_sheet_haircut":
-      return { ...base, budget_ids: budget ? [budget.budget_id] : [], haircut_fraction: 0.25 };
-    case "rate_shock_ladder":
-      return {
-        ...base,
-        factor: "lending_fee_spread",
-        template: "spread_widening",
-        direction: "increase",
-        targets: route ? [{ field: "route.fee_rate", target_id: route.route_id }] : [],
-        steps_bps: [10, 25],
-      };
-    case "supply_shock":
-      return {
-        ...base,
-        inventory_id: eligibleInventory?.inventory_id ?? "",
-        quantity_shares: eligibleInventory ? Math.max(Number.EPSILON, eligibleInventory.available_to_lend_shares * 0.1) : 1,
-        event_type: "sell",
-        trade_date: tradeDate,
-        effective_date: date,
-        settlement_date: date,
-      };
-    default:
-      return { ...base, route_ids: route ? [route.route_id] : [], demand_group_ids: demand.slice(0, 1).map((row) => row.demand_group_id) };
-  }
-}
-
 function pctFromDecimal(value: number) {
   return fmtPct(value * 100, 2);
 }
@@ -554,10 +489,20 @@ export default function InventoryOptimizerPage() {
   const [showAdvancedSynthetic, setShowAdvancedSynthetic] = useState(false);
   const [runConfig, setRunConfig] = useState<RunConfig>(() => sessionPrefs.runConfig ?? DEFAULT_RUN_CONFIG);
   const [workflow, dispatchWorkflow] = useReducer(workflowReducer, sessionPrefs, initWorkflowState);
+  const [baseRunHistory, setBaseRunHistory] = useState<BaseRunSnapshot[]>([]);
+  const [baselineRunId, setBaselineRunId] = useState<string | null>(null);
+  const [comparisonRunId, setComparisonRunId] = useState<string | null>(null);
   const [customScenarios, setCustomScenarios] = useState<WhatIfScenario[]>(() => sessionPrefs.customScenarios ?? []);
   const [customShockLabel, setCustomShockLabel] = useState("");
   const [engineScenarioCatalog, setEngineScenarioCatalog] = useState<IbalScenarioCatalogItem[]>([]);
   const [engineScenarioType, setEngineScenarioType] = useState("borrower_default");
+  const [presenting, setPresenting] = useState(false);
+  const [presenterIndex, setPresenterIndex] = useState(0);
+  const [suiteToken, setSuiteToken] = useState(0);
+  const [suiteCount, setSuiteCount] = useState(0);
+  const [warm, setWarm] = useState("Not warmed up yet");
+  const [warmed, setWarmed] = useState(false);
+  const [engineSizing, setEngineSizing] = useState<SizingValues>(() => defaultSizing("borrower_default"));
   const [engineScenarioParameters, setEngineScenarioParameters] = useState("");
   const [engineScenarioResponse, setEngineScenarioResponse] = useState<IbalScenarioStressResponse | null>(null);
   const [engineScenarioError, setEngineScenarioError] = useState<string | null>(null);
@@ -685,10 +630,14 @@ export default function InventoryOptimizerPage() {
   }, []);
 
   useEffect(() => {
-    setEngineScenarioParameters(JSON.stringify(scenarioParametersDraft(engineScenarioType, dataset), null, 2));
+    setEngineSizing(defaultSizing(engineScenarioType));
+  }, [engineScenarioType]);
+
+  useEffect(() => {
+    setEngineScenarioParameters(JSON.stringify(buildScenarioParameters(engineScenarioType, dataset, result, engineSizing), null, 2));
     setEngineScenarioResponse(null);
     setEngineScenarioError(null);
-  }, [engineScenarioType, dataset]);
+  }, [engineScenarioType, dataset, result?.run_id, engineSizing]);
 
   useEffect(() => {
     setEngineScenarioResponse(null);
@@ -726,6 +675,15 @@ export default function InventoryOptimizerPage() {
   const viewDataset = activeView?.dataset ?? null;
   const viewResult = activeView?.result ?? null;
   const viewLabel = activeView?.label ?? "Base Case";
+
+  const baselineRun = baseRunHistory.find((run) => run.result.run_id === baselineRunId) ?? null;
+  const comparisonRun = baseRunHistory.find((run) => run.result.run_id === comparisonRunId) ?? null;
+  const baseRunComparison = useMemo(
+    () => baselineRun && comparisonRun && baselineRun.result.run_id !== comparisonRun.result.run_id
+      ? compareBaseRuns(baselineRun, comparisonRun)
+      : null,
+    [baselineRun, comparisonRun]
+  );
 
   const selectedAllocation = useMemo(
     () => viewResult?.allocations.find((row) => row.route_id === selectedRouteId) ?? null,
@@ -1020,6 +978,15 @@ export default function InventoryOptimizerPage() {
     { key: "message", header: "Message", render: (row) => <span className="text-term-text-mute">{row.message ?? row.requestHash?.slice(0, 12) ?? "-"}</span>, sortVal: (row) => row.message ?? row.requestHash ?? "" },
   ];
 
+  const baseRunDriverColumns: Column<DriverDelta>[] = [
+    { key: "entity", header: "Entity", render: (row) => <span className="text-term-text" title={row.entityId}>{row.label}</span>, sortVal: (row) => row.label },
+    { key: "presence", header: "Presence", align: "center", render: (row) => <Tag tone={row.presence === "matched" ? "neutral" : row.presence === "new" ? "blue" : "amber"}>{row.presence}</Tag>, sortVal: (row) => row.presence },
+    { key: "baseline", header: "Baseline", align: "right", render: (row) => row.baselineQuantityShares == null ? <span className="text-term-text-mute">N/A</span> : fmtAbbr(row.baselineQuantityShares), sortVal: (row) => row.baselineQuantityShares ?? Number.NEGATIVE_INFINITY },
+    { key: "comparison", header: "Comparison", align: "right", render: (row) => row.comparisonQuantityShares == null ? <span className="text-term-text-mute">N/A</span> : fmtAbbr(row.comparisonQuantityShares), sortVal: (row) => row.comparisonQuantityShares ?? Number.NEGATIVE_INFINITY },
+    { key: "delta", header: "Delta", align: "right", render: (row) => row.deltaShares == null ? <span className="text-term-text-mute">N/A</span> : <span className={row.deltaShares > 0 ? "text-term-up" : row.deltaShares < 0 ? "text-term-down" : "text-term-text-mute"}>{fmtAbbr(row.deltaShares)}</span>, sortVal: (row) => row.deltaShares == null ? Number.NEGATIVE_INFINITY : Math.abs(row.deltaShares) },
+    { key: "coverage", header: "Coverage", align: "center", render: (row) => <Tag tone={row.coverage === "complete" ? "up" : row.coverage === "partial" ? "amber" : "neutral"}>{row.coverage}</Tag>, sortVal: (row) => row.coverage },
+  ];
+
   async function doRefreshSynthetic() {
     dispatchWorkflow({ type: "start", phase: "preparing" });
     try {
@@ -1086,6 +1053,9 @@ export default function InventoryOptimizerPage() {
 
   function resetAll() {
     dispatchWorkflow({ type: "reset" });
+    setBaseRunHistory([]);
+    setBaselineRunId(null);
+    setComparisonRunId(null);
   }
 
   async function solveCurrent() {
@@ -1095,6 +1065,11 @@ export default function InventoryOptimizerPage() {
     try {
       const response = await runIbal(dataset, runConfig);
       setResult(response.result);
+      setBaseRunHistory((current) => current.some((run) => run.result.run_id === response.result.run_id)
+        ? current
+        : [...current, { dataset, result: response.result }]);
+      setBaselineRunId((current) => current ?? response.result.run_id);
+      setComparisonRunId(response.result.run_id);
       setMessage(`Run ${response.result.run_id} returned ${response.result.status}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Run failed.");
@@ -1296,6 +1271,29 @@ export default function InventoryOptimizerPage() {
     URL.revokeObjectURL(anchor.href);
   }
 
+  async function doWarmUp() {
+    setWarm("Warming up…");
+    const outcome = await warmUp();
+    setWarmed(outcome.ok);
+    setWarm(outcome.ok ? `Warm · ${outcome.ms} ms` : `Warm-up incomplete: ${outcome.failed.join(", ")}`);
+    await refreshEngineStatus();
+  }
+
+  const needDataset = dataset?.validation.valid ? undefined : "Generate a book first.";
+  const needBase = result ? undefined : "Solve the base case first.";
+  const presenterSteps: PresenterStepView[] = [
+    { ...PRESENTER_STEPS[0], done: warmed && Boolean(health?.ready) && !engineBlock, busy: engineChecking || warm === "Warming up…", run: () => void doWarmUp() },
+    { ...PRESENTER_STEPS[1], done: Boolean(dataset?.validation.valid), busy: workflow.phase === "preparing", disabledReason: engineBlock ?? undefined, run: () => void doRefreshSynthetic() },
+    { ...PRESENTER_STEPS[2], done: result?.status === "optimal", busy: workflow.phase === "solving", disabledReason: needDataset, run: () => void solveCurrent() },
+    { ...PRESENTER_STEPS[3], done: Boolean(engineScenarioResponse), busy: engineScenarioBusy, disabledReason: needBase, run: () => void runEngineScenarioStressTest() },
+    { ...PRESENTER_STEPS[4], done: suiteCount > 0, busy: false, disabledReason: needBase, run: () => setSuiteToken((token) => token + 1) },
+    { ...PRESENTER_STEPS[5], done: whatIfResults.some((row) => row.status === "optimal"), busy: scenarioBusy, disabledReason: needDataset, run: () => void runWhatIfScenarios() },
+  ];
+  const presenterDone = presenterSteps.map((step) => step.done).join();
+  useEffect(() => {
+    if (presenting) setPresenterIndex(currentStepIndex(presenterDone.split(",").map((value) => value === "true")));
+  }, [presenting, presenterDone]);
+
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
@@ -1306,6 +1304,15 @@ export default function InventoryOptimizerPage() {
         asOf={dataset?.summary.as_of ?? null}
         right={
           <span className="flex items-center gap-1">
+            <button
+              type="button"
+              className={`term-btn px-2 py-0.5 text-3xs ${presenting ? "border-term-amber text-term-amber" : ""}`}
+              aria-pressed={presenting}
+              title="Guided demo: warms the engine up and walks through the story step by step"
+              onClick={() => { const next = !presenting; setPresenting(next); if (next && !warmed) void doWarmUp(); }}
+            >
+              Present
+            </button>
             {health?.ready ? (
               <>
                 <ProvenanceBadge source={sourceFor(dataset, health)} />
@@ -1317,6 +1324,8 @@ export default function InventoryOptimizerPage() {
           </span>
         }
       />
+
+      {presenting && <PresenterBar steps={presenterSteps} index={presenterIndex} onIndex={setPresenterIndex} warm={warm} onExit={() => setPresenting(false)} />}
 
       <KpiStrip>
         <Stat label="Securities" value={fmtInt(dataset?.summary.security_count ?? 0)} sub={`${fmtInt(dataset?.summary.borrower_count ?? 0)} borrowers`} />
@@ -1562,7 +1571,10 @@ export default function InventoryOptimizerPage() {
                 </select>
               </label>
               {selectedEngineScenario && <div className="text-term-text-mute">{selectedEngineScenario.description}</div>}
-              <label className="grid gap-1 text-term-text-dim">
+              <ScenarioSizingForm family={SCENARIO_FAMILIES.find((item) => item.id === engineScenarioType)} values={engineSizing} disabled={engineScenarioBusy} onChange={setEngineSizing} />
+              <details className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text-mute">
+                <summary className="cursor-pointer">Advanced: explicit engine parameters (JSON)</summary>
+                <label className="grid gap-1 text-term-text-dim">
                 Validated scenario parameters (JSON)
                 <textarea
                   className="min-h-40 border border-term-border bg-term-panel-2 px-2 py-1 font-mono text-3xs text-term-text"
@@ -1576,6 +1588,7 @@ export default function InventoryOptimizerPage() {
                   }}
                 />
               </label>
+              </details>
               {selectedEngineScenario && (
                 <details className="border border-term-border bg-term-panel-2 px-2 py-1 text-term-text-mute">
                   <summary className="cursor-pointer">Engine parameter schema</summary>
@@ -1598,6 +1611,7 @@ export default function InventoryOptimizerPage() {
               </button>
             </div>
           </Panel>
+          <StressSuitePanel dataset={dataset} runConfig={runConfig} result={result} disabled={busy || engineScenarioBusy} runToken={suiteToken} onRanked={setSuiteCount} />
         </div>
 
         <div className="flex min-h-0 flex-col gap-2">
@@ -1664,6 +1678,80 @@ export default function InventoryOptimizerPage() {
                 {engineScenarioResponse.stress_report.outcomes.flatMap((outcome) => outcome.driver_reconciliations.map((item) => (
                   <div key={`${outcome.scenario_id}-${item.dimension}`}>{outcome.scenario_id} · {item.dimension}: attributed {fmtAbbr(item.attributed_delta_shares)} / total {fmtAbbr(item.total_delta_shares)} / residual {fmtAbbr(item.residual_shares)}</div>
                 )))}
+              </div>
+            </Panel>
+          )}
+
+          {baseRunHistory.length > 0 && (
+            <Panel title="Base-Run Comparison" code="BASE RUNS" accent={Boolean(baseRunComparison?.partial)}>
+              <div className="grid gap-2 p-2">
+                <div className="grid gap-2 md:grid-cols-2">
+                  <label className="grid gap-1 text-term-text-dim">
+                    Baseline run
+                    <select className="min-w-0 border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" value={baselineRunId ?? ""} onChange={(event) => setBaselineRunId(event.target.value || null)}>
+                      {baseRunHistory.map((run) => <option key={run.result.run_id} value={run.result.run_id}>{run.result.created_at} · {run.result.run_id}</option>)}
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-term-text-dim">
+                    Comparison run
+                    <select className="min-w-0 border border-term-border bg-term-panel-2 px-2 py-1 text-term-text" value={comparisonRunId ?? ""} onChange={(event) => setComparisonRunId(event.target.value || null)}>
+                      {baseRunHistory.map((run) => <option key={run.result.run_id} value={run.result.run_id}>{run.result.created_at} · {run.result.run_id}</option>)}
+                    </select>
+                  </label>
+                </div>
+
+                {baseRunComparison && baselineRun && comparisonRun ? (
+                  <>
+                    <div className="grid gap-2 border-y border-term-border py-2 md:grid-cols-2">
+                      {[{ label: "Baseline", identity: baseRunComparison.baseline }, { label: "Comparison", identity: baseRunComparison.comparison }].map(({ label, identity }) => (
+                        <div key={label} className="min-w-0 text-3xs leading-5 text-term-text-mute">
+                          <div className="mb-1 flex items-center gap-2 text-term-text"><span>{label}</span><Tag tone={identity.status === "optimal" ? "up" : "amber"}>{identity.status}</Tag><Tag>{identity.sourceMode.toUpperCase()}</Tag></div>
+                          <div className="break-all">Run {identity.runId} · {identity.createdAt}</div>
+                          <div className="break-all">Source {identity.sourceLabel}{identity.seed == null ? "" : ` · seed ${identity.seed}`}{identity.uploadHash ? ` · upload ${identity.uploadHash}` : ""}</div>
+                          <div className="break-all">Input {identity.requestHash} · config {identity.configHash}</div>
+                          <div className="break-all">Engine {identity.engineVersion} · backend {identity.backendVersion ?? "not reported"} · verification {identity === baseRunComparison.baseline ? (baseRunComparison.baselineMetrics.verificationPassed == null ? "not reported" : baseRunComparison.baselineMetrics.verificationPassed ? "passed" : "failed") : (baseRunComparison.comparisonMetrics.verificationPassed == null ? "not reported" : baseRunComparison.comparisonMetrics.verificationPassed ? "passed" : "failed")}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {baseRunComparison.partial && (
+                      <div className="border border-term-amber/40 bg-term-amber/10 px-2 py-1 text-2xs text-term-amber" role="status">
+                        Partial comparison. {fmtInt(baseRunComparison.unmatchedEntityCount)} unmatched driver rows and {fmtInt(baseRunComparison.unresolvedEntityCount)} unresolved IDs are retained; unavailable deltas are not treated as zero.
+                        {(baselineRun.dataset.api_schema_version !== comparisonRun.dataset.api_schema_version || baselineRun.dataset.template_schema_version !== comparisonRun.dataset.template_schema_version || baselineRun.dataset.request.problem_family !== comparisonRun.dataset.request.problem_family) && " Run schemas or problem families differ."}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">
+                      <Stat label="Objective Δ" value={baseRunComparison.portfolioDelta.objectiveDeltaUsd == null ? "N/A" : fmtUsdAbbr(baseRunComparison.portfolioDelta.objectiveDeltaUsd)} tone={baseRunComparison.portfolioDelta.objectiveDeltaUsd == null ? "neutral" : baseRunComparison.portfolioDelta.objectiveDeltaUsd >= 0 ? "up" : "down"} />
+                      <Stat label="Allocation Δ" value={baseRunComparison.portfolioDelta.totalAllocationShares == null ? "N/A" : fmtAbbr(baseRunComparison.portfolioDelta.totalAllocationShares)} />
+                      <Stat label="Filled Δ" value={baseRunComparison.portfolioDelta.filledShares == null ? "N/A" : fmtAbbr(baseRunComparison.portfolioDelta.filledShares)} />
+                      <Stat label="Fill Rate Δ" value={baseRunComparison.portfolioDelta.fillRate == null ? "N/A" : fmtPct(baseRunComparison.portfolioDelta.fillRate * 100, 2)} />
+                      <Stat label="Utilization Δ" value={baseRunComparison.portfolioDelta.utilization == null ? "N/A" : fmtPct(baseRunComparison.portfolioDelta.utilization * 100, 2)} />
+                      <Stat label="Active Routes Δ" value={baseRunComparison.portfolioDelta.activeRoutes == null ? "N/A" : fmtInt(baseRunComparison.portfolioDelta.activeRoutes)} />
+                      <Stat label="Binding Rows Δ" value={baseRunComparison.portfolioDelta.bindingConstraints == null ? "N/A" : fmtInt(baseRunComparison.portfolioDelta.bindingConstraints)} />
+                      <Stat label="Warnings Δ" value={fmtInt(baseRunComparison.portfolioDelta.warningCount)} />
+                    </div>
+
+                    <div className="grid gap-2 xl:grid-cols-2">
+                      {([
+                        ["security", "Security Drivers"],
+                        ["borrower_parent", "Borrower / Parent Drivers"],
+                        ["inventory", "Inventory Drivers"],
+                        ["inventory_pool", "Inventory Pool Drivers"],
+                        ["route", "Route Drivers"],
+                      ] as [DriverDimension, string][]).map(([dimension, title]) => (
+                        <section key={dimension} className="min-w-0 border border-term-border">
+                          <h3 className="border-b border-term-border px-2 py-1 text-2xs font-semibold text-term-text-dim">{title} · ABSOLUTE SHARE DELTA</h3>
+                          <DataGrid columns={baseRunDriverColumns} rows={baseRunComparison.drivers[dimension]} rowKey={(row) => `${row.presence}-${row.entityId}`} maxHeight="220px" initialSort={{ key: "delta", dir: "desc" }} zebra />
+                        </section>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="border-y border-term-border py-3 text-2xs text-term-text-mute" role="status">
+                    {baseRunHistory.length < 2 ? "A second completed base-case run is needed for comparison." : "Select two different completed runs."}
+                  </div>
+                )}
               </div>
             </Panel>
           )}
