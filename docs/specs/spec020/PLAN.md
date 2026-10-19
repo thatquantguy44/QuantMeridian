@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decisions 1–5 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Draft — pending owner review; decisions 1–6 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-19
 
 ## Approach
@@ -109,7 +109,13 @@ The Basel comprehensive approach for securities financing transactions: E* = max
 
 ### 8. Pricing view
 
-Indemnification cost (bps per year) = (EL + cost of capital × capital measure) / average loan value. It is shown next to the borrower's average fee. A borrower whose cost is above, say, half its fee is flagged for review. The threshold is configurable.
+Computed from the annual view only (decision 6).
+
+- **Economic capital (drives the flag):** program UL = VaR99.9 − EL of annual loss, across both channels. Borrower b's capital = UL × (Euler ES contribution of b / program ES). Reinvestment losses not caused by a borrower default are attributed pro rata to each borrower's share of cash collateral in the pool.
+- **Cost:** indemnification cost_b (bps per year) = (EL_b + cost of capital × capital_b) / average loan value_b, shown next to the borrower's average fee.
+- **Regulatory proxy (comparison only):** E*_b (section 6) × risk weight(rating_b) × 8%, put through the same cost formula. It is labelled as excluding wrong-way risk and reinvestment losses, and never drives the flag.
+- **Flag:** cost_b > threshold × fee_b.
+- **Defaults (configurable, illustrative):** cost of capital 10% a year; threshold 50%; risk weights AAA to AA− 20%, A+ to A− 50%, BBB+ to BB− 100%, below BB− 150%, unrated 100%.
 
 ## Service and terminal boundary
 
