@@ -8,6 +8,7 @@ from referencing import Registry, Resource
 CONTRACTS = Path(__file__).resolve().parents[3] / "contracts" / "indemnification"
 SCHEMA_FILES = [
     "closeout-profile-1.0.schema.json",
+    "rating-pd-table-1.0.schema.json",
     "model-card-1.0.schema.json",
     "snapshot-1.0.schema.json",
     "result-1.0.schema.json",

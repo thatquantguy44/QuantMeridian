@@ -11,7 +11,7 @@ import {
   profileHash, snapshotHash, snapshotIssues,
   type BorrowerRecord, type CloseoutProfile, type CloseoutSettings, type CollateralHoldingRecord,
   type IndemnificationSnapshot, type LoanRecord, type ModelSettings, type PositionOverride,
-  type RunSettings, type SecurityRecord,
+  RATING_ORDER, type RatingPdTable, type RunSettings, type SecurityRecord,
 } from "./indemnificationContract";
 
 const read = (path: string) => JSON.parse(readFileSync(new URL(`../../contracts/indemnification/${path}`, import.meta.url), "utf-8"));
@@ -19,6 +19,8 @@ const SNAPSHOT_SCHEMA = read("snapshot-1.0.schema.json");
 const RESULT_SCHEMA = read("result-1.0.schema.json");
 const CARD_SCHEMA = read("model-card-1.0.schema.json");
 const PROFILE_SCHEMA = read("closeout-profile-1.0.schema.json");
+const TABLE_SCHEMA = read("rating-pd-table-1.0.schema.json");
+const DEFAULT_TABLE = read("rating-pd-table.default.json");
 const DEFAULT_PROFILE: CloseoutProfile = read("closeout-profile.default.json");
 const SNAPSHOT: IndemnificationSnapshot = read("fixtures/snapshot.example.json");
 const RESULT = read("fixtures/result.example.json");
@@ -50,14 +52,14 @@ const LOAN: Fields<LoanRecord> = {
 const COLLATERAL: Fields<CollateralHoldingRecord> = { id: true, borrower_id: true, kind: true, security_id: true, quantity: true, cash_amount: true, provenance: true };
 const SNAPSHOT_FIELDS: Fields<IndemnificationSnapshot> = {
   api_schema_version: true, snapshot_hash: true, as_of: true, source: true, currency: true, run: true, model: true,
-  pricing: true, closeout_profile: true, securities: true, borrowers: true, owners: true, loans: true, collateral: true, pool: true,
+  pricing: true, rating_pd_table: true, closeout_profile: true, securities: true, borrowers: true, owners: true, loans: true, collateral: true, pool: true,
 };
 
 let ajv: Ajv2020;
 beforeAll(() => {
   ajv = new Ajv2020({ strict: true, allErrors: true });
   addFormats(ajv);
-  for (const schema of [PROFILE_SCHEMA, CARD_SCHEMA, SNAPSHOT_SCHEMA, RESULT_SCHEMA]) ajv.addSchema(schema);
+  for (const schema of [PROFILE_SCHEMA, TABLE_SCHEMA, CARD_SCHEMA, SNAPSHOT_SCHEMA, RESULT_SCHEMA]) ajv.addSchema(schema);
 });
 const validator = (schema: { $id: string }) => ajv.getSchema(schema.$id)!;
 const errors = (schema: { $id: string }, value: unknown) => {
@@ -67,13 +69,14 @@ const errors = (schema: { $id: string }, value: unknown) => {
 
 describe("schemas and fixtures", () => {
   test("every schema compiles under strict mode", () => {
-    for (const schema of [PROFILE_SCHEMA, CARD_SCHEMA, SNAPSHOT_SCHEMA, RESULT_SCHEMA]) expect(validator(schema), schema.$id).toBeTypeOf("function");
+    for (const schema of [PROFILE_SCHEMA, TABLE_SCHEMA, CARD_SCHEMA, SNAPSHOT_SCHEMA, RESULT_SCHEMA]) expect(validator(schema), schema.$id).toBeTypeOf("function");
   });
 
   test("the snapshot, result and default profile fixtures are valid", () => {
     expect(errors(SNAPSHOT_SCHEMA, SNAPSHOT)).toEqual([]);
     expect(errors(RESULT_SCHEMA, RESULT)).toEqual([]);
     expect(errors(PROFILE_SCHEMA, DEFAULT_PROFILE)).toEqual([]);
+    expect(errors(TABLE_SCHEMA, DEFAULT_TABLE)).toEqual([]);
     expect(errors(CARD_SCHEMA, RESULT.model_card)).toEqual([]);
   });
 
@@ -184,6 +187,28 @@ describe("close-out profile", () => {
   });
 });
 
+describe("rating PD table", () => {
+  test("the shipped table is labelled illustrative, non-decreasing from AAA to CCC, and embedded in the fixture", () => {
+    expect(DEFAULT_TABLE.label).toBe("ILLUSTRATIVE");
+    for (let i = 1; i < RATING_ORDER.length; i++) {
+      expect(DEFAULT_TABLE.pd_1y[RATING_ORDER[i]], RATING_ORDER[i]).toBeGreaterThanOrEqual(DEFAULT_TABLE.pd_1y[RATING_ORDER[i - 1]]);
+    }
+    expect(SNAPSHOT.rating_pd_table).toEqual(DEFAULT_TABLE);
+  });
+
+  const bad = (name: string, mutate: (t: RatingPdTable) => void) =>
+    test(`the schema rejects ${name}`, () => {
+      const table = clone(DEFAULT_TABLE);
+      mutate(table);
+      expect(errors(TABLE_SCHEMA, table).length, name).toBeGreaterThan(0);
+    });
+  bad("a missing rating", (t) => { delete (t.pd_1y as Partial<Record<string, number>>).BBB; });
+  bad("an unknown rating", (t) => { (t.pd_1y as unknown as Record<string, number>).XYZ = 0.1; });
+  bad("a probability of 1", (t) => { t.pd_1y.CCC = 1; });
+  bad("a probability of 0", (t) => { t.pd_1y.AAA = 0; });
+  bad("an unknown label", (t) => { (t as unknown as Record<string, unknown>).label = "REAL"; });
+});
+
 describe("snapshot validation", () => {
   const bad = (name: string, mutate: (s: IndemnificationSnapshot) => void) =>
     test(`the schema rejects ${name}`, () => {
@@ -213,6 +238,7 @@ describe("snapshot validation", () => {
       mutate(snapshot);
       expect(snapshotIssues(snapshot).some((m) => expected.test(m)), snapshotIssues(snapshot).join("; ")).toBe(true);
     });
+  issue("a PD table that decreases with worse credit", (s) => { s.rating_pd_table.pd_1y.BBB = 0.0001; }, /PD for BBB- is below|PD for BBB is below/);
   issue("rho_w squared above rho_d", (s) => { s.model.rho_w = 0.6; }, /rho_w\^2/);
   issue("a duplicate loan id", (s) => { s.loans[1].id = "L1"; }, /duplicate loan id L1/);
   issue("a loan with an unknown borrower", (s) => { s.loans[0].borrower_id = "B9"; }, /unknown borrower B9/);

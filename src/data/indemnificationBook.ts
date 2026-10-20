@@ -3,9 +3,10 @@ import {
   API_SCHEMA_VERSION, snapshotHash,
   type BorrowerRecord, type CloseoutProfile, type CollateralHoldingRecord, type IndemnificationSnapshot,
   type LoanRecord, type ModelSettings, type OwnerRecord, type PoolPositionRecord, type PricingSettings,
-  type Rating, type RunSettings, type SecurityRecord,
+  type Rating, type RatingPdTable, type RunSettings, type SecurityRecord,
 } from "@/lib/indemnificationContract";
 import DEFAULT_PROFILE from "../../contracts/indemnification/closeout-profile.default.json";
+import DEFAULT_RATING_TABLE from "../../contracts/indemnification/rating-pd-table.default.json";
 import { getReinvestmentPositions, type ReinvestmentPosition } from "./reinvestment";
 import { getIndemnificationBookExtension, getLoanBook } from "./securitiesLending";
 import { COUNTERPARTIES, bySymbol, type Security } from "./universe";
@@ -31,6 +32,7 @@ export interface SimSnapshotOptions {
   run?: Partial<RunSettings>;
   model?: Partial<ModelSettings>;
   pricing?: Partial<PricingSettings>;
+  ratingPdTable?: RatingPdTable;
   profile?: CloseoutProfile;
 }
 
@@ -126,6 +128,7 @@ export async function buildSimSnapshot(options: SimSnapshotOptions): Promise<Ind
     run: { ...DEFAULT_RUN, ...options.run },
     model: { ...DEFAULT_MODEL, ...options.model },
     pricing: { ...DEFAULT_PRICING, ...options.pricing },
+    rating_pd_table: options.ratingPdTable ?? (JSON.parse(JSON.stringify(DEFAULT_RATING_TABLE)) as RatingPdTable),
     closeout_profile: options.profile ?? (JSON.parse(JSON.stringify(DEFAULT_PROFILE)) as CloseoutProfile),
     securities,
     borrowers,

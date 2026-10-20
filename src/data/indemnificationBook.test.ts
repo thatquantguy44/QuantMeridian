@@ -103,7 +103,7 @@ describe("buildSimSnapshot", () => {
   beforeAll(async () => {
     ajv = new Ajv2020({ strict: true, allErrors: true });
     addFormats(ajv);
-    for (const name of ["closeout-profile-1.0.schema.json", "model-card-1.0.schema.json", "snapshot-1.0.schema.json", "result-1.0.schema.json"]) ajv.addSchema(readSchema(name));
+    for (const name of ["closeout-profile-1.0.schema.json", "rating-pd-table-1.0.schema.json", "model-card-1.0.schema.json", "snapshot-1.0.schema.json", "result-1.0.schema.json"]) ajv.addSchema(readSchema(name));
     snapshot = await buildSimSnapshot({ asOf: AS_OF });
   });
 
@@ -173,6 +173,14 @@ describe("buildSimSnapshot", () => {
       expect(s.adv_units, s.id).toBeGreaterThan(0);
       expect(s.daily_vol, s.id).toBeGreaterThan(0);
     }
+  });
+
+  test("embeds the default rating PD table, or the one supplied", async () => {
+    const defaultTable = JSON.parse(readFileSync(new URL("../../contracts/indemnification/rating-pd-table.default.json", import.meta.url), "utf-8"));
+    expect(snapshot.rating_pd_table).toEqual(defaultTable);
+    const custom = await buildSimSnapshot({ asOf: AS_OF, ratingPdTable: { ...defaultTable, label: "USER_INPUT", pd_1y: { ...defaultTable.pd_1y, BBB: 0.003 } } });
+    expect(custom.rating_pd_table.pd_1y.BBB).toBe(0.003);
+    expect(custom.snapshot_hash).not.toBe(snapshot.snapshot_hash);
   });
 
   test("honours run, model, pricing and profile options", async () => {

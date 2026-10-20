@@ -1,6 +1,6 @@
 {
   "api_schema_version": "1.0",
-  "snapshot_hash": "9216e7646de4ceefeff1a01695171597ce186cbaf6f3e44016de820f74b8ec03",
+  "snapshot_hash": "d32eb4a58bea883c72637fdf611f66bfcd9826679de0d37b1c5a9b611351b252",
   "as_of": "2026-10-20",
   "source": {
     "label": "SIM",
@@ -32,6 +32,30 @@
       "bbb_plus_to_bb_minus": 1,
       "below_bb_minus": 1.5,
       "unrated": 1
+    }
+  },
+  "rating_pd_table": {
+    "table_version": 1,
+    "label": "ILLUSTRATIVE",
+    "pd_1y": {
+      "AAA": 0.0001,
+      "AA+": 0.0001,
+      "AA": 0.0002,
+      "AA-": 0.0003,
+      "A+": 0.0004,
+      "A": 0.0006,
+      "A-": 0.0009,
+      "BBB+": 0.0013,
+      "BBB": 0.002,
+      "BBB-": 0.0035,
+      "BB+": 0.0055,
+      "BB": 0.0085,
+      "BB-": 0.015,
+      "B+": 0.025,
+      "B": 0.04,
+      "B-": 0.065,
+      "CCC": 0.25,
+      "NR": 0.01
     }
   },
   "closeout_profile": {

@@ -92,6 +92,16 @@ export interface SecurityRecord {
   rate_duration: number;
   spread_duration: number;
 }
+/** Ratings from best to worst; NR (unrated) sits outside the order. */
+export const RATING_ORDER: Rating[] = ["AAA", "AA+", "AA", "AA-", "A+", "A", "A-", "BBB+", "BBB", "BBB-", "BB+", "BB", "BB-", "B+", "B", "B-", "CCC"];
+
+/** Illustrative annual default probability per rating (decision 2); travels inside the snapshot. */
+export interface RatingPdTable {
+  table_version: number;
+  label: "ILLUSTRATIVE" | "USER_INPUT";
+  pd_1y: Record<Rating, number>;
+}
+
 export interface BorrowerRecord {
   id: string;
   name: string;
@@ -152,6 +162,7 @@ export interface IndemnificationSnapshot {
   run: RunSettings;
   model: ModelSettings;
   pricing: PricingSettings;
+  rating_pd_table: RatingPdTable;
   closeout_profile: CloseoutProfile;
   securities: SecurityRecord[];
   borrowers: BorrowerRecord[];
@@ -206,6 +217,14 @@ export function snapshotIssues(snapshot: IndemnificationSnapshot): string[] {
   const issues: string[] = [];
   const { model, closeout_profile: profile } = snapshot;
   if (model.rho_w ** 2 > model.rho_d) issues.push(`rho_w^2 (${model.rho_w ** 2}) must not exceed rho_d (${model.rho_d})`);
+
+  for (let i = 1; i < RATING_ORDER.length; i++) {
+    const better = RATING_ORDER[i - 1];
+    const worse = RATING_ORDER[i];
+    if (snapshot.rating_pd_table.pd_1y[worse] < snapshot.rating_pd_table.pd_1y[better]) {
+      issues.push(`rating_pd_table: PD for ${worse} is below PD for ${better}`);
+    }
+  }
 
   const idSets: Record<string, Set<string>> = {};
   const collect = (name: string, records: { id: string }[]) => {

@@ -5,184 +5,705 @@
   "description": "Everything the service needs for one run. The service has no database and substitutes nothing. snapshot_hash is SHA-256 of the canonical JSON (sorted keys, no whitespace) of this object without snapshot_hash, with every array of records sorted by id. Cross-field rules the schema cannot state (rho_w^2 <= rho_d, referential integrity, unique ids, horizon and step consistent with mode) are enforced by the service and by indemnificationContract.ts.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["api_schema_version", "snapshot_hash", "as_of", "source", "currency", "run", "model", "pricing", "closeout_profile", "securities", "borrowers", "owners", "loans", "collateral", "pool"],
+  "required": [
+    "api_schema_version",
+    "snapshot_hash",
+    "as_of",
+    "source",
+    "currency",
+    "run",
+    "model",
+    "pricing",
+    "rating_pd_table",
+    "closeout_profile",
+    "securities",
+    "borrowers",
+    "owners",
+    "loans",
+    "collateral",
+    "pool"
+  ],
   "properties": {
-    "api_schema_version": {"const": "1.0"},
-    "snapshot_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "as_of": {"type": "string", "format": "date"},
-    "source": {"$ref": "#/$defs/Source"},
-    "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
-    "run": {"$ref": "#/$defs/Run"},
-    "model": {"$ref": "#/$defs/Model"},
-    "pricing": {"$ref": "#/$defs/Pricing"},
-    "closeout_profile": {"$ref": "urn:quantmeridian:indemnification:closeout-profile:1.0"},
-    "securities": {"type": "array", "items": {"$ref": "#/$defs/Security"}},
-    "borrowers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/Borrower"}},
-    "owners": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/Owner"}},
-    "loans": {"type": "array", "items": {"$ref": "#/$defs/Loan"}},
-    "collateral": {"type": "array", "items": {"$ref": "#/$defs/CollateralHolding"}},
-    "pool": {"$ref": "#/$defs/Pool"}
+    "api_schema_version": {
+      "const": "1.0"
+    },
+    "snapshot_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date"
+    },
+    "source": {
+      "$ref": "#/$defs/Source"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "run": {
+      "$ref": "#/$defs/Run"
+    },
+    "model": {
+      "$ref": "#/$defs/Model"
+    },
+    "pricing": {
+      "$ref": "#/$defs/Pricing"
+    },
+    "rating_pd_table": {
+      "$ref": "urn:quantmeridian:indemnification:rating-pd-table:1.0"
+    },
+    "closeout_profile": {
+      "$ref": "urn:quantmeridian:indemnification:closeout-profile:1.0"
+    },
+    "securities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Security"
+      }
+    },
+    "borrowers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Borrower"
+      }
+    },
+    "owners": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Owner"
+      }
+    },
+    "loans": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Loan"
+      }
+    },
+    "collateral": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CollateralHolding"
+      }
+    },
+    "pool": {
+      "$ref": "#/$defs/Pool"
+    }
   },
   "$defs": {
-    "Provenance": {"enum": ["sim", "user_input"]},
-    "Id": {"type": "string", "pattern": "^[\\x21-\\x7e]{1,128}$"},
+    "Provenance": {
+      "enum": [
+        "sim",
+        "user_input"
+      ]
+    },
+    "Id": {
+      "type": "string",
+      "pattern": "^[\\x21-\\x7e]{1,128}$"
+    },
     "Source": {
-      "type": "object", "additionalProperties": false,
-      "required": ["label", "book_seed", "generator_version"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "book_seed",
+        "generator_version"
+      ],
       "properties": {
-        "label": {"enum": ["SIM", "USER_INPUT", "MIXED"]},
-        "book_seed": {"type": ["string", "null"], "maxLength": 128},
-        "generator_version": {"type": ["string", "null"], "maxLength": 64}
+        "label": {
+          "enum": [
+            "SIM",
+            "USER_INPUT",
+            "MIXED"
+          ]
+        },
+        "book_seed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "generator_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        }
       }
     },
     "Run": {
-      "type": "object", "additionalProperties": false,
-      "required": ["mode", "seed", "paths", "preview", "horizon_days", "step"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "seed",
+        "paths",
+        "preview",
+        "horizon_days",
+        "step"
+      ],
       "properties": {
-        "mode": {"enum": ["desk", "annual"]},
-        "seed": {"type": "integer", "minimum": 0, "maximum": 4294967295},
-        "paths": {"type": "integer", "minimum": 1000, "maximum": 500000},
-        "preview": {"type": "boolean"},
-        "horizon_days": {"type": "integer", "minimum": 21, "maximum": 1260},
-        "step": {"enum": ["daily", "weekly", "monthly"]}
+        "mode": {
+          "enum": [
+            "desk",
+            "annual"
+          ]
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "paths": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 500000
+        },
+        "preview": {
+          "type": "boolean"
+        },
+        "horizon_days": {
+          "type": "integer",
+          "minimum": 21,
+          "maximum": 1260
+        },
+        "step": {
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly"
+          ]
+        }
       }
     },
     "Model": {
-      "type": "object", "additionalProperties": false,
-      "required": ["rho_d", "rho_w", "student_t_enabled", "student_t_nu", "default_recovery"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rho_d",
+        "rho_w",
+        "student_t_enabled",
+        "student_t_nu",
+        "default_recovery"
+      ],
       "properties": {
-        "rho_d": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
-        "rho_w": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
-        "student_t_enabled": {"type": "boolean"},
-        "student_t_nu": {"type": "integer", "minimum": 3, "maximum": 200},
-        "default_recovery": {"type": "number", "minimum": 0, "exclusiveMaximum": 1}
+        "rho_d": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "rho_w": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "student_t_enabled": {
+          "type": "boolean"
+        },
+        "student_t_nu": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 200
+        },
+        "default_recovery": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        }
       }
     },
     "RiskWeights": {
-      "type": "object", "additionalProperties": false,
-      "required": ["aaa_to_aa_minus", "a_plus_to_a_minus", "bbb_plus_to_bb_minus", "below_bb_minus", "unrated"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aaa_to_aa_minus",
+        "a_plus_to_a_minus",
+        "bbb_plus_to_bb_minus",
+        "below_bb_minus",
+        "unrated"
+      ],
       "properties": {
-        "aaa_to_aa_minus": {"type": "number", "minimum": 0},
-        "a_plus_to_a_minus": {"type": "number", "minimum": 0},
-        "bbb_plus_to_bb_minus": {"type": "number", "minimum": 0},
-        "below_bb_minus": {"type": "number", "minimum": 0},
-        "unrated": {"type": "number", "minimum": 0}
+        "aaa_to_aa_minus": {
+          "type": "number",
+          "minimum": 0
+        },
+        "a_plus_to_a_minus": {
+          "type": "number",
+          "minimum": 0
+        },
+        "bbb_plus_to_bb_minus": {
+          "type": "number",
+          "minimum": 0
+        },
+        "below_bb_minus": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unrated": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
     "Pricing": {
-      "type": "object", "additionalProperties": false,
-      "required": ["cost_of_capital", "flag_threshold", "risk_weights"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost_of_capital",
+        "flag_threshold",
+        "risk_weights"
+      ],
       "properties": {
-        "cost_of_capital": {"type": "number", "minimum": 0, "maximum": 1},
-        "flag_threshold": {"type": "number", "minimum": 0},
-        "risk_weights": {"$ref": "#/$defs/RiskWeights"}
+        "cost_of_capital": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "flag_threshold": {
+          "type": "number",
+          "minimum": 0
+        },
+        "risk_weights": {
+          "$ref": "#/$defs/RiskWeights"
+        }
       }
     },
     "Security": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "label", "asset_class", "liquidity_class", "hard_to_borrow", "currency", "price", "adv_units", "daily_vol", "equity_beta", "rate_duration", "spread_duration"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "asset_class",
+        "liquidity_class",
+        "hard_to_borrow",
+        "currency",
+        "price",
+        "adv_units",
+        "daily_vol",
+        "equity_beta",
+        "rate_duration",
+        "spread_duration"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/Id"},
-        "label": {"type": "string", "maxLength": 200},
-        "asset_class": {"type": "string", "minLength": 1, "maxLength": 40},
-        "liquidity_class": {"enum": ["liquid", "other"]},
-        "hard_to_borrow": {"type": "boolean"},
-        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
-        "price": {"type": "number", "exclusiveMinimum": 0},
-        "adv_units": {"type": "number", "exclusiveMinimum": 0},
-        "daily_vol": {"type": "number", "exclusiveMinimum": 0},
-        "equity_beta": {"type": "number"},
-        "rate_duration": {"type": "number", "minimum": 0},
-        "spread_duration": {"type": "number", "minimum": 0}
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "asset_class": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "liquidity_class": {
+          "enum": [
+            "liquid",
+            "other"
+          ]
+        },
+        "hard_to_borrow": {
+          "type": "boolean"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "price": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "adv_units": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "daily_vol": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "equity_beta": {
+          "type": "number"
+        },
+        "rate_duration": {
+          "type": "number",
+          "minimum": 0
+        },
+        "spread_duration": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
     "Borrower": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "name", "rating", "spread_bps", "recovery", "credit_provenance"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "rating",
+        "spread_bps",
+        "recovery",
+        "credit_provenance"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/Id"},
-        "name": {"type": "string", "minLength": 1, "maxLength": 200},
-        "rating": {"enum": ["AAA", "AA+", "AA", "AA-", "A+", "A", "A-", "BBB+", "BBB", "BBB-", "BB+", "BB", "BB-", "B+", "B", "B-", "CCC", "NR"]},
-        "spread_bps": {"type": ["number", "null"], "exclusiveMinimum": 0},
-        "recovery": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 1},
-        "credit_provenance": {"$ref": "#/$defs/Provenance"}
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "rating": {
+          "enum": [
+            "AAA",
+            "AA+",
+            "AA",
+            "AA-",
+            "A+",
+            "A",
+            "A-",
+            "BBB+",
+            "BBB",
+            "BBB-",
+            "BB+",
+            "BB",
+            "BB-",
+            "B+",
+            "B",
+            "B-",
+            "CCC",
+            "NR"
+          ]
+        },
+        "spread_bps": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "recovery": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "credit_provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
       }
     },
     "Owner": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "name"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/Id"},
-        "name": {"type": "string", "minLength": 1, "maxLength": 200}
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
       }
     },
     "Loan": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "borrower_id", "owner_id", "security_id", "quantity", "rate_bps", "collateral_type", "margin_pct", "term", "maturity_days", "recallable", "provenance"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "borrower_id",
+        "owner_id",
+        "security_id",
+        "quantity",
+        "rate_bps",
+        "collateral_type",
+        "margin_pct",
+        "term",
+        "maturity_days",
+        "recallable",
+        "provenance"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/Id"},
-        "borrower_id": {"$ref": "#/$defs/Id"},
-        "owner_id": {"$ref": "#/$defs/Id"},
-        "security_id": {"$ref": "#/$defs/Id"},
-        "quantity": {"type": "number", "exclusiveMinimum": 0},
-        "rate_bps": {"type": "number", "minimum": 0},
-        "collateral_type": {"enum": ["CASH", "NON_CASH"]},
-        "margin_pct": {"type": "number", "minimum": 100, "maximum": 200},
-        "term": {"enum": ["open", "term"]},
-        "maturity_days": {"type": ["integer", "null"], "minimum": 1},
-        "recallable": {"type": "boolean"},
-        "provenance": {"$ref": "#/$defs/Provenance"}
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "borrower_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "owner_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "security_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "quantity": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rate_bps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "collateral_type": {
+          "enum": [
+            "CASH",
+            "NON_CASH"
+          ]
+        },
+        "margin_pct": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 200
+        },
+        "term": {
+          "enum": [
+            "open",
+            "term"
+          ]
+        },
+        "maturity_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "recallable": {
+          "type": "boolean"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
       },
-      "if": {"properties": {"term": {"const": "term"}}},
-      "then": {"properties": {"maturity_days": {"type": "integer"}}},
-      "else": {"properties": {"maturity_days": {"type": "null"}}}
+      "if": {
+        "properties": {
+          "term": {
+            "const": "term"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "maturity_days": {
+            "type": "integer"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "maturity_days": {
+            "type": "null"
+          }
+        }
+      }
     },
     "CollateralHolding": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "borrower_id", "kind", "security_id", "quantity", "cash_amount", "provenance"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "borrower_id",
+        "kind",
+        "security_id",
+        "quantity",
+        "cash_amount",
+        "provenance"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/Id"},
-        "borrower_id": {"$ref": "#/$defs/Id"},
-        "kind": {"enum": ["CASH", "SECURITY"]},
-        "security_id": {"type": ["string", "null"]},
-        "quantity": {"type": ["number", "null"], "exclusiveMinimum": 0},
-        "cash_amount": {"type": ["number", "null"], "exclusiveMinimum": 0},
-        "provenance": {"$ref": "#/$defs/Provenance"}
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "borrower_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "enum": [
+            "CASH",
+            "SECURITY"
+          ]
+        },
+        "security_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quantity": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "cash_amount": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
       },
-      "if": {"properties": {"kind": {"const": "CASH"}}},
-      "then": {"properties": {"security_id": {"type": "null"}, "quantity": {"type": "null"}, "cash_amount": {"type": "number"}}},
-      "else": {"properties": {"security_id": {"$ref": "#/$defs/Id"}, "quantity": {"type": "number"}, "cash_amount": {"type": "null"}}}
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "CASH"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "security_id": {
+            "type": "null"
+          },
+          "quantity": {
+            "type": "null"
+          },
+          "cash_amount": {
+            "type": "number"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "security_id": {
+            "$ref": "#/$defs/Id"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "cash_amount": {
+            "type": "null"
+          }
+        }
+      }
     },
     "PoolPosition": {
-      "type": "object", "additionalProperties": false,
-      "required": ["id", "instrument", "liquidity_bucket", "credit_bucket", "allocation", "yield_bps", "wam_days"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "instrument",
+        "liquidity_bucket",
+        "credit_bucket",
+        "allocation",
+        "yield_bps",
+        "wam_days"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/Id"},
-        "instrument": {"type": "string", "minLength": 1, "maxLength": 200},
-        "liquidity_bucket": {"enum": ["T+0", "T+1", "T+7", "TERM"]},
-        "credit_bucket": {"enum": ["HQLA", "AGENCY", "A1/P1", "BANK", "CREDIT"]},
-        "allocation": {"type": "number", "exclusiveMinimum": 0},
-        "yield_bps": {"type": "number"},
-        "wam_days": {"type": "number", "minimum": 0}
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "instrument": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "liquidity_bucket": {
+          "enum": [
+            "T+0",
+            "T+1",
+            "T+7",
+            "TERM"
+          ]
+        },
+        "credit_bucket": {
+          "enum": [
+            "HQLA",
+            "AGENCY",
+            "A1/P1",
+            "BANK",
+            "CREDIT"
+          ]
+        },
+        "allocation": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "yield_bps": {
+          "type": "number"
+        },
+        "wam_days": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
     "OwnerShare": {
-      "type": "object", "additionalProperties": false,
-      "required": ["owner_id", "share"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_id",
+        "share"
+      ],
       "properties": {
-        "owner_id": {"$ref": "#/$defs/Id"},
-        "share": {"type": "number", "minimum": 0, "maximum": 1}
+        "owner_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "share": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "Pool": {
-      "type": "object", "additionalProperties": false,
-      "required": ["positions", "owner_shares", "rescaled", "source_total", "note"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "positions",
+        "owner_shares",
+        "rescaled",
+        "source_total",
+        "note"
+      ],
       "properties": {
-        "positions": {"type": "array", "items": {"$ref": "#/$defs/PoolPosition"}},
-        "owner_shares": {"type": "array", "items": {"$ref": "#/$defs/OwnerShare"}},
-        "rescaled": {"type": "boolean"},
-        "source_total": {"type": ["number", "null"], "minimum": 0},
-        "note": {"type": ["string", "null"], "maxLength": 500}
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PoolPosition"
+          }
+        },
+        "owner_shares": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OwnerShare"
+          }
+        },
+        "rescaled": {
+          "type": "boolean"
+        },
+        "source_total": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        }
       }
     }
   }
