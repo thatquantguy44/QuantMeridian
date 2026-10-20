@@ -5,10 +5,10 @@
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
-| IND-T01 | Resolve SPEC decisions 1–8 and record them in the decision log. | IND-001–021 | blocked | Decisions 1–7 and 9 recorded; decision 8 open |
+| IND-T01 | Resolve SPEC decisions 1–8 and record them in the decision log; get owner approval of spec, plan and tasks. | IND-001–021, IND-028 | blocked | Decisions 1–9 recorded 2026-10-19 to 2026-10-20; owner approval of the docs outstanding |
 | IND-T02 | Rename "BlueCrest" in `econEnhancements.ts` and add it to the `REAL_FIRMS` pattern. | AC-007 | todo | Fictional-counterparty test fails before the rename and passes after |
 | IND-T03 | Define versioned snapshot, result and model-card contracts. | IND-001, IND-014 | todo | JSON schemas with TS/Python parity fixtures |
-| IND-T04 | Build the deterministic synthetic book: loans, collateral, margin and borrower credit inputs. | IND-002 | todo | Fixed-seed golden test; reconciles to SLAB if decision 8 is to extend it |
+| IND-T04 | Extend `src/data/securitiesLending.ts` additively (owner, term and maturity, margin %, collateral holdings) from a separate random stream; add INDEM's rescaled reinvestment pool view and borrower credit inputs. | IND-002, IND-028 | todo | Before-and-after snapshot shows existing values unchanged; consumer tests pass; pool total equals cash collateral (AC-020) |
 | IND-T04a | Add the versioned illustrative rating-to-PD table and the per-borrower spread override, with source labels. | IND-018 | todo | Hand-computed hazard and PD for both sources; fallback when the override is removed (AC-011) |
 | IND-T04b | Implement the run modes: desk view on the actual book, annual view with constant-book rolling, time grids, path settings and limits. | IND-021 | todo | Term-loan maturity and roll-date tests; shared random draws; limit rejection (AC-014) |
 | IND-T05 | Implement factor market paths with jumps for hard-to-borrow names. | IND-003 | todo | Moment tests against analytic mean and variance; jump frequency test |

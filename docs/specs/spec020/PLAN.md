@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decisions 1–7 and 9 resolved; other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Draft — pending owner review; phase 1 decisions 1–8 and decision 9 resolved; decision 10 open (phase 2 only); other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-20
 
 ## Approach
@@ -158,6 +158,7 @@ where M_b = Σ_k m_k · (u_bk · L_b) is the collateral amount. The products u_b
 - Dependencies: NumPy and SciPy only for phase 1. No ML stack is needed. Phase 2 adds `services/optimization_core` for the optimizer.
 - The terminal server route composes the snapshot from the SLAB book (decision 8) and the user's parameters, then calls the service. The browser does no risk calculation.
 - Route: `/securities-lending/indemnification` (decision 7), its own page. `INDEM` nav entry in `src/lib/nav.ts` (FINANCE group, next to `SQZ`), toggle in `settings/modules.config.json`, and `on("INDEM")` route in `src/App.tsx`.
+- Book source (decision 8): the terminal route builds the snapshot from the extended `src/data/securitiesLending.ts` and INDEM's rescaled view of `src/data/reinvestment.ts`, so INDEM's loans and borrowers match the SLAB page.
 - Local development uses labelled `SIM` fixtures only; production stays disabled.
 
 ## UI (first release)
@@ -189,9 +190,9 @@ where M_b = Σ_k m_k · (u_bk · L_b) is the collateral amount. The products u_b
 
 ## Sequence
 
-1. Resolve SPEC decisions 1–8 and fix the BlueCrest naming issue.
+1. ~~Resolve SPEC decisions 1–8~~ (done 2026-10-20); get owner approval of the docs and fix the BlueCrest naming issue.
 2. Define snapshot and result contracts with fixtures.
-3. Build the synthetic book generator (extending SLAB, if decision 8 says so).
+3. Extend the shared SLAB book additively and add INDEM's rescaled view of the reinvestment pool (decision 8), with the before-and-after snapshot test.
 4. Build market paths, then default times, then the reinvestment pool, then close-out, each with golden tests.
 5. Add metrics, standard errors, Euler allocation and the model card.
 6. Add the comprehensive approach cross-check, sensitivities and stresses.
