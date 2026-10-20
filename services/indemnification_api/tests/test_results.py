@@ -55,7 +55,7 @@ def test_the_result_echoes_the_run_and_carries_the_model_card_facts(desk):
     assert card["data_label"] == "SIM" == result["source"]
     assert "synthetic" in card["limitations"].lower()
     assert "not modelled" not in card["limitations"]  # the SIM book has a pool
-    assert all(item["passed"] for item in card["validation"])
+    assert all(item["passed"] is not False for item in card["validation"])
     assert {item["check"] for item in card["validation"]} >= {
         "snapshot schema, cross-field rules and hash",
         "conditional and sampled expected loss agree",
@@ -246,6 +246,18 @@ def test_a_failed_estimator_agreement_check_is_reported_not_hidden(snapshot):
     assert not next(
         i for i in corrupted if i["check"] == "conditional and sampled expected loss agree"
     )["passed"]
+
+
+def test_the_agreement_check_is_not_made_when_too_few_sampled_paths_have_a_loss(desk):
+    # 1,000 paths of one-month investment-grade defaults: the sampled estimator is nearly all zeros
+    _, result = desk
+    item = next(
+        i
+        for i in result["model_card"]["validation"]
+        if i["check"] == "conditional and sampled expected loss agree"
+    )
+    assert item["passed"] is None
+    assert "not assessed" in item["note"] and "30 are needed" in item["note"]
 
 
 def test_a_mini_book_with_a_cash_loan_also_builds(snapshot, validator_for):

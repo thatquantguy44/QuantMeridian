@@ -153,6 +153,9 @@ def _convergence(output: RunOutput) -> dict[str, Any]:
     return {"checked": True, "max_shift_in_standard_errors": worst, "passed": bool(worst < 2.0)}
 
 
+MIN_LOSS_PATHS_FOR_AGREEMENT = 30
+
+
 def _validation(
     output: RunOutput,
     program: dict[str, Any],
@@ -165,6 +168,11 @@ def _validation(
     se = math.hypot(cond.std(ddof=1), sampled.std(ddof=1)) / math.sqrt(len(cond))
     gap = abs(cond.mean() - sampled.mean())
     agree = gap == 0.0 or (se > 0 and gap / se < 4.0)
+    # The sampled estimator is mostly zeros when defaults are rare, so its standard error says
+    # little. With too few loss paths the comparison is not made, and the card says so instead of
+    # passing or failing.
+    loss_paths = int((sampled > 0).sum())
+    assessed = loss_paths >= MIN_LOSS_PATHS_FOR_AGREEMENT
     es = program["gaussian"]["with_wrong_way"]["total"]["es99"]["value"]
     euler = sum(c.value for c in contributions) + pool_part.value
     return [
@@ -177,8 +185,15 @@ def _validation(
         },
         {
             "check": "conditional and sampled expected loss agree",
-            "passed": bool(agree),
-            "note": f"difference {gap / se:.2f} standard errors" if se > 0 else "no sampled losses",
+            "passed": bool(agree) if assessed else None,
+            "note": (
+                f"difference {gap / se:.2f} standard errors"
+                if assessed and se > 0
+                else "no sampled losses"
+                if assessed
+                else f"not assessed: only {loss_paths} sampled paths have a default loss, "
+                f"{MIN_LOSS_PATHS_FOR_AGREEMENT} are needed"
+            ),
         },
         {
             "check": "borrower Euler contributions sum to program expected shortfall",

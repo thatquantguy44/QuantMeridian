@@ -60,6 +60,13 @@ def test_the_same_seed_gives_identical_paths_and_a_different_seed_does_not(model
     assert not np.array_equal(a.log_price, c.log_price)
 
 
+def test_the_early_days_of_every_path_do_not_depend_on_how_many_days_are_simulated(model):
+    short = simulate_paths(model, rng(), n_paths=500, days=10)
+    long = simulate_paths(model, rng(), n_paths=500, days=40)
+    assert np.array_equal(short.factors, long.factors[:, :11, :])
+    assert np.array_equal(short.log_price, long.log_price[:, :11, :])
+
+
 def test_paths_start_at_zero_and_have_the_requested_shape(paths, model):
     assert paths.log_price.shape == (20000, 22, len(model.security_ids))
     assert paths.factors.shape == (20000, 22, 4)

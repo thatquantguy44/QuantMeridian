@@ -122,10 +122,19 @@ def build_market(snapshot: dict[str, Any]) -> MarketModel:
 def simulate_paths(model: MarketModel, rng: np.random.Generator, n_paths: int, days: int) -> Paths:
     n_sec = len(model.security_ids)
     n_jump = len(model.jump_columns)
-    z = rng.standard_normal((n_paths, days, 4))
-    eps = rng.standard_normal((n_paths, days, n_sec))
-    counts = rng.poisson(model.jump_intensity_daily, (n_paths, days, n_jump))
-    jump_z = rng.standard_normal((n_paths, days, n_jump))
+    # Each array has its own stream and is drawn day by day, so the first d days of every path are
+    # the same whatever the total number of days. The day count includes the longest close-out
+    # period, so without this a sweep over the close-out period would reshuffle every path
+    # (spec020 AC-003).
+    g_factor, g_idio, g_jump_count, g_jump_size = rng.spawn(4)
+
+    def by_path(draw: np.ndarray) -> np.ndarray:
+        return np.ascontiguousarray(draw.transpose(1, 0, 2))
+
+    z = by_path(g_factor.standard_normal((days, n_paths, 4)))
+    eps = by_path(g_idio.standard_normal((days, n_paths, n_sec)))
+    counts = by_path(g_jump_count.poisson(model.jump_intensity_daily, (days, n_paths, n_jump)))
+    jump_z = by_path(g_jump_size.standard_normal((days, n_paths, n_jump)))
 
     d_factor = (z @ model.factor_root.T) * model.factor_vol_daily  # (n, days, 4)
     returns = d_factor @ model.loadings.T + eps * model.idio_daily + model.drift_daily

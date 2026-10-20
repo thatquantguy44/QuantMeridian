@@ -29,11 +29,11 @@ benchmark (IND-T15). Phase 2 (the optimizer) is not approved: decision 10 is ope
 | IND-T11 | Sensitivities and named stresses (`sensitivity.py`, `stress.py`); `analysis.run_analysis` composes the full result | Done |
 | IND-T12 | Pricing: cost in bps against fee, economic capital, regulatory proxy, flags (`pricing.py`) | Done |
 | IND-T13 | HTTP service (`app.py`, `auth.py`, request/response/error contracts) | Done |
-| IND-T14 | UI page, route, nav, profile editor | Not started |
+| IND-T14 | UI page, route, nav, profile editor | Built and browser-checked; PR description and a final `npm run build` still to do |
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 
-Test counts at handoff: 263 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+Test counts at handoff: 266 Python (`services/indemnification_api`), 1,024 TypeScript (whole repo), plus `test/indemnification.spec.ts` (Playwright, canned service response).
 `ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
 
 ## Start here

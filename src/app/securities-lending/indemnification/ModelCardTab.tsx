@@ -31,7 +31,7 @@ export function ModelCardTab({ result, runId, durationMs }: { result: Indemnific
             {card.validation.map((v) => (
               <tr key={v.check} className="border-b border-term-border-soft">
                 <td className={`${TD} text-left text-term-text`}>{v.check.replace(/_/g, " ")}</td>
-                <td className={`${TD} text-left`}><Tag tone={v.passed ? "up" : "down"}>{v.passed ? "Pass" : "Fail"}</Tag></td>
+                <td className={`${TD} text-left`}><Tag tone={v.passed === null ? "neutral" : v.passed ? "up" : "down"}>{v.passed === null ? "Not assessed" : v.passed ? "Pass" : "Fail"}</Tag></td>
                 <td className={`${TD} whitespace-normal text-left text-3xs text-term-text-mute`}>{v.note ?? ""}</td>
               </tr>
             ))}

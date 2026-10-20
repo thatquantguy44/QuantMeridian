@@ -77,6 +77,14 @@ def test_expected_loss_rises_with_the_close_out_period(snapshot):
     assert all(b >= a for a, b in zip(el, el[1:], strict=False)) and el[-1] > el[0]
 
 
+def test_a_close_out_sweep_on_the_sim_book_uses_the_same_paths_at_every_point():
+    book = json.loads((CONTRACTS / "fixtures" / "sim-book.example.json").read_text("utf-8"))
+    sweep = run_sensitivity(book, "mpor_days", [3, 5, 10, 20], paths=1000)
+    default = values(sweep, "el_default_shortfall")
+    # the simulated days include the longest close-out period; the paths must not change with it
+    assert all(b >= a - 1e-9 for a, b in zip(default, default[1:], strict=False))
+
+
 def test_a_sweep_point_equals_a_full_run_at_that_value(snapshot):
     base = cash_book(snapshot)
     sweep = run_sensitivity(base, "margin_pct", [105.0])

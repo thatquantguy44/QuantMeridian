@@ -82,7 +82,7 @@ export interface ModelCard {
   horizon_days: number;
   step: StepSize;
   convergence: { checked: boolean; max_shift_in_standard_errors: number | null; passed: boolean | null };
-  validation: { check: string; passed: boolean; note: string | null }[];
+  validation: { check: string; passed: boolean | null; note: string | null }[];
   data_label: DataLabel;
   limitations: string;
 }
