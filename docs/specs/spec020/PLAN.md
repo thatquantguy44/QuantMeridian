@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decisions 1–6 and 9 resolved; other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Draft — pending owner review; decisions 1–7 and 9 resolved; other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-20
 
 ## Approach
@@ -74,7 +74,7 @@ Every close-out and liquidity setting comes from a named, versioned close-out pr
 
 **Validation:** values are type- and range-checked against the profile schema, and a profile that fails is rejected before any simulation, with the failing settings named. Unknown setting names are rejected rather than ignored.
 
-**Profiles:** users can copy the default profile, edit it, name it and run it. Profiles are plain JSON that can be exported and imported. The UI shows how each profile differs from the default. Every run record and model card stores the full resolved profile and its hash. Where saved profiles persist is settled with decision 7.
+**Profiles:** users can copy the default profile, edit it, name it and run it. Profiles are plain JSON that can be exported and imported. The UI shows how each profile differs from the default. Every run record and model card stores the full resolved profile and its hash. Storage (decision 7): the default profile is a versioned JSON file in `contracts/indemnification/`; user profiles are saved in the browser, with export and import; run records hold the full resolved profile, so results never depend on browser storage.
 
 ### 4. Reinvestment pool (decision 1)
 
@@ -154,10 +154,10 @@ where M_b = Σ_k m_k · (u_bk · L_b) is the collateral amount. The products u_b
 
 ## Service and terminal boundary
 
-- Python service at `services/indemnification_api`, proposed port 8018 (decision 7). FastAPI with token auth and health checks, matching the other services.
+- Python service at `services/indemnification_api`, port 8018 (decision 7). FastAPI with token auth and health checks, matching the other services.
 - Dependencies: NumPy and SciPy only for phase 1. No ML stack is needed. Phase 2 adds `services/optimization_core` for the optimizer.
 - The terminal server route composes the snapshot from the SLAB book (decision 8) and the user's parameters, then calls the service. The browser does no risk calculation.
-- Proposed route: `/securities-lending/indemnification`, behind an `INDEM` module toggle (decision 7).
+- Route: `/securities-lending/indemnification` (decision 7), its own page. `INDEM` nav entry in `src/lib/nav.ts` (FINANCE group, next to `SQZ`), toggle in `settings/modules.config.json`, and `on("INDEM")` route in `src/App.tsx`.
 - Local development uses labelled `SIM` fixtures only; production stays disabled.
 
 ## UI (first release)
