@@ -144,4 +144,5 @@ def simulate(
         exposure=exposure,
         variants={v: VariantLosses(cond[v], sampled[v]) for v in names},
         pool_loss=np.zeros(n_paths),
+        extras={"validated": validate},
     )

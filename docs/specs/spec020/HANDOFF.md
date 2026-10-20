@@ -20,8 +20,8 @@ and no result is assembled for the terminal. Phase 2 (the optimizer) is not appr
 | IND-T06 | Default copula, wrong-way link, Student-t (`defaults.py`) | Done |
 | IND-T06b | Close-out profile resolution and snapshot validation (`profile.py`, `schema.py`) | Done |
 | IND-T07 | Close-out shortfall and exposure (`book.py`, `closeout.py`) | Done (pool realization is a hook) |
-| IND-T08 | Metrics and engine | **In progress**: metrics and engine done; convergence check and result assembly not |
-| IND-T09 | Euler allocation, owner and channel attribution | **In progress**: Euler function done |
+| IND-T08 | Metrics, engine, result and model card (`metrics.py`, `engine.py`, `results.py`) | Done |
+| IND-T09 | Euler allocation, owner and channel attribution | **In progress**: Euler and owner attribution done; the borrower split of reinvestment loss waits for the pool |
 | IND-T06a | Reinvestment pool | **Not started** (the contract has no pool parameters yet) |
 | IND-T10 – T12 | Basel cross-check, sensitivities and stresses, pricing | Not started |
 | IND-T13 | Service API | Not started |
@@ -29,7 +29,7 @@ and no result is assembled for the terminal. Phase 2 (the optimizer) is not appr
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 
-Test counts at handoff: 141 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+Test counts at handoff: 157 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
 `ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
 
 ## Start here
@@ -96,21 +96,15 @@ stale: `indemnificationContract.test.ts`, `indemnificationBook.test.ts`, and `te
 
 ## Next steps, in order
 
-**1. Finish IND-T08 (small).** Add `results.py` with `build_result(snapshot, output)` returning a dict that
-validates against `result-1.0.schema.json`: model card (`profile_hash`, `snapshot_hash`, seed, paths, mode,
-data label, limitations text saying results are synthetic), `effective_settings` from `profile.resolve_all`,
-program and per-borrower metrics from `metrics.channel_metrics` for the three variants, and the program
-exposure profile (mean, P95, P99 per event day). Add the convergence check: compare the first half of
-`output.chunk_bounds` with the full run for `el`, `pfe99` and `es99` (where the standard error is above 0) and
-pass when each shift is under 2 standard errors of the half run; report `checked: false` when there is only
-one chunk. Test by validating the output with `conftest.validator_for("result-1.0.schema.json")`. Leave
-`sensitivities`, `stresses` and `cross_check` empty until their tasks. The exposure metrics (EPE, PFE) are
-repeated in the total and default channels and are zero in the reinvestment channel; say so in the schema
-description.
+**1. (Done.) IND-T08 and most of IND-T09.** `results.build_result(snapshot, output)` returns a dict that validates
+against `result-1.0` and `model-card-1.0`. The exposure metrics (EPE, PFE) are repeated in the total and default
+channels and are zero in the reinvestment channel. The model card's `limitations` text says the reinvestment
+channel is not modelled; **remove that sentence and the matching assertion in `tests/test_results.py` when the
+pool lands.** Note that the "conditional and sampled expected loss agree" check has little power when defaults
+are rare (the SIM book over one month); it is a real check only on books with plenty of defaults.
 
-**2. IND-T09 attribution.** Per-owner default losses pro rata to each owner's initial loan value within the
-borrower; reinvestment by `pool.owner_shares`. Euler contributions already sum exactly to ES
-(`metrics.euler_expected_shortfall`); add them to the result as `euler_es99`.
+**2. IND-T09 remainder.** After the pool exists, attribute reinvestment loss to borrowers (pro rata to each
+borrower's share of cash collateral in the pool) so borrower-level channels add up (AC-010).
 
 **3. IND-T06a reinvestment pool (largest remaining model piece).** First a contract change (#2): add
 `model.returns` (open-loan return hazard per year, recallable multiplier, stress sensitivity) and

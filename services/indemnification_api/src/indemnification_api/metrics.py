@@ -108,6 +108,28 @@ def channel_metrics(
     }
 
 
+def euler_metrics(
+    by_borrower: np.ndarray, pool: np.ndarray, level: float
+) -> tuple[list[Metric], Metric]:
+    """Euler contributions with block standard errors: one Metric per borrower, and the pool's."""
+    value, pool_value = euler_expected_shortfall(by_borrower, pool, level)
+    n = len(pool)
+    if n < BLOCKS * 2:
+        return [Metric(float(v), None) for v in value], Metric(pool_value, None)
+    edges = np.linspace(0, n, BLOCKS + 1).astype(int)
+    parts = [
+        euler_expected_shortfall(
+            by_borrower[edges[i] : edges[i + 1]], pool[edges[i] : edges[i + 1]], level
+        )
+        for i in range(BLOCKS)
+    ]
+    borrower_se = np.std([p[0] for p in parts], axis=0, ddof=1) / math.sqrt(BLOCKS)
+    pool_se = float(np.std([p[1] for p in parts], ddof=1) / math.sqrt(BLOCKS))
+    return [Metric(float(v), float(s)) for v, s in zip(value, borrower_se, strict=True)], Metric(
+        pool_value, pool_se
+    )
+
+
 def euler_expected_shortfall(
     by_borrower: np.ndarray, pool: np.ndarray, level: float
 ) -> tuple[np.ndarray, float]:

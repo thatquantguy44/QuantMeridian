@@ -26,8 +26,8 @@ from indemnification_api.engine import simulate
 
 book = json.load(open("contracts/indemnification/fixtures/sim-book.example.json"))
 book["run"].update(mode="desk", horizon_days=21, step="daily", paths=5000)
-out = simulate(seal(book))          # validates schema, cross-field rules and hash first
-out.variants["gaussian_ww"].cond.sum(axis=1).mean()   # expected loss, default channel
+out = simulate(seal(book))  # validates schema, cross-field rules and hash first
+out.variants["gaussian_ww"].cond.sum(axis=1).mean()  # expected loss, default channel
 ```
 
 `seal` recomputes `snapshot_hash` after you edit a snapshot. The book is built by
