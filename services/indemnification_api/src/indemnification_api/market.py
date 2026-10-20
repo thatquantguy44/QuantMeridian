@@ -28,6 +28,7 @@ IDIO_FLOOR = 0.25  # idiosyncratic vol is at least this share of a security's to
 class MarketModel:
     security_ids: list[str]
     index: dict[str, int]
+    price0: np.ndarray                  # (S,) starting prices
     factor_vol_daily: np.ndarray        # (4,)
     factor_corr: np.ndarray             # (4, 4)
     factor_root: np.ndarray             # (4, 4), factor_root @ factor_root.T == factor_corr
@@ -87,6 +88,7 @@ def build_market(snapshot: dict[str, Any]) -> MarketModel:
     return MarketModel(
         security_ids=ids,
         index={sid: i for i, sid in enumerate(ids)},
+        price0=np.array([s["price"] for s in securities], dtype=float),
         factor_vol_daily=vol,
         factor_corr=corr,
         factor_root=root,
