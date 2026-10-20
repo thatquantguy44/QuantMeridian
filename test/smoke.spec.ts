@@ -20,6 +20,7 @@ const PAGES = [
   { path: "/market-volatility", title: "Market Volatility", code: "MVOL" },
   { path: "/securities-lending", title: "Securities Lending", code: "SLAB" },
   { path: "/securities-lending/squeeze", title: "Squeeze Radar", code: "SQZ" },
+  { path: "/securities-lending/indemnification", title: "Indemnification Risk", code: "INDEM" },
   { path: "/prime-finance", title: "Prime Finance", code: "PB" },
   { path: "/collateral", title: "Collateral Management", code: "COLL" },
   { path: "/cash-optimizer", title: "Cash Optimizer", code: "CASH" },

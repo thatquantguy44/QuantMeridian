@@ -49,7 +49,7 @@ describe("INDEM page state", () => {
     const ui = { ...withMode(defaultUi(book), "annual"), seed: 7, credit: { [book.borrowers[0].id]: { spread_bps: 250, recovery: null } } };
     const input = toRunInput(ui);
     expect(input.run).toEqual({ mode: "annual", seed: 7, paths: 5000, preview: true, horizon_days: 252, step: "weekly" });
-    expect(input.options).toEqual({ sensitivity_paths: 5000, stresses: true, stress_profile_overrides: null });
+    expect(input.options).toEqual({ sensitivity_paths: 2000, stresses: true, stress_profile_overrides: null });
     expect(Object.keys(input).sort()).toEqual(["borrower_credit", "model", "options", "pricing", "profile", "run"]);
     expect("loans" in input || "snapshot" in input).toBe(false);
     const request = await composeRunRequest(input, today);          // what the route will do

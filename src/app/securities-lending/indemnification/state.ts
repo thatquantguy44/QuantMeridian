@@ -5,6 +5,8 @@ import { profileIssues } from "@/lib/indemnificationProfiles";
 
 export type Mode = "desk" | "annual";
 export const PREVIEW_PATHS = 5000;
+/** Each sweep point is a full model run, so sweeps start at 2,000 paths; raise it for a reported run. */
+export const SWEEP_PREVIEW_PATHS = 2000;
 export const MODE_DEFAULTS: Record<Mode, { horizonDays: number; step: StepSize }> = {
   desk: { horizonDays: 21, step: "daily" },
   annual: { horizonDays: 252, step: "weekly" },
@@ -41,7 +43,7 @@ export function defaultUi(book: BookSummary): UiState {
     horizonDays: MODE_DEFAULTS.desk.horizonDays, step: MODE_DEFAULTS.desk.step,
     rhoD: d.model.rho_d, rhoW: d.model.rho_w, studentT: d.model.student_t_enabled, studentNu: d.model.student_t_nu,
     costOfCapital: d.pricing.cost_of_capital, flagThreshold: d.pricing.flag_threshold,
-    sweeps: true, sweepPaths: d.options.sensitivity_paths ?? 5000, stresses: d.options.stresses,
+    sweeps: true, sweepPaths: Math.min(d.options.sensitivity_paths ?? SWEEP_PREVIEW_PATHS, SWEEP_PREVIEW_PATHS), stresses: d.options.stresses,
     stressOverrides: {}, profile: JSON.parse(JSON.stringify(d.profile)), credit: {},
   };
 }
