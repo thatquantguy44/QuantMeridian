@@ -8,7 +8,7 @@ import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { TermToggleGroup } from "@/components/ui/TermToggleGroup";
 import { Waterfall } from "@/components/charts/Waterfall";
 import { Treemap } from "@/components/charts/Treemap";
-import { IbalShowcase } from "./Showcase";
+import { DomainDisclosures, IbalShowcase } from "./Showcase";
 import { Donut } from "@/components/charts/Radial";
 import {
   DEFAULT_RUN_CONFIG,
@@ -2122,6 +2122,12 @@ export default function InventoryOptimizerPage() {
                   <div className="term-label mb-1">MIP progress</div>
                   <div className="border border-term-border p-2"><MipProgressView result={viewResult ?? null} /></div>
                 </div>
+                {Boolean(viewResult?.agency || viewResult?.prime) && (
+                  <div>
+                    <div className="term-label mb-1">Agency and prime</div>
+                    <div className="border border-term-border p-2"><DomainDisclosures result={viewResult ?? null} capabilities={capabilities} /></div>
+                  </div>
+                )}
                 <div>
                   <div className="term-label mb-1">Verification</div>
                   <div className="grid grid-cols-2 divide-x divide-y divide-term-border border border-term-border md:grid-cols-4">

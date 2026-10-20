@@ -67,7 +67,8 @@ function CompareRows({ comparison }: { comparison: IbalShowcaseComparison | null
   </div>;
 }
 
-function DomainDisclosures({ result, capabilities }: { result: IbalResult | null; capabilities: IbalCapabilities | null }) {
+/** Agency and prime result sections, when the engine returned them and the pin advertises them. */
+export function DomainDisclosures({ result, capabilities }: { result: IbalResult | null; capabilities: IbalCapabilities | null }) {
   if (!result || !capabilities) return null;
   const agency = result.agency as Record<string, unknown> | null;
   const prime = result.prime as Record<string, unknown> | null;
