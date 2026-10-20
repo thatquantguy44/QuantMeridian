@@ -76,8 +76,20 @@ def build_market(snapshot: dict[str, Any]) -> MarketModel:
 
     securities = snapshot["securities"]
     ids = [s["id"] for s in securities]
+    # A security priced in another currency moves one for one with the FX factor (the base
+    # currency's value of the foreign currency), so an FX shock reaches it; base-currency
+    # securities are unaffected.
+    base_currency = snapshot["currency"]
     loadings = np.array(
-        [[s["equity_beta"], -s["rate_duration"], -s["spread_duration"], 0.0] for s in securities]
+        [
+            [
+                s["equity_beta"],
+                -s["rate_duration"],
+                -s["spread_duration"],
+                1.0 if s["currency"] != base_currency else 0.0,
+            ]
+            for s in securities
+        ]
     )
     total = np.array([s["daily_vol"] for s in securities])
     systematic = np.einsum("sf,fg,sg->s", loadings, cov, loadings)

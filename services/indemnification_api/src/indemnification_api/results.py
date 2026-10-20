@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 
 from . import MODEL_VERSION
+from .attribution import owner_shares
 from .basel import comprehensive_approach
 from .contracts import profile_hash
 from .engine import GAUSSIAN_NO_WW, GAUSSIAN_WW, STUDENT_T_WW, RunOutput, VariantLosses
@@ -69,21 +70,6 @@ def _profile(exposure: np.ndarray, output: RunOutput) -> dict[str, Any]:
         "pfe95": np.quantile(exposure, 0.95, axis=0, method="higher").tolist(),
         "pfe99": np.quantile(exposure, 0.99, axis=0, method="higher").tolist(),
     }
-
-
-def _owner_shares(snapshot: dict[str, Any], output: RunOutput) -> np.ndarray:
-    """(B, O): each owner's share of the securities on loan to each borrower, by starting value."""
-    owners = [o["id"] for o in snapshot["owners"]]
-    o_index = {o: i for i, o in enumerate(owners)}
-    b_index = {b: i for i, b in enumerate(output.book.borrower_ids)}
-    price = output.market.price0
-    value = np.zeros((len(b_index), len(owners)))
-    for loan in snapshot["loans"]:
-        sec = output.market.index[loan["security_id"]]
-        value[b_index[loan["borrower_id"]], o_index[loan["owner_id"]]] += (
-            loan["quantity"] * price[sec]
-        )
-    return value / value.sum(axis=1, keepdims=True)
 
 
 def _mean_metric(x: np.ndarray) -> Metric:
@@ -209,7 +195,7 @@ def build_result(
             }
         )
 
-    shares = _owner_shares(snapshot, output)
+    shares = owner_shares(snapshot, output.book.borrower_ids, output.market)
     owner_ids = [o["id"] for o in snapshot["owners"]]
     pool_shares = {s["owner_id"]: s["share"] for s in snapshot["pool"]["owner_shares"]}
     owners = []

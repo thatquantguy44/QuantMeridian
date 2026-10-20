@@ -124,3 +124,17 @@ def test_standardized_equity_is_standard_normal(paths, model):
     n = z.size
     assert abs(z.mean()) < 4 / math.sqrt(n)
     assert abs(z.std(ddof=1) - 1) < 4 / math.sqrt(2 * (n - 1))
+
+
+def test_a_security_priced_in_another_currency_loads_on_the_fx_factor(snapshot):
+    s = copy.deepcopy(snapshot)
+    s["securities"][2]["currency"] = "EUR"  # UST1 becomes a EUR security
+    s["securities"][2]["daily_vol"] = 0.01  # a foreign bond's stated vol includes its FX part
+    m = build_market(s)
+    assert m.loadings[m.index["UST1"], 3] == 1.0
+    assert m.loadings[m.index["EQ1"], 3] == 0.0 and m.loadings[m.index["EQ2"], 3] == 0.0
+    # its total volatility is still the stated one: the FX part comes out of the idiosyncratic part
+    systematic = float(m.loadings[2] @ m.factor_cov_daily @ m.loadings[2])
+    assert math.sqrt(systematic + m.idio_daily[2] ** 2) == pytest.approx(
+        s["securities"][2]["daily_vol"], rel=1e-12
+    )
