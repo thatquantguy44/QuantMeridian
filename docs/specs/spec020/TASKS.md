@@ -1,12 +1,12 @@
 # Tasks: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md, PLAN.md)
-- **Status:** Draft — pending owner review; no implementation authorized yet. Phase 1 is IND-T01–T15; phase 2 is IND-T16–T21.
+- **Status:** Phase 1 approved 2026-10-20 (IND-T01–T15); phase 2 (IND-T16–T21) not approved. Implementation in progress.
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
-| IND-T01 | Resolve SPEC decisions 1–8 and record them in the decision log; get owner approval of spec, plan and tasks. | IND-001–021, IND-028 | blocked | Decisions 1–9 recorded 2026-10-19 to 2026-10-20; owner approval of the docs outstanding |
-| IND-T02 | Rename "BlueCrest" in `econEnhancements.ts` and add it to the `REAL_FIRMS` pattern. | AC-007 | todo | Fictional-counterparty test fails before the rename and passes after |
+| IND-T01 | Resolve SPEC decisions 1–8 and record them in the decision log; get owner approval of spec, plan and tasks. | IND-001–021, IND-028 | done | Decisions 1–9 recorded 2026-10-19 to 2026-10-20; owner approved phase 1 on 2026-10-20 |
+| IND-T02 | Rename "BlueCrest" in `econEnhancements.ts` and add it to the `REAL_FIRMS` pattern. | AC-007 | done | Fictional-counterparty test fails before the rename and passes after — done 2026-10-20: BlueCrest is now in the test's `REAL_FIRMS` and the overlay is renamed Kestrelmoor Capital |
 | IND-T03 | Define versioned snapshot, result and model-card contracts. | IND-001, IND-014 | todo | JSON schemas with TS/Python parity fixtures |
 | IND-T04 | Extend `src/data/securitiesLending.ts` additively (owner, term and maturity, margin %, collateral holdings) from a separate random stream; add INDEM's rescaled reinvestment pool view and borrower credit inputs. | IND-002, IND-028 | todo | Before-and-after snapshot shows existing values unchanged; consumer tests pass; pool total equals cash collateral (AC-020) |
 | IND-T04a | Add the versioned illustrative rating-to-PD table and the per-borrower spread override, with source labels. | IND-018 | todo | Hand-computed hazard and PD for both sources; fallback when the override is removed (AC-011) |

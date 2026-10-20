@@ -2,9 +2,9 @@
 
 - **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
-- **Status:** Draft — not approved for implementation. Phase 1 decisions (1–8) and decision 9 resolved; awaiting owner approval of the spec, plan and tasks. Decision 10 is open and blocks phase 2 only.
+- **Status:** Approved for phase 1 implementation 2026-10-20 (decisions 1–9 resolved). Phase 2 (optimizer) is not approved: decision 10 is open and phase 2 starts only after phase 1 passes its validation report.
 - **Author:** Joshua Lutkemuller, CFA
-- **Approver:** — (pending owner review)
+- **Approver:** Joshua Lutkemuller, CFA (2026-10-20, phase 1)
 - **Last updated:** 2026-10-20
 
 > WHAT and WHY only. Model architecture belongs in PLAN.md; task ordering belongs in TASKS.md.
@@ -131,9 +131,9 @@ Phase 2 starts only after phase 1 passes its validation report (IND-T15) and dec
 9. ~~**Optimizer.**~~ **Resolved 2026-10-20:** add an Indemnification Optimizer to spec020 as phase 2. See the decision log.
 10. **Optimizer settings (blocks phase 2 only).** Margin levels offered (proposed 102%, 103%, 105%, 108%, 110%); tail-loss measure and level for the optimizer (expected shortfall, because VaR cannot be optimized as a linear program, at 99% because 99.9% leaves too few tail paths); program risk budget; limit on movement from today's settings; source of the fee uplift for broader collateral schedules (user-entered per borrower and collateral type, labelled illustrative); whether reinvestment losses are held fixed in phase 2; and the tolerance for the fresh-path check.
 
-## Known issue found while scoping
+## Known issue found while scoping (fixed 2026-10-20)
 
-`getCounterpartyCreditOverlays` in `src/data/econEnhancements.ts` lists "BlueCrest" with an invented rating and a haircut escalation. BlueCrest is a real firm, and it is not in the `REAL_FIRMS` pattern, so the fictional-counterparty test does not catch it. Rename it and add it to the pattern before INDEM reuses those overlays.
+`getCounterpartyCreditOverlays` in `src/data/econEnhancements.ts` listed "BlueCrest", a real firm, with an invented rating and a haircut escalation, and the fictional-counterparty test did not catch it. It is renamed "Kestrelmoor Capital" and BlueCrest is now in the test's `REAL_FIRMS` pattern.
 
 ## Decision log
 
@@ -147,6 +147,7 @@ Phase 2 starts only after phase 1 passes its validation report (IND-T15) and dec
 | 2026-10-19 | **Decision 6 resolved — economic capital drives pricing and the flag; a regulatory proxy is shown alongside.** From the annual view: economic capital = annual VaR99.9 − EL (unexpected loss), covering both loss channels and wrong-way risk, allocated to borrowers in proportion to their Euler expected-shortfall contributions. Reinvestment losses not tied to a borrower's default are attributed to borrowers pro rata to their share of the cash collateral in the pool. Indemnification cost (bps per year) = (EL + cost of capital × economic capital) / average loan value. The regulatory proxy (comprehensive approach E* × risk weight from rating × 8%) is shown next to it for comparison and does not drive the flag; it cannot see wrong-way risk or reinvestment losses, and the UI says so. Defaults, all configurable and labelled illustrative: cost of capital 10% a year; flag when cost exceeds 50% of the borrower's fee; risk weights by rating AAA to AA− 20%, A+ to A− 50%, BBB+ to BB− 100%, below BB− 150%, unrated 100%. | Owner |
 | 2026-10-20 | **Decision 7 resolved — own service and own page.** Service: `services/indemnification_api` on port 8018 (8013–8017 are taken). Page: `/securities-lending/indemnification`, with an `INDEM` entry in `src/lib/nav.ts` (FINANCE group, next to `SQZ`), an `INDEM` toggle in `settings/modules.config.json`, and an `on("INDEM")` route in `src/App.tsx`, following the Squeeze Radar pattern. A tab inside the SLAB page was rejected because the module has too many views (overview, borrowers, profiles, sensitivities, stresses, reinvestment, and the phase 2 optimizer). Close-out profile storage: the default profile is a versioned JSON file in `contracts/indemnification/`; user profiles are saved in the browser with JSON export and import; every run record stores the full resolved profile and its hash, so no saved result depends on browser storage. | Owner |
 | 2026-10-20 | **Decision 8 resolved — extend the shared SLAB book with additive fields only.** `src/data/securitiesLending.ts` gains, per loan, a beneficial owner, open or term with a maturity date, and margin %, plus collateral holdings per borrower sized at margin × loan value. New fields come from a separate random stream so every existing value stays identical and consumers (SLAB, reinvestment, utilization, copilot, agent desk datasets) are unaffected (AC-020). The reinvestment pool from `src/data/reinvestment.ts` is rescaled to the book's cash collateral, keeping its mix, inside INDEM only and labelled as rescaled; the reinvestment page itself is not changed. Rejected: an INDEM-only book (would not match other pages) and resizing the reinvestment page (widens scope and changes its numbers). | Owner |
+| 2026-10-20 | **Phase 1 approved.** The owner approved the spec, plan and tasks for phase 1 implementation (IND-T01–T15). Phase 2 remains unapproved pending decision 10 and the phase 1 validation report. | Owner |
 | 2026-10-20 | **Decision 9 resolved — add an Indemnification Optimizer to spec020 as phase 2.** It recommends borrower loan limits, margin levels and accepted collateral types that maximize fees net of expected loss and capital cost, within demand, inventory, margin, concentration and risk-budget constraints (IND-022–027). It is built only after the phase 1 measurement model passes validation, because recommendations resting on unvalidated loss figures would be confidently wrong. It recommends only; changes need human approval. Its settings are decision 10, which blocks phase 2 but not phase 1. | Owner |
 
 ## Related documents

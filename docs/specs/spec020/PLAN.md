@@ -1,7 +1,7 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; phase 1 decisions 1–8 and decision 9 resolved; decision 10 open (phase 2 only); other parameters below are proposals until their SPEC decisions are resolved
+- **Status:** Phase 1 approved 2026-10-20; phase 2 not approved; phase 1 decisions 1–8 and decision 9 resolved; decision 10 open (phase 2 only); other parameters below are proposals until their SPEC decisions are resolved
 - **Last updated:** 2026-10-20
 
 ## Approach
