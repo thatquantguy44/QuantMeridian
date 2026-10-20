@@ -2,16 +2,16 @@
 
 - **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
-- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–6 resolved 2026-10-19; decisions 7–8 are open.
+- **Status:** Draft — scoping only; not approved for implementation. Decisions 1–6 and 9 resolved; decisions 7–8 are open and block phase 1; decision 10 is open and blocks phase 2 only.
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** — (pending owner review)
-- **Last updated:** 2026-10-19
+- **Last updated:** 2026-10-20
 
 > WHAT and WHY only. Model architecture belongs in PLAN.md; task ordering belongs in TASKS.md.
 
 ## Summary
 
-Build a standalone service that measures the agent lender's exposure under borrower-default indemnification. If a borrower defaults, the agent must buy back the loaned securities for the beneficial owner, using the borrower's collateral. If the collateral falls short, the agent pays the difference. This program also indemnifies losses on the reinvested cash collateral (decision 1), so the service models the reinvestment pool as a second loss channel. The service simulates borrower defaults together with market moves, including wrong-way risk. For each borrower and for the program as a whole, it reports expected exposure, potential future exposure (PFE), expected indemnification loss, tail loss, and a capital-cost view. It also shows how margin levels and collateral schedules change those numbers, and what indemnification costs in basis points against the fee each borrower pays.
+Build a standalone service that measures the agent lender's exposure under borrower-default indemnification. If a borrower defaults, the agent must buy back the loaned securities for the beneficial owner, using the borrower's collateral. If the collateral falls short, the agent pays the difference. This program also indemnifies losses on the reinvested cash collateral (decision 1), so the service models the reinvestment pool as a second loss channel. The service simulates borrower defaults together with market moves, including wrong-way risk. For each borrower and for the program as a whole, it reports expected exposure, potential future exposure (PFE), expected indemnification loss, tail loss, and a capital-cost view. It also shows how margin levels and collateral schedules change those numbers, and what indemnification costs in basis points against the fee each borrower pays. In phase 2, an optimizer recommends borrower loan limits, margin levels and collateral schedules that maximize fee revenue net of indemnification cost (decision 9).
 
 ## Problem & Context
 
@@ -41,6 +41,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 - Show how EL and PFE respond to margin level, collateral schedule and close-out period.
 - Express indemnification cost in basis points of loan value next to each borrower's fee, giving an indemnification-adjusted return.
 - Run named deterministic stress scenarios (default of the largest borrower, short squeeze, rates shock, FX shock, reinvestment pool run).
+- Phase 2: recommend borrower loan limits, margin levels and collateral schedules that maximize fees net of expected loss and capital cost, within a risk budget, and prove the recommendation on paths it was not fitted to.
 
 ## Non-goals
 
@@ -76,6 +77,19 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | IND-020 | Take close-out and liquidity settings from a named, versioned close-out profile in which every parameter is user-configurable. Overrides apply in order (position, then borrower, then asset class or pool bucket, then global default), and stress scenarios can override any of them. Invalid values are rejected with an explanation, and every result reports the effective values it used. | must |
 | IND-021 | Support two run modes. The desk view (default) simulates today's actual book over 1 month in daily steps. The annual view simulates a constant book, rolled and re-margined, over 1 year in weekly steps with daily steps inside close-out periods. Horizon, step and path count are configurable within set limits, and every result states which mode, horizon, step and path count produced it. | must |
 
+### Phase 2: Indemnification Optimizer (decision 9)
+
+Phase 2 starts only after phase 1 passes its validation report (IND-T15) and decision 10 is resolved.
+
+| ID | Requirement | Priority |
+|---|---|---|
+| IND-022 | Recommend, per borrower, a loan limit (up to demand), a minimum margin for each collateral type, and which collateral types are accepted, to maximize fees − EL − cost of capital × tail-loss capital measure. | must |
+| IND-023 | Respect borrower demand, lendable inventory, minimum margins, collateral concentration limits, a program tail-loss budget, and an optional limit on how far each setting can move from today. | must |
+| IND-024 | Assume each borrower posts whichever accepted collateral is worst for the lender, so a broader schedule is never credited with better collateral than the borrower would choose. | must |
+| IND-025 | Re-run the recommended setup through the full phase 1 simulator on fresh paths it was not fitted to, and report fitted and fresh-path results side by side. | must |
+| IND-026 | Verify every constraint independently, show current against recommended per borrower (revenue, EL, capital, tail loss), and report infeasibility with the binding constraints rather than a partial result. | must |
+| IND-027 | Recommend only. No limit, margin or schedule changes without a person approving them. | must |
+
 ## Acceptance Criteria
 
 - **AC-001:** The same seed and snapshot produce identical results; a different seed changes results only within the reported standard error.
@@ -94,6 +108,13 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 - **AC-014:** The two modes use the same random draws, settings and close-out profile. In the desk view a term loan stops contributing exposure after its maturity date. In the annual view, book size and mix stay constant at each roll date. Settings outside the limits are rejected before any simulation runs. Results never mix the two modes without labelling each figure.
 - **AC-015:** Borrower economic capital sums to program economic capital. A two-borrower fixture matches hand-computed cost in bps under both capital measures. Only the economic-capital cost drives the flag, and changing the cost-of-capital rate, the flag threshold or a risk weight changes the outputs as expected.
 
+### Phase 2 acceptance criteria
+
+- **AC-016:** On a two-borrower, small-path fixture, the optimizer matches a hand-solved or brute-force optimum within solver tolerance, and the independent verifier rejects a tampered solution.
+- **AC-017:** Tightening the tail-loss budget never increases recommended exposure or tail loss; a budget below the minimum achievable returns infeasible with the binding constraints named.
+- **AC-018:** The recommended setup's fresh-path results stay within the reported tolerance of its fitted results, or the gap is flagged as possible overfitting.
+- **AC-019:** Adding a collateral type to a borrower's schedule never lowers that borrower's shortfall on any path (worst-case collateral rule).
+
 ## Decisions required before implementation
 
 1. ~~**Indemnification scope.** Borrower-default shortfall only, or also cash collateral reinvestment losses?~~ **Resolved 2026-10-19:** both. See the decision log.
@@ -104,6 +125,9 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 6. ~~**Capital and pricing.**~~ **Resolved 2026-10-19:** economic capital drives the flag; the regulatory proxy is shown alongside. See the decision log.
 7. **Placement.** New service `services/indemnification_api` on port 8018 (8013–8017 are taken), and a route at `/securities-lending/indemnification` behind a new `INDEM` toggle, or a tab on the SLAB page?
 8. **Book source.** Build an INDEM-only synthetic book, or extend `src/data/securitiesLending.ts` with collateral holdings and margin (and link it to the reinvestment pool in `src/data/reinvestment.ts`) so SLAB, the reinvestment view and INDEM show the same book? Extending is recommended so the two views reconcile.
+
+9. ~~**Optimizer.**~~ **Resolved 2026-10-20:** add an Indemnification Optimizer to spec020 as phase 2. See the decision log.
+10. **Optimizer settings (blocks phase 2 only).** Margin levels offered (proposed 102%, 103%, 105%, 108%, 110%); tail-loss measure and level for the optimizer (expected shortfall, because VaR cannot be optimized as a linear program, at 99% because 99.9% leaves too few tail paths); program risk budget; limit on movement from today's settings; source of the fee uplift for broader collateral schedules (user-entered per borrower and collateral type, labelled illustrative); whether reinvestment losses are held fixed in phase 2; and the tolerance for the fresh-path check.
 
 ## Known issue found while scoping
 
@@ -119,6 +143,7 @@ Today the terminal shows a static, seeded counterparty credit overlay (`getCount
 | 2026-10-19 | **Decision 4 resolved — the proposed close-out and liquidity values are the defaults, and every setting is configurable.** Default close-out periods (business days): 5 for liquid equities and G7 government bonds; 10 for other bonds, smaller-company equities and emerging markets; 10 for hard-to-borrow or concentrated positions (over 25% of average daily volume); 5 for forced sales of TERM reinvestment assets. Default liquidity cost: k · σ_daily · (q / ADV)^α with k = 0.5 and α = 0.5. All defaults are labelled illustrative. The owner asked for the settings to be extremely customizable, so they live in a named, versioned close-out profile (IND-020, PLAN section 3a). The extra settings it adds (spread floor, cost cap, stress multiplier, unwind schedule, margin-call frequency, close-out add-on days) are neutral by default, so the default profile gives exactly the values above. | Owner |
 | 2026-10-19 | **Decision 5 resolved — two run modes, with the short-horizon desk view as the default.** A static one-year projection is unrealistic for a book of mostly open, recallable loans with daily margining, but annual figures are still needed for pricing and capital. **Desk view (default):** today's actual book over 1 month (21 business days) in daily steps; term loans run to maturity and open loans follow the return assumption. It drives the exposure profile, PFE, stress tests and the reinvestment liquidity ladder. **Annual view:** a constant book, rolled and re-margined so size and mix stay the same, over 1 year in weekly steps with daily steps inside each close-out period. It drives annual expected loss, indemnification cost against fees, the capital charge and annual tail loss. Both modes share random draws, settings and the close-out profile. Defaults: 50,000 paths for reported figures and 5,000 for interactive previews, which are labelled as previews. Configurable limits: horizon 1 month to 5 years; daily, weekly or monthly steps; 1,000 to 500,000 paths. Convergence check: halving the path count moves results by less than 2 standard errors. | Owner |
 | 2026-10-19 | **Decision 6 resolved — economic capital drives pricing and the flag; a regulatory proxy is shown alongside.** From the annual view: economic capital = annual VaR99.9 − EL (unexpected loss), covering both loss channels and wrong-way risk, allocated to borrowers in proportion to their Euler expected-shortfall contributions. Reinvestment losses not tied to a borrower's default are attributed to borrowers pro rata to their share of the cash collateral in the pool. Indemnification cost (bps per year) = (EL + cost of capital × economic capital) / average loan value. The regulatory proxy (comprehensive approach E* × risk weight from rating × 8%) is shown next to it for comparison and does not drive the flag; it cannot see wrong-way risk or reinvestment losses, and the UI says so. Defaults, all configurable and labelled illustrative: cost of capital 10% a year; flag when cost exceeds 50% of the borrower's fee; risk weights by rating AAA to AA− 20%, A+ to A− 50%, BBB+ to BB− 100%, below BB− 150%, unrated 100%. | Owner |
+| 2026-10-20 | **Decision 9 resolved — add an Indemnification Optimizer to spec020 as phase 2.** It recommends borrower loan limits, margin levels and accepted collateral types that maximize fees net of expected loss and capital cost, within demand, inventory, margin, concentration and risk-budget constraints (IND-022–027). It is built only after the phase 1 measurement model passes validation, because recommendations resting on unvalidated loss figures would be confidently wrong. It recommends only; changes need human approval. Its settings are decision 10, which blocks phase 2 but not phase 1. | Owner |
 
 ## Related documents
 

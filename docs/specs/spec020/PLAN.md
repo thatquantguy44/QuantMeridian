@@ -1,8 +1,8 @@
 # Plan: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md)
-- **Status:** Draft — pending owner review; decisions 1–6 resolved 2026-10-19; other parameters below are proposals until their SPEC decisions are resolved
-- **Last updated:** 2026-10-19
+- **Status:** Draft — pending owner review; decisions 1–6 and 9 resolved; other parameters below are proposals until their SPEC decisions are resolved
+- **Last updated:** 2026-10-20
 
 ## Approach
 
@@ -117,10 +117,45 @@ Computed from the annual view only (decision 6).
 - **Flag:** cost_b > threshold × fee_b.
 - **Defaults (configurable, illustrative):** cost of capital 10% a year; threshold 50%; risk weights AAA to AA− 20%, A+ to A− 50%, BBB+ to BB− 100%, below BB− 150%, unrated 100%.
 
+## Phase 2: Indemnification Optimizer (decision 9)
+
+Built after phase 1 validation. Settings marked (D10) are proposals until decision 10 is resolved.
+
+**Inputs from phase 1:** an annual-view run gives, for each path s and borrower b, a default indicator δ_bs, the loaned value at close-out per unit of loan ℓ_bs (including liquidity cost at today's size), and the realizable value per unit of each collateral type a, κ_as. The optimizer works on these fixed values.
+
+**Decision variables, per borrower b:**
+- L_b: loan size, as a multiple of the borrower's current loan mix, 0 ≤ L_b ≤ demand_b.
+- u_bk ∈ {0, 1}: margin level k chosen from the offered levels (D10), exactly one per borrower.
+- y_ba ∈ {0, 1}: collateral type a accepted.
+
+**Shortfall per path (worst-case collateral, IND-024):** for every accepted type a,
+z_bs ≥ δ_bs · (L_b · ℓ_bs − M_b · κ_as) − Big_b · (1 − y_ba), with z_bs ≥ 0,
+where M_b = Σ_k m_k · (u_bk · L_b) is the collateral amount. The products u_bk · L_b and y_ba · L_b are linearized exactly because L_b is bounded and u, y are binary. Taking the constraint over every accepted type means the borrower is assumed to post the type worst for the lender.
+
+**Revenue:** Σ_b (fee_b · L_b + Σ_a uplift_ba · (y_ba · L_b)), with the fee uplift for broader schedules as an input (D10).
+
+**Tail loss:** expected shortfall of program loss Σ_b z_bs at the chosen level (D10, proposed 99%), in the Rockafellar–Uryasev linear form: η + (1 / ((1 − α) · S)) · Σ_s ξ_s, with ξ_s ≥ Σ_b z_bs − η and ξ_s ≥ 0.
+
+**Objective:** maximize revenue − (1/S) · Σ_s Σ_b z_bs − cost of capital × (expected shortfall − EL).
+
+**Constraints:**
+- Demand and lendable inventory.
+- Exactly one margin level per borrower, at or above the minimum.
+- Collateral concentration limits.
+- Program expected shortfall ≤ risk budget (D10).
+- Optional movement limit from today's settings (D10).
+- Reinvestment losses held fixed at their phase 1 values unless D10 says otherwise.
+
+**Solve:** a mixed-integer linear program on `services/optimization_core`, using the same solver path and independent verifier pattern as spec014's lever MIP. The fitting run uses a separate seed from the phase 1 reporting run.
+
+**Fresh-path re-test (IND-025):** the recommended setup is fed back through the full phase 1 simulator (non-linear liquidity cost, margin lag, both loss channels) on new seeds. Fitted and fresh-path results are shown together; a gap beyond tolerance (D10) is flagged as possible overfitting.
+
+**Output:** current against recommended per borrower (limit, margin, accepted collateral, revenue, EL, capital, expected shortfall), the program totals, binding constraints with their shadow prices where the relaxation gives them, and an explanation when infeasible.
+
 ## Service and terminal boundary
 
 - Python service at `services/indemnification_api`, proposed port 8018 (decision 7). FastAPI with token auth and health checks, matching the other services.
-- Dependencies: NumPy and SciPy only. No ML stack is needed.
+- Dependencies: NumPy and SciPy only for phase 1. No ML stack is needed. Phase 2 adds `services/optimization_core` for the optimizer.
 - The terminal server route composes the snapshot from the SLAB book (decision 8) and the user's parameters, then calls the service. The browser does no risk calculation.
 - Proposed route: `/securities-lending/indemnification`, behind an `INDEM` module toggle (decision 7).
 - Local development uses labelled `SIM` fixtures only; production stays disabled.
@@ -135,6 +170,7 @@ Computed from the annual view only (decision 6).
 - Close-out profile editor: global and asset-class tables, borrower and position overrides, validation messages, difference from the default, reset, save as named profile, and JSON export and import. Results show each position's effective settings and which level they came from.
 - Reinvestment tab: pool composition by bucket, liquidity ladder against simulated return waves, and reinvestment loss by owner.
 - Stress tab: shortfall by borrower and beneficial owner for each named scenario.
+- Phase 2 Optimizer tab: settings, current against recommended per borrower, fitted against fresh-path results, binding constraints, and an approve-or-reject record per recommendation.
 - Model card drawer: seed, paths, standard errors, convergence, input hash, version.
 
 ## Validation strategy
@@ -149,6 +185,7 @@ Computed from the annual view only (decision 6).
 - **Run modes:** a term loan stops contributing exposure after maturity in the desk view; book size and mix stay constant at each roll date in the annual view; both modes reuse the same random draws.
 - **Determinism:** golden outputs per seed; contract parity between the TypeScript and Python fixtures.
 - **Naming:** all fixtures pass the fictional-counterparty test.
+- **Phase 2:** brute-force optimum on a tiny fixture; verifier tamper test; monotonicity in the risk budget; infeasible budget; worst-case collateral rule; fresh-path overfitting check.
 
 ## Sequence
 
@@ -159,4 +196,6 @@ Computed from the annual view only (decision 6).
 5. Add metrics, standard errors, Euler allocation and the model card.
 6. Add the comprehensive approach cross-check, sensitivities and stresses.
 7. Add service auth, health, terminal route composition and UI.
-8. Add the validation report, demo-scale benchmark and handoff.
+8. Add the validation report, demo-scale benchmark and handoff. Phase 1 ends here.
+9. Resolve decision 10, then build the phase 2 optimizer, verifier and fresh-path re-test.
+10. Add the Optimizer tab, approval record and phase 2 validation report.

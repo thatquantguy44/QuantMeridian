@@ -1,7 +1,7 @@
 # Tasks: Borrower Default and Indemnification Risk (INDEM)
 
 - **Spec:** spec020-indemnification-risk (SPEC.md, PLAN.md)
-- **Status:** Draft — pending owner review; no implementation authorized yet
+- **Status:** Draft — pending owner review; no implementation authorized yet. Phase 1 is IND-T01–T15; phase 2 is IND-T16–T21.
 
 | ID | Task | Covers | Status | Evidence / definition of done |
 |---|---|---|---|---|
@@ -23,7 +23,13 @@
 | IND-T12 | Implement economic capital allocation, the regulatory proxy, indemnification cost against fee, and flags. | IND-012 | todo | Capital sums to the program total; hand-computed bps under both measures for a two-borrower fixture (AC-015) |
 | IND-T13 | Add the service: auth, health, telemetry, and run records with hashes. | IND-001, IND-014 | todo | Health, auth and redaction tests |
 | IND-T14 | Add terminal route composition and the INDEM UI with provenance labels, including the close-out profile editor and effective-settings view. | IND-013, IND-020 | todo | Missing inputs show as unavailable (AC-008); nav and route tests |
-| IND-T15 | Write the validation report, demo-scale benchmark and handoff. | All | todo | Run times at 50k paths; limitations section states results are synthetic |
+| IND-T15 | Write the validation report, demo-scale benchmark and handoff. | All phase 1 | todo | Run times at 50k paths; limitations section states results are synthetic |
+| IND-T16 | Resolve decision 10 (optimizer settings). | IND-022–027 | blocked | Owner decisions recorded; requires IND-T15 complete |
+| IND-T17 | Export per-path default, loaned-value and collateral-value factors from an annual-view run for the optimizer. | IND-022 | todo | Factors reproduce phase 1 shortfalls on the same paths |
+| IND-T18 | Implement the optimizer MILP on optimization_core: worst-case collateral, margin levels, revenue with uplift, expected-shortfall budget, movement limit. | IND-022–024 | todo | Brute-force match on a tiny fixture (AC-016); risk-budget monotonicity and infeasibility (AC-017); worst-case rule (AC-019) |
+| IND-T19 | Implement the independent verifier and infeasibility explanation. | IND-026 | todo | Tampered-solution rejection; binding constraints named |
+| IND-T20 | Implement the fresh-path re-test through the full simulator. | IND-025 | todo | Fitted and fresh results reported; overfitting flag (AC-018) |
+| IND-T21 | Add the Optimizer tab, approve-or-reject record and phase 2 validation report. | IND-026, IND-027 | todo | No setting changes without an approval record; report states results are synthetic |
 
 ## Definition of Done
 
@@ -32,3 +38,4 @@
 - Wrong-way and no-wrong-way results use the same random numbers.
 - The Monte Carlo output agrees with closed forms and the comprehensive approach bound on test cases.
 - No real firm appears as a borrower or owner, and no real-world risk claim rests on synthetic data.
+- Phase 2: every recommendation is verified, re-tested on fresh paths, and applied only with human approval.
