@@ -41,7 +41,9 @@ def snapshot():
     return load("fixtures/snapshot.example.json")
 
 
-def mini_snapshot(base, *, loans, collateral=None, securities=None, borrowers=None, profile=None):
+def mini_snapshot(
+    base, *, loans, collateral=None, securities=None, borrowers=None, profile=None, pool=None
+):
     """A small controlled book built from the fixture: one owner, hand-set loans and collateral."""
     import copy
 
@@ -89,7 +91,7 @@ def mini_snapshot(base, *, loans, collateral=None, securities=None, borrowers=No
     s["owners"] = [{"id": "O1", "name": "Summitline Index Partners"}]
     s["loans"] = loans
     s["collateral"] = collateral or []
-    s["pool"] = {
+    s["pool"] = pool or {
         "positions": [],
         "owner_shares": [],
         "rescaled": False,
@@ -115,6 +117,7 @@ def loan(
     cash=True,
     term="open",
     maturity=None,
+    recallable=False,
 ):
     return {
         "id": loan_id,
@@ -127,7 +130,7 @@ def loan(
         "margin_pct": margin,
         "term": term,
         "maturity_days": maturity,
-        "recallable": False,
+        "recallable": recallable,
         "provenance": "sim",
     }
 
@@ -153,4 +156,28 @@ def security_holding(holding_id="C2", *, borrower="B1", security="GV", quantity=
         "quantity": quantity,
         "cash_amount": None,
         "provenance": "sim",
+    }
+
+
+def pool_position(
+    position_id="P1", *, bucket="TERM", credit="BANK", allocation=1_000_000.0, wam_days=70.0
+):
+    return {
+        "id": position_id,
+        "instrument": f"Test {bucket} {credit}",
+        "liquidity_bucket": bucket,
+        "credit_bucket": credit,
+        "allocation": allocation,
+        "yield_bps": 440.0,
+        "wam_days": wam_days,
+    }
+
+
+def pool_of(*positions):
+    return {
+        "positions": list(positions),
+        "owner_shares": [{"owner_id": "O1", "share": 1.0}],
+        "rescaled": False,
+        "source_total": None,
+        "note": None,
     }

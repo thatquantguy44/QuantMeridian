@@ -54,9 +54,7 @@ def test_the_result_echoes_the_run_and_carries_the_model_card_facts(desk):
     )
     assert card["data_label"] == "SIM" == result["source"]
     assert "synthetic" in card["limitations"].lower()
-    assert (
-        "reinvestment channel is not modelled" in card["limitations"]
-    )  # remove when IND-T06a lands
+    assert "not modelled" not in card["limitations"]  # the SIM book has a pool
     assert all(item["passed"] for item in card["validation"])
     assert {item["check"] for item in card["validation"]} >= {
         "snapshot schema, cross-field rules and hash",
@@ -93,17 +91,45 @@ def test_program_metrics_are_ordered_and_channels_add_up(desk):
             channels[k]["el"]["value"] for k in ("total", "default_shortfall", "reinvestment")
         )
         assert total == pytest.approx(default + reinvestment)
-        assert reinvestment == 0.0  # no pool yet (IND-T06a)
+        assert reinvestment > 0.0  # the SIM book has a pool and loans that come back
     assert result["program"]["student_t"] is not None
 
 
-def test_borrower_euler_contributions_sum_to_the_program_expected_shortfall(desk):
+def test_borrower_euler_contributions_sum_to_the_program_total_expected_shortfall(desk):
     _, result = desk
-    program_es = result["program"]["gaussian"]["with_wrong_way"]["default_shortfall"]["es99"][
-        "value"
-    ]
+    program_es = result["program"]["gaussian"]["with_wrong_way"]["total"]["es99"]["value"]
     parts = sum(b["euler_es99"]["value"] for b in result["borrowers"])
     assert parts == pytest.approx(program_es, rel=1e-9, abs=1e-9)
+
+
+def test_borrower_channels_add_up_to_the_program_channels(desk):
+    """AC-010: default plus reinvestment is the total, for the program and for every borrower."""
+    _, result = desk
+    channels = result["program"]["gaussian"]["with_wrong_way"]
+    for name in ("el",):
+        for part in ("default_shortfall", "reinvestment"):
+            assert sum(
+                b["metrics"]["with_wrong_way"][part][name]["value"] for b in result["borrowers"]
+            ) == pytest.approx(channels[part][name]["value"], rel=1e-9)
+    for b in result["borrowers"]:
+        m = b["metrics"]["with_wrong_way"]
+        assert m["total"]["el"]["value"] == pytest.approx(
+            m["default_shortfall"]["el"]["value"] + m["reinvestment"]["el"]["value"]
+        )
+    assert result["owners"] and sum(
+        o["el"]["reinvestment"]["value"] for o in result["owners"]
+    ) == pytest.approx(channels["reinvestment"]["el"]["value"], rel=1e-9)
+
+
+def test_a_snapshot_without_a_pool_says_the_reinvestment_channel_is_not_modelled(snapshot):
+    snap = mini_snapshot(
+        snapshot, loans=[loan(quantity=1000)], collateral=[cash_holding(amount=102_000.0)]
+    )
+    snap["run"] = {**snap["run"], "paths": 1000}
+    snap = seal(snap)
+    result = build_result(snap, simulate(snap), created_at=CREATED)
+    assert "reinvestment channel is not modelled" in result["model_card"]["limitations"]
+    assert result["program"]["gaussian"]["with_wrong_way"]["reinvestment"]["el"]["value"] == 0.0
 
 
 def test_owner_losses_add_up_to_the_program_default_loss(desk):

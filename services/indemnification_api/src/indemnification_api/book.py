@@ -55,6 +55,7 @@ class Book:
     loan_margin: np.ndarray  # fraction, e.g. 1.02
     loan_cash: np.ndarray  # bool
     loan_maturity: np.ndarray  # business days; inf for open loans
+    loan_recallable: np.ndarray  # bool
     loan_call: np.ndarray  # margin call interval in business days
     loan_leg: np.ndarray  # leg index of each loan
     loan_legs: Legs
@@ -185,6 +186,7 @@ def build_book(snapshot: dict[str, Any], market: MarketModel) -> Book:
             [loan["maturity_days"] if loan["term"] == "term" else math.inf for loan in loans],
             dtype=float,
         ),
+        loan_recallable=np.array([loan["recallable"] for loan in loans], dtype=bool),
         loan_call=call,
         loan_leg=loan_leg,
         loan_legs=loan_legs,

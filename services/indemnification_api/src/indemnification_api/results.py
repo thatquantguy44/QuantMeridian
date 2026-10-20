@@ -24,7 +24,10 @@ from .profile import resolve_all
 
 LIMITATIONS = (
     "Synthetic data and illustrative parameters: this shows how the model behaves, not "
-    "real-world risk levels. The reinvestment channel is not modelled in this version and "
+    "real-world risk levels."
+)
+NO_POOL_NOTE = (
+    " The snapshot has no reinvestment pool, so the reinvestment channel is not modelled and "
     "reports zero."
 )
 PREVIEW_NOTE = " Preview run with a reduced path count; do not use for reported figures."
@@ -166,8 +169,12 @@ def build_result(
         "student_t": None if student is None else program_channels(student),
     }
 
-    contributions, pool_part = euler_metrics(gaussian.sampled, pool, 0.99)
-    zero_pool = np.zeros(output.n_paths)
+    # Each borrower carries a share of the pool's loss equal to its share of the cash collateral
+    cash_share = np.asarray(output.extras.get("cash_share", np.zeros(n_b)))
+    pool_by_borrower = pool[:, None] * cash_share[None, :]
+    contributions, pool_part = euler_metrics(
+        gaussian.sampled + pool_by_borrower, np.zeros(output.n_paths), 0.99
+    )
     borrowers = []
     for b, borrower_id in enumerate(output.book.borrower_ids):
         credit = output.credits[b]
@@ -176,7 +183,9 @@ def build_result(
         def by_borrower(
             v: VariantLosses, b: int = b, exposure: np.ndarray = exposure
         ) -> dict[str, Any]:
-            return _channels(v.cond[:, b], v.sampled[:, b], zero_pool, exposure, output)
+            return _channels(
+                v.cond[:, b], v.sampled[:, b], pool_by_borrower[:, b], exposure, output
+            )
 
         borrowers.append(
             {
@@ -213,7 +222,8 @@ def build_result(
             }
         )
 
-    limitations = LIMITATIONS + (PREVIEW_NOTE if run["preview"] else "")
+    limitations = LIMITATIONS + ("" if output.extras.get("pool_modelled") else NO_POOL_NOTE)
+    limitations += PREVIEW_NOTE if run["preview"] else ""
     limitations += DESK_NOTE if run["mode"] == "desk" else ""
     card = {
         "model_card_schema_version": "1.0",

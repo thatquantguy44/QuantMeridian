@@ -29,7 +29,11 @@ def make(base, loans, *, collateral=None, paths=20_000, seed=1, horizon=21, edit
         "step": "daily",
     }
     snap["closeout_profile"]["defaults"]["impact_k"] = 0.0
-    snap["model"] = {**snap["model"], "student_t_enabled": False}
+    snap["model"] = {
+        **snap["model"],
+        "student_t_enabled": False,
+        "returns": {**snap["model"]["returns"], "open_loan_hazard_annual": 0.0},  # loans stay on
+    }
     if edit:
         edit(snap)
     return seal(snap)
@@ -268,3 +272,97 @@ def test_an_invalid_snapshot_is_refused_before_any_work(snapshot):
     bad["run"]["paths"] = 5
     with pytest.raises(ValueError):
         simulate(bad)
+
+
+def with_pool(
+    snapshot, positions, *, loans=None, rating="CCC", paths=20_000, edit=None, returns=0.0
+):
+    """A one-borrower cash-collateral book (102,000 owed) with a reinvestment pool."""
+    from conftest import pool_of
+
+    borrowers = [
+        {
+            "id": "B1",
+            "name": "Alderwood Capital",
+            "rating": rating,
+            "spread_bps": None,
+            "recovery": None,
+            "credit_provenance": "sim",
+        }
+    ]
+
+    def edit_all(s):
+        s["model"]["returns"]["open_loan_hazard_annual"] = returns
+        if edit:
+            edit(s)
+
+    return make(
+        snapshot, loans or [loan(quantity=1000)], paths=paths, borrowers=borrowers,
+        pool=pool_of(*positions), edit=edit_all,
+    )  # fmt: skip
+
+
+def test_a_fully_liquid_pool_has_no_reinvestment_loss_even_when_loans_come_back(snapshot):
+    """AC-009 end to end: overnight cash cannot lose value, however hard the loans are returned."""
+    from conftest import pool_position
+
+    snap = with_pool(snapshot, [pool_position(bucket="T+0", credit="HQLA", allocation=102_000.0)],
+                     returns=30.0, paths=10_000)  # fmt: skip
+    out = simulate(snap)
+    assert out.extras["pool_modelled"] is True
+    assert out.pool_loss.max() < 1e-6  # zero up to floating-point rounding
+
+
+def test_a_term_pool_loses_money_when_loans_come_back_and_the_loss_is_finite(snapshot):
+    from conftest import pool_position
+
+    snap = with_pool(snapshot, [pool_position(bucket="TERM", credit="BANK", allocation=102_000.0)],
+                     returns=30.0, paths=10_000)  # fmt: skip
+    out = simulate(snap)
+    assert np.isfinite(out.pool_loss).all()
+    assert out.pool_loss.min() >= 0.0 and out.pool_loss.mean() > 0.0
+    assert out.extras["cash_share"].tolist() == [1.0]
+
+
+def test_returning_loans_lower_expected_exposure(snapshot):
+    def epe(returns):
+        def weekly_calls(s):
+            s["closeout_profile"]["defaults"]["margin_call_every_days"] = 5
+
+        out = simulate(with_pool(snapshot, [], returns=returns, paths=10_000, edit=weekly_calls))
+        return out.exposure.sum(axis=1).mean()
+
+    assert epe(40.0) < 0.8 * epe(0.0)
+
+
+def test_an_impaired_pool_makes_cash_collateral_worth_less_and_raises_expected_loss(snapshot):
+    """IND-016: when the pool cannot pay a defaulting borrower in full, cash collateral is worth
+    less than par.
+    """
+    from conftest import pool_position
+
+    def el(issuer_hazard):
+        def edit(s):
+            s["model"]["rho_d"], s["model"]["rho_w"] = 0.4, 0.0
+            s["model"]["pool_risk"]["issuer_hazard_annual"]["BANK"] = issuer_hazard
+            s["model"]["pool_risk"]["issuer_recovery"] = 0.3
+
+        out = simulate(
+            with_pool(snapshot, [pool_position(bucket="TERM", credit="BANK", allocation=102_000.0)],
+                      paths=60_000, edit=edit)
+        )  # fmt: skip
+        cond = out.variants[GAUSSIAN_WW].cond.sum(axis=1)
+        return cond.mean(), cond.std(ddof=1) / math.sqrt(len(cond))
+
+    healthy, healthy_se = el(0.0)
+    impaired, impaired_se = el(10.0)  # the pool's issuer defaults often
+    assert impaired > healthy + 4 * math.hypot(healthy_se, impaired_se)
+
+
+def test_runs_with_a_pool_are_reproducible(snapshot):
+    from conftest import pool_position
+
+    snap = with_pool(snapshot, [pool_position(allocation=102_000.0)], returns=10.0, paths=5000)
+    a, b = simulate(snap), simulate(snap)
+    assert np.array_equal(a.pool_loss, b.pool_loss)
+    assert np.array_equal(a.variants[GAUSSIAN_WW].cond, b.variants[GAUSSIAN_WW].cond)

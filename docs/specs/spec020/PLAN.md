@@ -95,6 +95,15 @@ Every close-out and liquidity setting comes from a named, versioned close-out pr
 - Losses are allocated to beneficial owners pro rata to their share of the pool.
 - Every loss metric is reported by channel (default shortfall, reinvestment) and in total (IND-017).
 
+**Implementation choices for the pool (2026-10-20):**
+
+- **Loan returns** (`returns.py`, contract `model.returns`): an open loan returns at an exponential time with hazard `base × (recallable multiplier) × exp(sensitivity × max(0, −Z_eq))`, so returns come in waves when equities fall. Term loans run to maturity. In the desk view a returned loan stays returned; in the annual view it is off for one step and replaced. Returns feed both exposures and the cash the pool owes.
+- **Loss definition.** The reinvestment loss on a path is the peak over the event grid of the *rise* in `cash owed − pool NAV` from its opening value, not the final shortfall (a stress event could force a realization at the worst point). An opening gap is data, not risk.
+- **Waterfall.** Outflows are paid from the most liquid positions first; a sale costs the profile's impact cost, never less than the bucket's forced-sale floor (`model.pool_risk`), scaled by the stress multiplier. Cash coming in is held in the most liquid position.
+- **Cash collateral at a borrower's default** is worth `min(1, cash raised by the same waterfall ÷ cash owed)`, not a pro-rata slice of every asset (which would make collateral look impaired merely because the pool holds term assets). It is below par only when the pool cannot pay. Because the cash comes out of the pool, the pool channel is unchanged by a default and the two channels do not double count.
+- **Issuer defaults** are independent across positions and scaled up by `issuer_stress_sensitivity` when spreads have widened; they are not linked to the borrowers' copula. A limitation to revisit.
+- **Borrower attribution.** Each borrower carries a share of the pool's loss equal to its share of the cash collateral; owners carry it by `pool.owner_shares`. Borrower Euler contributions are on the total loss and sum to the program's expected shortfall.
+
 ### 5. Metrics
 
 - **Exposure profile:** EE(t) = E[max(0, L(t) − C(t))] over the exposure grid, plus EPE and PFE95/99(t).

@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 
 from .book import Book, build_book
-from .closeout import evaluate, required_days
+from .closeout import cash_requirements, evaluate, required_days
 from .credit import BorrowerCredit, resolve_credit
 from .defaults import (
     GAUSSIAN,
@@ -28,6 +28,8 @@ from .defaults import (
 )
 from .grid import Grid, build_grid
 from .market import MarketModel, build_market, simulate_paths
+from .pool import build_pool, draw_pool_noise, run_pool
+from .returns import build_activity, draw_return_noise
 from .schema import require_valid_snapshot
 
 CHUNK_PATHS = 5000
@@ -97,7 +99,13 @@ def simulate(
 
     sizes = _chunk_sizes(n_paths)
     streams = np.random.SeedSequence(int(run["seed"])).spawn(len(sizes))
+    pool = build_pool(snapshot, market)
     days = required_days(book, grid)
+    if pool is not None:
+        days = max(days, grid.horizon_days + int(pool.mpor.max()))
+    n_events_steps = n_events - 1
+    day_index = {int(d): k for k, d in enumerate(grid.event_days)}
+    pool_loss = np.zeros(n_paths)
     names = variant_names(snapshot)
     cond = {v: np.zeros((n_paths, n_b)) for v in names}
     sampled = {v: np.zeros((n_paths, n_b)) for v in names}
@@ -105,13 +113,32 @@ def simulate(
     bounds: list[tuple[int, int]] = []
 
     start = 0
+    cash_share = np.zeros(n_b)
     for size, stream in zip(sizes, streams, strict=True):
         rng = np.random.default_rng(stream)
         paths = simulate_paths(market, rng, size, days)
         evaluation = evaluate(book, market, paths, grid)
         z_eq = paths.standardized_equity(grid.horizon_days, market)
         noise = draw_default_noise(rng, size, n_b, model["student_t_nu"])
+        return_noise = draw_return_noise(rng, size, n_events_steps, len(book.loan_ids))
+        pool_noise = draw_pool_noise(rng, size, n_events_steps, pool.n_positions) if pool else None
+        on_loan = build_activity(book, model["returns"], z_eq, grid, return_noise)
+
+        def activity(day: int, on_loan: np.ndarray = on_loan) -> np.ndarray:
+            return on_loan[:, day_index[day], :]
+
+        realization = None
         sl = slice(start, start + size)
+        if pool is not None:
+            owed = cash_requirements(book, market, paths, grid, activity)
+            pool_run = run_pool(pool, market, paths, grid, owed, pool_noise)
+            pool_loss[sl] = pool_run.loss
+            cash_share = owed[:, :, 0].mean(axis=0)
+
+            def realization(k: int, day: int, r: np.ndarray = pool_run.realization) -> np.ndarray:
+                return r[:, :, k - 1]
+
+        evaluation = evaluate(book, market, paths, grid, activity=activity, realization=realization)
         exposure[sl] = evaluation.exposure
         for name in names:
             rho_w = 0.0 if name == GAUSSIAN_NO_WW else model["rho_w"]
@@ -143,6 +170,12 @@ def simulate(
         chunk_bounds=bounds,
         exposure=exposure,
         variants={v: VariantLosses(cond[v], sampled[v]) for v in names},
-        pool_loss=np.zeros(n_paths),
-        extras={"validated": validate},
+        pool_loss=pool_loss,
+        extras={
+            "validated": validate,
+            "pool_modelled": pool is not None,
+            "cash_share": (cash_share / cash_share.sum())
+            if pool is not None and cash_share.sum() > 0
+            else np.zeros(n_b),
+        },
     )

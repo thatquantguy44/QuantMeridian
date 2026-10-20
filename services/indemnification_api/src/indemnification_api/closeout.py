@@ -85,6 +85,26 @@ def _onehot(index: np.ndarray, size: int) -> np.ndarray:
     return m
 
 
+def cash_requirements(
+    book: Book, market: MarketModel, paths: Paths, grid: Grid, activity: Activity | None = None
+) -> np.ndarray:
+    """Cash collateral owed to each borrower at every event day, (n, B, K + 1).
+
+    This is the cash side of the margin requirement as of each borrower's last margin call, for the
+    loans that are on loan; it is what the reinvestment pool owes back.
+    """
+    activity = activity or default_activity(book)
+    by_borrower = _onehot(book.loan_borrower, book.n_borrowers)
+    n = paths.log_price.shape[0]
+    out = np.zeros((n, book.n_borrowers, len(grid.event_days)))
+    for k, day in enumerate(grid.event_days):
+        day = int(day)
+        qty = np.asarray(activity(day), dtype=float) * book.loan_qty
+        prices = _prices(market, paths, book.loan_sec, day - day % book.loan_call)
+        out[:, :, k] = (qty * book.loan_margin * prices * book.loan_cash) @ by_borrower
+    return out
+
+
 def evaluate(
     book: Book,
     market: MarketModel,

@@ -5,9 +5,9 @@
 **Branch:** `spec020-indemnification-scope`, open as [PR #188](https://github.com/thatquantguy44/QuantMeridian/pull/188) against `main`.
 
 **State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The model core is built and tested in Python:
-the contract, the close-out profile, market paths, the default copula, the close-out shortfall, risk
-metrics and the engine that runs them. There is **no HTTP API, no UI page and no reinvestment pool yet**,
-and no result is assembled for the terminal. Phase 2 (the optimizer) is not approved: decision 10 is open.
+the contract, the close-out profile, market paths, the default copula, loan returns, the reinvestment pool,
+the close-out shortfall, risk metrics, the engine and the result/model-card assembly. There is **no HTTP API
+and no UI page yet**, and the Basel cross-check, sensitivities, stresses and pricing are not built. Phase 2 (the optimizer) is not approved: decision 10 is open.
 
 | Task | What | Status |
 |---|---|---|
@@ -21,15 +21,15 @@ and no result is assembled for the terminal. Phase 2 (the optimizer) is not appr
 | IND-T06b | Close-out profile resolution and snapshot validation (`profile.py`, `schema.py`) | Done |
 | IND-T07 | Close-out shortfall and exposure (`book.py`, `closeout.py`) | Done (pool realization is a hook) |
 | IND-T08 | Metrics, engine, result and model card (`metrics.py`, `engine.py`, `results.py`) | Done |
-| IND-T09 | Euler allocation, owner and channel attribution | **In progress**: Euler and owner attribution done; the borrower split of reinvestment loss waits for the pool |
-| IND-T06a | Reinvestment pool | **Not started** (the contract has no pool parameters yet) |
+| IND-T09 | Euler allocation, owner and channel attribution | Done |
+| IND-T06a | Loan returns and the reinvestment pool (`returns.py`, `pool.py`) | Done |
 | IND-T10 – T12 | Basel cross-check, sensitivities and stresses, pricing | Not started |
 | IND-T13 | Service API | Not started |
 | IND-T14 | UI page, route, nav, profile editor | Not started |
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 
-Test counts at handoff: 157 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+Test counts at handoff: 188 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
 `ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
 
 ## Start here
@@ -96,72 +96,53 @@ stale: `indemnificationContract.test.ts`, `indemnificationBook.test.ts`, and `te
 
 ## Next steps, in order
 
-**1. (Done.) IND-T08 and most of IND-T09.** `results.build_result(snapshot, output)` returns a dict that validates
-against `result-1.0` and `model-card-1.0`. The exposure metrics (EPE, PFE) are repeated in the total and default
-channels and are zero in the reinvestment channel. The model card's `limitations` text says the reinvestment
-channel is not modelled; **remove that sentence and the matching assertion in `tests/test_results.py` when the
-pool lands.** Note that the "conditional and sampled expected loss agree" check has little power when defaults
-are rare (the SIM book over one month); it is a real check only on books with plenty of defaults.
+**1. (Done.) IND-T06a, IND-T08 and IND-T09.** `results.build_result(snapshot, output)` returns a dict that
+validates against `result-1.0` and `model-card-1.0`. The exposure metrics (EPE, PFE) are repeated in the total
+and default channels and are zero in the reinvestment channel. The model card's limitations text only says the
+reinvestment channel is not modelled for a snapshot with no pool. The "conditional and sampled expected loss
+agree" check has little power when defaults are rare (the SIM book over one month); it is a real check only on
+books with plenty of defaults.
 
-**2. IND-T09 remainder.** After the pool exists, attribute reinvestment loss to borrowers (pro rata to each
-borrower's share of cash collateral in the pool) so borrower-level channels add up (AC-010).
-
-**3. IND-T06a reinvestment pool (largest remaining model piece).** First a contract change (#2): add
-`model.returns` (open-loan return hazard per year, recallable multiplier, stress sensitivity) and
-`model.pool_risk` (credit beta, issuer hazard and recovery per credit bucket; daily liquidity fraction per
-liquidity bucket). Sketch agreed during the build:
-- Each open loan returns at an exponential time; the multiplier rises when equities fall. Pass an `(n, L)`
-  activity matrix to `evaluate`. In the annual view a returned loan is replaced one step later.
-- Pool positions are revalued by the credit-spread factor (spread duration ≈ WAM/252 times the bucket's
-  beta); BANK and CREDIT positions can default. Liabilities are cash collateral on active CASH loans.
-- Outflows are paid T+0, then T+1, T+7, then forced sales of TERM assets at the profile's impact cost
-  (ADV = daily liquidity fraction × allocation). Reinvestment loss = peak over the grid of
-  `max(0, liabilities − pool NAV)`.
-- Cash collateral at a borrower's default is worth par × the realization ratio for that borrower's slice; pass
-  it as `realization`. Remove a defaulted borrower's liabilities from the pool from its default time so the
-  two channels do not double count (AC-010).
-- Acceptance: AC-009 (all-overnight pool loses nothing; a single term asset matches a hand calculation) and
-  AC-010 (channels sum to the total on every path).
-
-**4. IND-T10 Basel cross-check.** `E* = max(0, E(1+He) − C(1−Hc−Hfx))`, haircuts scaled by `sqrt(MPOR/10)`,
+**2. IND-T10 Basel cross-check.** `E* = max(0, E(1+He) − C(1−Hc−Hfx))`, haircuts scaled by `sqrt(MPOR/10)`,
 labelled illustrative. Put the haircut table in the snapshot (contract change #3) for the same reason as the
 rating table. Compare with Monte Carlo PFE99 in `cross_check`.
 
-**5. IND-T11 sensitivities and stresses.** Sensitivities reuse the same seed (common random numbers) while
+**3. IND-T11 sensitivities and stresses.** Sensitivities reuse the same seed (common random numbers) while
 sweeping margin, MPOR, `rho_w`, a collateral substitution, or any numeric profile setting. Stresses need
 conditioned paths: add a shock to the simulated log prices from a chosen day and force the default (largest
 borrower with a −20% equity move; a +60% squeeze on the most concentrated hard-to-borrow loan; +150 bp rates;
 15% FX, which has no effect on a USD-only book; the reinvestment run once the pool exists). Per-scenario
 profile overrides are required (IND-020).
 
-**6. IND-T12 pricing.** Economic capital = annual VaR99.9 − EL, allocated by Euler contributions; cost in bps
+**4. IND-T12 pricing.** Economic capital = annual VaR99.9 − EL, allocated by Euler contributions; cost in bps
 per year against fee; regulatory proxy beside it; flag when cost exceeds the threshold share of the fee.
 Annual view only.
 
-**7. IND-T13 service API.** FastAPI app, token auth, health, a run endpoint taking a snapshot and returning a
+**5. IND-T13 service API.** FastAPI app, token auth, health, a run endpoint taking a snapshot and returning a
 result, in-memory run history with hashes (no database), a capability manifest like
 `services/money_market_api/capability-manifest.json`, port 8018. Then the terminal server route that builds
 the snapshot with `buildSimSnapshot` and calls it; look at how the SXU and collateral routes do it.
 
-**8. IND-T14 UI.** Page at `/securities-lending/indemnification`: `INDEM` entry in `src/lib/nav.ts` (FINANCE
+**6. IND-T14 UI.** Page at `/securities-lending/indemnification`: `INDEM` entry in `src/lib/nav.ts` (FINANCE
 group, next to `SQZ`; update `nav.test.ts`), toggle in `settings/modules.config.json`, `on("INDEM")` route in
 `src/App.tsx`, the tabs listed in `PLAN.md`, the close-out profile editor, and a mode switch (desk is the
 default). Every figure shows seed, path count, standard error and the `SIM` label (AC-008).
 
-**9. IND-T15.** Validation report, benchmark at 50,000 paths, as-built notes. Phase 2 starts only after this.
+**7. IND-T15.** Validation report, benchmark at 50,000 paths, as-built notes. Phase 2 starts only after this.
 
 ## Known issues and risks
 
-- **Speed.** 5,000 paths on the SIM book: desk 2.5 s, annual (weekly) 14 s, so a 50,000-path annual run is
-  about 2.5 minutes. The loops in `closeout.evaluate` over event steps are the cost. Profile before adding
+- **Speed.** 5,000 paths on the SIM book: desk 4.8 s, annual (weekly) 16.8 s, so a 50,000-path annual run is
+  under 3 minutes. The loops in `closeout.evaluate` over event steps are the cost. Profile before adding
   the pool; float32 for log prices and fewer temporary arrays are the first things to try.
 - **Memory.** Exposures need `paths × borrowers × (event days + 1) × 4` bytes; the engine refuses more than
   2 GB. The service will need a clearer error and perhaps coarser steps by default for annual runs.
 - **Test time** is about 35 s, mostly the 100,000–400,000-path statistical tests. Keep them; they are what
   catches modelling errors.
+- **Pool simplifications.** Issuer defaults are independent across positions (scaled up when spreads widen) and not linked to the borrowers' copula; the pool is rescaled to the book's cash collateral so it starts exactly funded. Both are in `PLAN.md`.
 - **Parameters are illustrative.** The rating PD table, factor volatilities and correlations, jump
   parameters, copula correlations, risk weights and cost of capital are placeholders labelled as such. The SIM
-  book's figures (for example desk EL of roughly $8k on a $6.5B book) are smoke numbers, not results.
+  book's figures (for example, on the SIM book a one-month desk run gives a default-channel EL of roughly $8k and a reinvestment EL of roughly $230k on a $6.5B book, the latter driven by the illustrative forced-sale floors) are smoke numbers, not results.
 - **Concentration threshold.** In the SIM book the largest loan is 18% of average daily volume, so with the
   25% default only hard-to-borrow names get the longer close-out period.
 
