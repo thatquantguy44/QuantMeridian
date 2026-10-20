@@ -195,6 +195,7 @@ def build_result(
     created_at: str | None = None,
     sensitivities: list[dict[str, Any]] | None = None,
     stresses: list[dict[str, Any]] | None = None,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
     run = snapshot["run"]
     pool = output.pool_loss
@@ -304,9 +305,9 @@ def build_result(
         "data_label": snapshot["source"]["label"],
         "limitations": limitations,
     }
-    run_id = hashlib.sha256(f"{snapshot['snapshot_hash']}|{MODEL_VERSION}".encode()).hexdigest()[
-        :32
-    ]
+    if run_id is None:
+        digest = hashlib.sha256(f"{snapshot['snapshot_hash']}|{MODEL_VERSION}".encode())
+        run_id = digest.hexdigest()[:32]
     assert n_b == len(borrowers)
     return {
         "api_schema_version": "1.0",

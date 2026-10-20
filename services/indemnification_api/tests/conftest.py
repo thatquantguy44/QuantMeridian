@@ -12,6 +12,9 @@ SCHEMA_FILES = [
     "model-card-1.0.schema.json",
     "snapshot-1.0.schema.json",
     "result-1.0.schema.json",
+    "run-request-1.0.schema.json",
+    "run-response-1.0.schema.json",
+    "error-1.0.schema.json",
 ]
 
 

@@ -25,6 +25,9 @@ _SCHEMA_FILES = (
     "model-card-1.0.schema.json",
     "snapshot-1.0.schema.json",
     "result-1.0.schema.json",
+    "run-request-1.0.schema.json",
+    "run-response-1.0.schema.json",
+    "error-1.0.schema.json",
 )
 
 
@@ -75,3 +78,11 @@ def require_valid_snapshot(snapshot: dict[str, Any]) -> None:
     issues = validate_snapshot(snapshot)
     if issues:
         raise SnapshotRejected(issues)
+
+
+def validate_request(payload: Any) -> list[str]:
+    """Schema errors for a run request (the envelope and its embedded snapshot)."""
+    return [
+        f"{'/'.join(str(p) for p in error.absolute_path) or '<root>'}: {error.message}"
+        for error in validator("run-request-1.0.schema.json").iter_errors(payload)
+    ]

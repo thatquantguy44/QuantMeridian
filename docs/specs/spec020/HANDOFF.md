@@ -28,12 +28,12 @@ benchmark (IND-T15). Phase 2 (the optimizer) is not approved: decision 10 is ope
 | IND-T10 | Basel comprehensive approach cross-check (`basel.py`, contract `basel_haircuts`) | Done |
 | IND-T11 | Sensitivities and named stresses (`sensitivity.py`, `stress.py`); `analysis.run_analysis` composes the full result | Done |
 | IND-T12 | Pricing: cost in bps against fee, economic capital, regulatory proxy, flags (`pricing.py`) | Done |
-| IND-T13 | Service API | Not started |
+| IND-T13 | HTTP service (`app.py`, `auth.py`, request/response/error contracts) | Done |
 | IND-T14 | UI page, route, nav, profile editor | Not started |
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 
-Test counts at handoff: 246 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+Test counts at handoff: 263 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
 `ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
 
 ## Start here
@@ -128,12 +128,14 @@ stresses, and the Basel cross-check. Things worth knowing:
 (the model card says so). Capital is the program's `VaR99.9 − EL` split by Euler ES99.9 shares; the flag uses the
 economic cost only, never the regulatory proxy.
 
-**5. IND-T13 service API (next).** FastAPI app, token auth, health, a run endpoint taking a snapshot and returning a
-result, in-memory run history with hashes (no database), a capability manifest like
-`services/money_market_api/capability-manifest.json`, port 8018. Then the terminal server route that builds
-the snapshot with `buildSimSnapshot` and calls it; look at how the SXU and collateral routes do it.
+**5. (Done.) IND-T13.** `uvicorn indemnification_api.app:app --port 8018`; see the service README for routes, errors
+and settings. The terminal's server route that builds a snapshot with `buildSimSnapshot`, wraps it in a
+`run-request-1.0` envelope and calls `POST /v1/runs` is part of step 6; look at how the SXU and collateral routes
+(`src/app/api/...`, `src/lib/server/...`) hold the URL and token (for example `INDEMNIFICATION_API_URL`,
+`INDEMNIFICATION_API_TOKEN`) and handle an unreachable service. TypeScript types for the request, response and
+error envelopes still need adding to `src/lib/indemnificationContract.ts` (with the `Fields<T>` parity test).
 
-**6. IND-T14 UI.** Page at `/securities-lending/indemnification`: `INDEM` entry in `src/lib/nav.ts` (FINANCE
+**6. IND-T14 terminal route and UI (next).** Page at `/securities-lending/indemnification`: `INDEM` entry in `src/lib/nav.ts` (FINANCE
 group, next to `SQZ`; update `nav.test.ts`), toggle in `settings/modules.config.json`, `on("INDEM")` route in
 `src/App.tsx`, the tabs listed in `PLAN.md`, the close-out profile editor, and a mode switch (desk is the
 default). Every figure shows seed, path count, standard error and the `SIM` label (AC-008).

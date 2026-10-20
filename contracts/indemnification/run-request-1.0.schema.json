@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quantmeridian:indemnification:run-request:1.0",
+  "title": "Indemnification run request 1.0 (spec020 IND-T13)",
+  "description": "The body of POST /v1/runs: a snapshot and options for the sweeps and stresses that accompany the main run. The main run always uses the snapshot's own path count.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "api_schema_version",
+    "snapshot",
+    "options"
+  ],
+  "properties": {
+    "api_schema_version": {
+      "const": "1.0"
+    },
+    "snapshot": {
+      "$ref": "urn:quantmeridian:indemnification:snapshot:1.0"
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sensitivity_paths",
+        "stresses",
+        "stress_profile_overrides"
+      ],
+      "properties": {
+        "sensitivity_paths": {
+          "description": "Paths per sweep point (the sweeps reuse the run's seed). Null skips the sensitivities.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1000,
+          "maximum": 500000
+        },
+        "stresses": {
+          "description": "Whether to run the five named stresses.",
+          "type": "boolean"
+        },
+        "stress_profile_overrides": {
+          "description": "Close-out profile settings that apply to the stresses alone.",
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

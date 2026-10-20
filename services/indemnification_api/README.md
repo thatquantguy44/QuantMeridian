@@ -6,7 +6,7 @@ snapshot it is given and substitutes nothing. Everything it produces from the SI
 
 Specification: `docs/specs/spec020/` (start with `HANDOFF.md`). Wire contract: `contracts/indemnification/`.
 
-**Status: the model core is built (no HTTP API yet).** See the handoff for what remains.
+**Status: the model and the HTTP service are built; the terminal route and UI page are not.** See the handoff.
 
 ## Run the tests
 
@@ -33,6 +33,26 @@ out.variants["gaussian_ww"].cond.sum(axis=1).mean()  # expected loss, default ch
 `seal` recomputes `snapshot_hash` after you edit a snapshot. The book is built by
 `src/data/indemnificationBook.ts` (`buildSimSnapshot`) from the SLAB loan book.
 
+## Run the service
+
+```bash
+INDEMNIFICATION_API_TOKEN=local-secret PYTHONPATH=services/indemnification_api/src \
+  uvicorn indemnification_api.app:app --host 127.0.0.1 --port 8018
+```
+
+| Route | Auth | What |
+|---|---|---|
+| `GET /health` | none | Ready, model version, whether a token is configured. |
+| `GET /v1/capabilities` | token | The capability manifest (port 8018, no database, no market data). |
+| `POST /v1/runs` | token + `X-Correlation-ID` (UUID) | Body: `run-request-1.0` (a snapshot and options). Returns `run-response-1.0`: a run record and the validated `result-1.0`. Optional `Idempotency-Key`. |
+| `GET /v1/runs/{run_id}` | token | A recent run again (the last 50 are kept in memory). |
+
+Errors use `error-1.0`: `REQUEST_CONTRACT_INVALID` and `SNAPSHOT_INVALID` (422, with the failing paths),
+`RUN_TOO_LARGE` (422), `BODY_TOO_LARGE` (413), `SERVICE_BUSY` (429, one run at a time), `IDEMPOTENCY_CONFLICT` (409),
+`RUN_NOT_FOUND` (404) and `MODEL_ERROR` (500, no details). Set `INDEM_ENV=production` and
+`INDEM_PRODUCTION_ENABLED=true` to enable it outside local development; otherwise every route but `/health`
+returns 503. Logs carry ids and hashes only, never loan, borrower or owner data.
+
 ## Modules
 
 | Module | Role |
@@ -48,6 +68,12 @@ out.variants["gaussian_ww"].cond.sum(axis=1).mean()  # expected loss, default ch
 | `closeout.py` | Shortfall if a borrower defaults at each event step, and margin-period-of-risk exposure. |
 | `metrics.py` | EL, EPE, PFE, VaR, ES with standard errors; Euler allocation. |
 | `engine.py` | Chunked runs with per-chunk seed streams; three default variants on shared draws. |
+| `returns.py`, `pool.py` | Open-loan returns and the reinvestment pool (revaluation, issuer defaults, liquidity waterfall). |
+| `basel.py` | Basel comprehensive approach cross-check. |
+| `sensitivity.py`, `stress.py` | One-parameter sweeps on common random numbers; five named deterministic stresses. |
+| `pricing.py` | Cost against fee: economic capital and the regulatory proxy. |
+| `results.py`, `analysis.py` | Assemble the validated result; `run_analysis` composes the whole thing. |
+| `app.py`, `auth.py` | The HTTP service. |
 
 ## Memory and speed
 

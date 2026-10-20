@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quantmeridian:indemnification:run-response:1.0",
+  "title": "Indemnification run response 1.0 (spec020 IND-T13)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "api_schema_version",
+    "correlation_id",
+    "run",
+    "result"
+  ],
+  "properties": {
+    "api_schema_version": {
+      "const": "1.0"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "received_at",
+        "snapshot_hash",
+        "request_hash",
+        "status",
+        "model_version",
+        "duration_ms"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "snapshot_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "status": {
+          "const": "complete"
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "result": {
+      "$ref": "urn:quantmeridian:indemnification:result:1.0"
+    }
+  }
+}
