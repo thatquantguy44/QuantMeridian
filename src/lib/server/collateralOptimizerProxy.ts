@@ -1,5 +1,6 @@
 import { json } from "@/lib/server/http";
 import { isCollateralRun } from "@/lib/collateralOptimizer";
+import { collateralLogEntry, recordRun } from "@/lib/server/runLog";
 import bindingManifest from "../../../services/collateral_optimizer_api/binding-manifest.json";
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -39,22 +40,28 @@ export async function collateralProxy(request: Request, path: string, method: "G
   const correlation = crypto.randomUUID();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const started = performance.now();
   try {
     const upstream = await fetch(target, { method, body, signal: controller.signal,
       cache: "no-store", headers: { authorization: "Bearer " + token,
         "content-type": "application/json", "x-correlation-id": correlation,
         "idempotency-key": request.headers.get("idempotency-key") ?? crypto.randomUUID() } });
+    const rejected = (code: string, message: string) => {
+      if (path === "/v1/runs") recordRun(collateralLogEntry(502, { code }, performance.now() - started));
+      return failure(502, code, message);
+    };
     const bytes = await upstream.arrayBuffer();
-    if (bytes.byteLength > MAX_BYTES * 4) return failure(502, "RESPONSE_TOO_LARGE", "Collateral response exceeded the limit.");
+    if (bytes.byteLength > MAX_BYTES * 4) return rejected("RESPONSE_TOO_LARGE", "Collateral response exceeded the limit.");
     let payload: unknown;
     try { payload = JSON.parse(new TextDecoder().decode(bytes)); }
-    catch { return failure(502, "RESPONSE_INVALID", "Collateral service returned invalid JSON."); }
+    catch { return rejected("RESPONSE_INVALID", "Collateral service returned invalid JSON."); }
     if (upstream.ok && path === "/v1/runs") {
       if (!isCollateralRun(payload) || payload.model_commit !== bindingManifest.commit ||
           payload.package_version !== bindingManifest.package_version ||
           payload.wheel_sha256 !== bindingManifest.wheel_sha256)
-        return failure(502, "RESPONSE_INCOMPATIBLE", "Collateral result failed the terminal pin or contract check.");
+        return rejected("RESPONSE_INCOMPATIBLE", "Collateral result failed the terminal pin or contract check.");
     }
+    if (path === "/v1/runs") recordRun(collateralLogEntry(upstream.status, payload, performance.now() - started));
     if (upstream.ok && path === "/health") {
       const health = payload as { ready?: boolean; source_commit?: string; wheel_sha256?: string };
       if (health.ready && (health.source_commit !== bindingManifest.commit ||
@@ -64,7 +71,8 @@ export async function collateralProxy(request: Request, path: string, method: "G
     return json(payload, { status: upstream.status, headers: { "cache-control": "no-store",
       "x-correlation-id": correlation } });
   } catch (error) {
-    return failure(error instanceof DOMException && error.name === "AbortError" ? 504 : 503,
-      "SERVICE_UNAVAILABLE", "Collateral service is unavailable or timed out.");
+    const status = error instanceof DOMException && error.name === "AbortError" ? 504 : 503;
+    if (path === "/v1/runs") recordRun(collateralLogEntry(status, { code: "SERVICE_UNAVAILABLE" }, performance.now() - started));
+    return failure(status, "SERVICE_UNAVAILABLE", "Collateral service is unavailable or timed out.");
   } finally { clearTimeout(timer); }
 }

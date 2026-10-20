@@ -8,6 +8,7 @@ import {
   type MmktRateSnapshot,
 } from "@/lib/server/mmktRateSnapshot";
 import { loadSimMmktRateSnapshot } from "@/lib/server/mmktSimRateSets";
+import { mmktLogEntry, recordRun } from "@/lib/server/runLog";
 
 export const runtime = "nodejs";
 
@@ -182,6 +183,7 @@ export async function POST(request: Request) {
   const idempotencyKey = request.headers.get("idempotency-key")?.trim() || randomUUID();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 75_000);
+  const started = performance.now();
   try {
     const upstream = await fetch(`${service.baseUrl}/v1/runs`, {
       method: "POST",
@@ -204,9 +206,15 @@ export async function POST(request: Request) {
     headers.set("x-correlation-id", correlationId);
     headers.set("x-rate-snapshot-hash", snapshot.snapshot_hash);
     headers.set("x-rate-source", snapshot.source);
-    return new Response(upstream.body, { status: upstream.status, headers });
+    // Buffered once so the OPT session run log can record the run's metadata.
+    const text = await upstream.text();
+    let payload: unknown = null;
+    try { payload = JSON.parse(text); } catch { /* recorded by HTTP status alone */ }
+    recordRun(mmktLogEntry(upstream.status, payload, performance.now() - started));
+    return new Response(text, { status: upstream.status, headers });
   } catch (error) {
     const aborted = error instanceof DOMException && error.name === "AbortError";
+    recordRun(mmktLogEntry(aborted ? 504 : 503, { code: aborted ? "MMKT_PROXY_TIMEOUT" : "MMKT_SERVICE_UNAVAILABLE" }, performance.now() - started));
     return failure(
       aborted ? 504 : 503,
       aborted ? "MMKT_PROXY_TIMEOUT" : "MMKT_SERVICE_UNAVAILABLE",

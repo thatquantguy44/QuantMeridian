@@ -1,4 +1,5 @@
 import { json } from "@/lib/server/http";
+import { ibalLogEntry, ibalRunKind, recordRun } from "@/lib/server/runLog";
 import http from "node:http";
 import https from "node:https";
 
@@ -125,6 +126,14 @@ function passthroughHeaders(upstream: Response): Headers {
   return headers;
 }
 
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 function isBodyAllowed(method: string): boolean {
   return method !== "GET" && method !== "HEAD";
 }
@@ -247,6 +256,8 @@ export async function proxyInventoryOptimizer(request: Request, upstreamPath: st
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), init?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  const kind = ibalRunKind(upstreamPath);
+  const started = performance.now();
   try {
     const upstream = await serviceFetch(upstreamUrl, {
       method,
@@ -255,18 +266,30 @@ export async function proxyInventoryOptimizer(request: Request, upstreamPath: st
       signal: controller.signal,
       cache: "no-store",
     });
-    return new Response(upstream.body, {
+    if (!kind) {
+      return new Response(upstream.body, {
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers: passthroughHeaders(upstream),
+      });
+    }
+    // Model runs are buffered once so the OPT session run log can record their metadata.
+    const text = await upstream.text();
+    recordRun(ibalLogEntry(kind, upstream.status, parseJson(text), body ? parseJson(new TextDecoder().decode(body)) : null, performance.now() - started));
+    return new Response(text, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: passthroughHeaders(upstream),
     });
   } catch (error) {
     const aborted = error instanceof DOMException && error.name === "AbortError";
+    const code = aborted ? "IBAL_PROXY_TIMEOUT" : "IBAL_PROXY_UNAVAILABLE";
+    if (kind) recordRun(ibalLogEntry(kind, aborted ? 504 : 503, { code }, null, performance.now() - started));
     return json(
       {
         source: "ERR",
         ok: false,
-        code: aborted ? "IBAL_PROXY_TIMEOUT" : "IBAL_PROXY_UNAVAILABLE",
+        code,
         error: aborted ? "IBAL service request timed out." : "IBAL service is unavailable.",
         config: inventoryOptimizerStatus(),
       },

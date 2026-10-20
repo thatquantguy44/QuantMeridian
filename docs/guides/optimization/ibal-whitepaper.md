@@ -215,7 +215,7 @@ On the default synthetic book (balanced, small, seed 1701) the base case solves 
 - Reinvestment income, dynamic reserve buffers, richer collateral schedules, agency and prime variants, robust optimization and exact mixed-integer quadratic solving are not implemented in the pinned engine.
 - Dual values and sensitivity ranges are meaningful for LP runs only; for a MIP the engine returns a reason code instead.
 - The infeasibility explanation relaxes only utilization limits. It is not an irreducible infeasible subsystem (IIS): when the cause is another rule, such as hard client coverage, it says no utilization change helps rather than naming the rule.
-- There is no run registry: results live in the browser session and in exported files.
+- There is no durable run registry: results live in the browser session and in exported files. OPT's session run log lists each run's id, status, verification and timing (metadata only) until the terminal server restarts.
 
 ## Status and governance
 

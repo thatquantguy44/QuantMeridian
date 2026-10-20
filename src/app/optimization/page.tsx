@@ -13,6 +13,12 @@ import { downloadCollateralRun, isCollateralRun, type CollateralRun } from "@/li
 type Connection = { family: "MMKT" | "COLL" | "IBAL"; label: string; binding_status: string;
   service_health: string; detail: string; model_status: string | null };
 type Connections = { approval: string; connections: Connection[] };
+type RunLogEntry = { model: "IBAL" | "MMKT" | "COLL"; kind: "run" | "stress" | "showcase"; recorded_at: string;
+  http_status: number; run_id: string | null; status: string; verified: boolean | null; solve_ms: number | null;
+  round_trip_ms: number; source: string | null; input_hash: string | null; model_version: string | null };
+type RunLog = { started_at: string; capacity: number; runs: RunLogEntry[] };
+
+const millis = (value: number | null) => value == null ? "—" : `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })} ms`;
 
 /** Every other optimization model in the sidebar group; derived from NAV so it follows module gating. */
 const MODELS = NAV.filter(item => item.group === "OPTIMIZATION" && item.code !== "OPT");
@@ -22,6 +28,8 @@ export default function OptimizationCenter() {
   const [preview, setPreview] = useState<CollateralRun | null>(null);
   const [message, setMessage] = useState("Checking services…");
   const [busy, setBusy] = useState(false);
+  const [runLog, setRunLog] = useState<RunLog | null>(null);
+  const [runLogError, setRunLogError] = useState("");
 
   async function refresh() {
     try {
@@ -32,7 +40,16 @@ export default function OptimizationCenter() {
       setMessage("");
     } catch { setMessage("Connection status is unavailable. Retry."); }
   }
-  useEffect(() => { void refresh(); }, []);
+  async function refreshRunLog() {
+    try {
+      const response = await fetch("/api/optimization/runs", { cache: "no-store" });
+      const body = await response.json() as RunLog;
+      if (!response.ok || !Array.isArray(body.runs)) throw Error("Run log unavailable.");
+      setRunLog(body);
+      setRunLogError("");
+    } catch { setRunLogError("The session run log is unavailable. Retry."); }
+  }
+  useEffect(() => { void refresh(); void refreshRunLog(); }, []);
 
   async function solveBaseline() {
     setBusy(true); setMessage("");
@@ -47,6 +64,7 @@ export default function OptimizationCenter() {
       }
       if (!isCollateralRun(body)) throw Error("Service result failed the terminal contract.");
       setPreview(body);
+      void refreshRunLog();
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Model unavailable."); setPreview(null); }
     finally { setBusy(false); }
   }
@@ -135,11 +153,45 @@ export default function OptimizationCenter() {
         </div>
       </Panel>
     </div>
-    <Panel title="Operational runs and audit" code="RUNS">
-      <p className="p-3 text-xs text-term-text-dim">
-        No durable collateral run registry is configured. Spec015 must establish identity, immutable storage,
-        authorization, and append-only audit before this panel can show operational runs.
-      </p>
+    <Panel title="Session run log" code="RUNS" right={<Tag tone="amber">NOT PERSISTED</Tag>}>
+      <div className="space-y-2 p-3 text-xs text-term-text-dim">
+        <p>
+          Model runs this terminal server forwarded to IBAL, MMKT and COLL since it started
+          {runLog ? ` (${new Date(runLog.started_at).toLocaleString()})` : ""}, newest first, last {runLog?.capacity ?? 200}.
+          Status, verification and solve time are each service&apos;s own; round trip is measured here. Held in server
+          memory only and lost on restart. This is not an operational audit record: Spec015 must establish identity,
+          immutable storage, authorization and append-only audit first. S&amp;U and liquidity runs appear once those
+          services exist.
+        </p>
+        <button type="button" onClick={() => void refreshRunLog()} className="border border-term-border px-2 py-1 text-xs">
+          Refresh runs
+        </button>
+        {runLogError && <p role="status">{runLogError}</p>}
+        {runLog && runLog.runs.length === 0 && <p data-testid="opt-run-log-empty">No model run has gone through this server yet.</p>}
+        {runLog && runLog.runs.length > 0 && <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-2xs [&_td]:pr-3 [&_th]:pr-3" data-testid="opt-run-log">
+            <thead><tr className="text-term-text-mute">
+              <th scope="col">Time</th><th scope="col">Model</th><th scope="col">Kind</th><th scope="col">Run</th>
+              <th scope="col">Status</th><th scope="col">Verified</th><th scope="col" className="text-right">Solve</th>
+              <th scope="col" className="text-right">Round trip</th><th scope="col">Source</th><th scope="col">Input hash</th>
+            </tr></thead>
+            <tbody>
+              {runLog.runs.map((run, index) => <tr key={`${run.recorded_at}-${index}`} className="border-t border-term-border">
+                <td className="py-1 font-mono">{new Date(run.recorded_at).toLocaleTimeString()}</td>
+                <td>{run.model}</td>
+                <td>{run.kind}</td>
+                <td className="max-w-[12rem] truncate font-mono" title={run.run_id ?? undefined}>{run.run_id ?? "—"}</td>
+                <td className={run.http_status >= 400 ? "text-term-down" : "text-term-text"}>{run.status}{run.http_status >= 400 ? ` (HTTP ${run.http_status})` : ""}</td>
+                <td>{run.verified == null ? "—" : run.verified ? "yes" : "no"}</td>
+                <td className="text-right font-mono">{millis(run.solve_ms)}</td>
+                <td className="text-right font-mono">{millis(run.round_trip_ms)}</td>
+                <td>{run.source ?? "—"}</td>
+                <td className="max-w-[9rem] truncate font-mono" title={run.input_hash ?? undefined}>{run.input_hash ?? "—"}</td>
+              </tr>)}
+            </tbody>
+          </table>
+        </div>}
+      </div>
     </Panel>
   </div>;
 }
