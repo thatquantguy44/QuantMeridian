@@ -21,7 +21,8 @@ from .attribution import owner_shares
 from .basel import comprehensive_approach
 from .contracts import profile_hash
 from .engine import GAUSSIAN_NO_WW, GAUSSIAN_WW, STUDENT_T_WW, RunOutput, VariantLosses
-from .metrics import Metric, channel_metrics, euler_metrics
+from .metrics import Metric, channel_metrics, euler_expected_shortfall, euler_metrics, value_at_risk
+from .pricing import allocate_capital, price_borrower
 from .profile import resolve_all
 
 LIMITATIONS = (
@@ -36,6 +37,10 @@ CROSS_CHECK_LABEL = (
     "Basel comprehensive approach at the start of the run, with illustrative supervisory haircuts "
     "scaled by sqrt(MPOR / base); read it beside the Monte Carlo PFE99 (peak over the horizon). "
     "A reasonableness bound, not regulatory capital."
+)
+NO_PRICING_NOTE = (
+    " Indemnification cost is shown only for the annual view over 252 business days, so no "
+    "pricing is reported for this run."
 )
 PREVIEW_NOTE = " Preview run with a reduced path count; do not use for reported figures."
 DESK_NOTE = (
@@ -75,6 +80,50 @@ def _profile(exposure: np.ndarray, output: RunOutput) -> dict[str, Any]:
 def _mean_metric(x: np.ndarray) -> Metric:
     se = float(x.std(ddof=1) / math.sqrt(len(x))) if len(x) > 1 else None
     return Metric(float(x.mean()), se)
+
+
+def _pricing(
+    snapshot: dict[str, Any],
+    output: RunOutput,
+    gaussian: VariantLosses,
+    pool_by_borrower: np.ndarray,
+) -> list[dict[str, Any] | None]:
+    """Per-borrower pricing, or None for every borrower unless this is a 252-day annual run."""
+    n_b = output.book.n_borrowers
+    run = snapshot["run"]
+    if run["mode"] != "annual" or run["horizon_days"] != 252:
+        return [None] * n_b
+    el = (gaussian.cond + pool_by_borrower).mean(axis=0)
+    total_loss = gaussian.sampled.sum(axis=1) + pool_by_borrower.sum(axis=1)
+    euler, _ = euler_expected_shortfall(
+        gaussian.sampled + pool_by_borrower, np.zeros(output.n_paths), 0.999
+    )
+    capital = allocate_capital(
+        var999=value_at_risk(total_loss, 0.999),
+        program_el=float(el.sum()),
+        euler=euler,
+        el=el,
+    )
+    value, fee = np.zeros(n_b), np.zeros(n_b)
+    index = {b: i for i, b in enumerate(output.book.borrower_ids)}
+    for loan in snapshot["loans"]:
+        v = loan["quantity"] * output.market.price0[output.market.index[loan["security_id"]]]
+        b = index[loan["borrower_id"]]
+        value[b] += v
+        fee[b] += v * loan["rate_bps"]
+    e_star = {r["borrower_id"]: r["e_star"] for r in comprehensive_approach(snapshot)}
+    return [
+        price_borrower(
+            el=float(el[b]),
+            capital=float(capital[b]),
+            avg_loan_value=float(value[b]),
+            fee_bps=float(fee[b] / value[b]),
+            proxy_exposure=e_star[output.book.borrower_ids[b]],
+            rating=output.credits[b].rating,
+            pricing=snapshot["pricing"],
+        )
+        for b in range(n_b)
+    ]
 
 
 def _convergence(output: RunOutput) -> dict[str, Any]:
@@ -219,6 +268,10 @@ def build_result(
             }
         )
 
+    priced = _pricing(snapshot, output, gaussian, pool_by_borrower)
+    for borrower, pricing in zip(borrowers, priced, strict=True):
+        borrower["pricing"] = pricing
+
     mc_pfe99 = {
         b["borrower_id"]: b["metrics"]["with_wrong_way"]["default_shortfall"]["pfe99"]["value"]
         for b in borrowers
@@ -229,6 +282,7 @@ def build_result(
     ]
 
     limitations = LIMITATIONS + ("" if output.extras.get("pool_modelled") else NO_POOL_NOTE)
+    limitations += NO_PRICING_NOTE if priced[0] is None else ""
     limitations += PREVIEW_NOTE if run["preview"] else ""
     limitations += DESK_NOTE if run["mode"] == "desk" else ""
     card = {

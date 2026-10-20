@@ -7,7 +7,7 @@
 **State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The model core is built and tested in Python:
 the contract, the close-out profile, market paths, the default copula, loan returns, the reinvestment pool,
 the close-out shortfall, risk metrics, the engine and the result/model-card assembly. There is **no HTTP API
-and no UI page yet**, and the sensitivities, named stresses and pricing are not built. Phase 2 (the optimizer) is not approved: decision 10 is open.
+and no UI page yet**, and the the HTTP service, terminal route and UI are not built. Phase 2 (the optimizer) is not approved: decision 10 is open.
 
 | Task | What | Status |
 |---|---|---|
@@ -25,13 +25,13 @@ and no UI page yet**, and the sensitivities, named stresses and pricing are not 
 | IND-T06a | Loan returns and the reinvestment pool (`returns.py`, `pool.py`) | Done |
 | IND-T10 | Basel comprehensive approach cross-check (`basel.py`, contract `basel_haircuts`) | Done |
 | IND-T11 | Sensitivities and named stresses (`sensitivity.py`, `stress.py`); `analysis.run_analysis` composes the full result | Done |
-| IND-T12 | Pricing | Not started |
+| IND-T12 | Pricing: cost in bps against fee, economic capital, regulatory proxy, flags (`pricing.py`) | Done |
 | IND-T13 | Service API | Not started |
 | IND-T14 | UI page, route, nav, profile editor | Not started |
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 
-Test counts at handoff: 227 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+Test counts at handoff: 246 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
 `ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
 
 ## Start here
@@ -122,11 +122,11 @@ stresses, and the Basel cross-check. Things worth knowing:
   The sweep reports the channels separately for that reason.
 - A margin sweep resizes the collateral holdings and the pool with the cash owed.
 
-**4. IND-T12 pricing (next).** Economic capital = annual VaR99.9 − EL, allocated by Euler contributions; cost in bps
-per year against fee; regulatory proxy beside it; flag when cost exceeds the threshold share of the fee.
-Annual view only.
+**4. (Done.) IND-T12.** Each borrower's `pricing` is filled for an annual run over 252 business days and null otherwise
+(the model card says so). Capital is the program's `VaR99.9 − EL` split by Euler ES99.9 shares; the flag uses the
+economic cost only, never the regulatory proxy.
 
-**5. IND-T13 service API.** FastAPI app, token auth, health, a run endpoint taking a snapshot and returning a
+**5. IND-T13 service API (next).** FastAPI app, token auth, health, a run endpoint taking a snapshot and returning a
 result, in-memory run history with hashes (no database), a capability manifest like
 `services/money_market_api/capability-manifest.json`, port 8018. Then the terminal server route that builds
 the snapshot with `buildSimSnapshot` and calls it; look at how the SXU and collateral routes do it.

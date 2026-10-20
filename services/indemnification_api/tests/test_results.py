@@ -153,7 +153,7 @@ def test_borrowers_report_their_credit_source_and_probabilities(desk):
     for b in result["borrowers"]:
         assert b["credit_source"] == "RATING_TABLE" and 0 < b["pd_1y"] < 1 and b["hazard"] > 0
         assert b["pd_1y"] == pytest.approx(-math.expm1(-b["hazard"]))
-        assert b["pricing"] is None  # pricing is IND-T12
+        assert b["pricing"] is None  # a one-month desk run is not priced
 
 
 def test_a_user_spread_is_labelled_in_the_result(sim_book):
