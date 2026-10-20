@@ -81,7 +81,7 @@ Transition costs are one-time amounts, not scaled by the horizon.
 | `counterparty_quantity` / `counterparty_notional` | Shares (or USD value) lent to a borrower, legal entity or parent group ≤ its limit |
 | Bounds | Each route's hard minimum and maximum; a reserve buffer of shares kept available |
 
-When routes have all-or-none or lot-size rules (the **discrete route fraction** in the synthetic generator), the problem becomes a **mixed-integer program (MIP)**. A positive allocation-stability penalty adds a quadratic term (QP). Exact mixed-integer quadratic problems are rejected rather than approximated.
+When routes have all-or-none or lot-size rules (the **discrete route fraction** in the synthetic generator), the problem becomes a **mixed-integer program (MIP)**. A positive allocation-stability penalty adds a quadratic term (QP). With discrete rules as well, the engine does not solve an exact mixed-integer quadratic problem: it replaces the stability term with a piecewise-linear surrogate that is zero at the current book and never below the quadratic penalty, solves that MIP (formulation variant `mip_linearized_stability`) and reports the interpolation error bound, the true quadratic objective and the resulting gap bound. The service passes such a request straight to the engine; it used to refuse it (`MIP_QP_CONFLICT`).
 
 ### Solver statuses
 
