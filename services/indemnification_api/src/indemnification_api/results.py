@@ -140,7 +140,12 @@ def _validation(
 
 
 def build_result(
-    snapshot: dict[str, Any], output: RunOutput, *, created_at: str | None = None
+    snapshot: dict[str, Any],
+    output: RunOutput,
+    *,
+    created_at: str | None = None,
+    sensitivities: list[dict[str, Any]] | None = None,
+    stresses: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     run = snapshot["run"]
     pool = output.pool_loss
@@ -263,6 +268,6 @@ def build_result(
         "borrowers": borrowers,
         "owners": owners,
         "cross_check": {"label": CROSS_CHECK_LABEL, "borrowers": cross_check},
-        "sensitivities": [],
-        "stresses": [],
+        "sensitivities": sensitivities or [],
+        "stresses": stresses or [],
     }

@@ -1122,6 +1122,34 @@
           "value": 60000,
           "std_error": 3000
         }
+      ],
+      "el_default_shortfall": [
+        {
+          "value": 700,
+          "std_error": 50
+        },
+        {
+          "value": 490,
+          "std_error": 40
+        },
+        {
+          "value": 280,
+          "std_error": 30
+        }
+      ],
+      "el_reinvestment": [
+        {
+          "value": 300,
+          "std_error": 50
+        },
+        {
+          "value": 210,
+          "std_error": 40
+        },
+        {
+          "value": 120,
+          "std_error": 30
+        }
       ]
     }
   ],

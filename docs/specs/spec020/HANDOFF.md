@@ -24,13 +24,14 @@ and no UI page yet**, and the sensitivities, named stresses and pricing are not 
 | IND-T09 | Euler allocation, owner and channel attribution | Done |
 | IND-T06a | Loan returns and the reinvestment pool (`returns.py`, `pool.py`) | Done |
 | IND-T10 | Basel comprehensive approach cross-check (`basel.py`, contract `basel_haircuts`) | Done |
-| IND-T11, T12 | Sensitivities and stresses; pricing | Not started |
+| IND-T11 | Sensitivities and named stresses (`sensitivity.py`, `stress.py`); `analysis.run_analysis` composes the full result | Done |
+| IND-T12 | Pricing | Not started |
 | IND-T13 | Service API | Not started |
 | IND-T14 | UI page, route, nav, profile editor | Not started |
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 
-Test counts at handoff: 199 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+Test counts at handoff: 227 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
 `ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
 
 ## Start here
@@ -108,14 +109,20 @@ books with plenty of defaults.
 borrower's Monte Carlo PFE99. The haircut table is part of the snapshot (`basel_haircuts`, labelled
 illustrative).
 
-**3. IND-T11 sensitivities and stresses (next).** Sensitivities reuse the same seed (common random numbers) while
-sweeping margin, MPOR, `rho_w`, a collateral substitution, or any numeric profile setting. Stresses need
-conditioned paths: add a shock to the simulated log prices from a chosen day and force the default (largest
-borrower with a −20% equity move; a +60% squeeze on the most concentrated hard-to-borrow loan; +150 bp rates;
-15% FX, which has no effect on a USD-only book; the reinvestment run once the pool exists). Per-scenario
-profile overrides are required (IND-020).
+**3. (Done.) IND-T11.** `analysis.run_analysis(snapshot)` returns the complete result: the run, four sweeps (margin,
+close-out period, wrong-way correlation, collateral substitution) on common random numbers, the five named
+stresses, and the Basel cross-check. Things worth knowing:
+- Stress shocks land one day after the forced default (and last margin call), so they fall inside the close-out
+  period. A shock on the default day is absorbed by that day's margin call.
+- Collateral is pooled per borrower, so a diversified borrower's 5% margin buffer can absorb a squeeze on one
+  loan; on the SIM book the squeeze scenario is usually zero. That is the model, not a bug (a test pins it).
+  The rates shock is the informative one there.
+- Rates and FX stress figures are each borrower's *own* default under the shock, not a joint event.
+- Raising cash margin lowers default shortfall but enlarges the pool, so total EL need not fall with margin.
+  The sweep reports the channels separately for that reason.
+- A margin sweep resizes the collateral holdings and the pool with the cash owed.
 
-**4. IND-T12 pricing.** Economic capital = annual VaR99.9 − EL, allocated by Euler contributions; cost in bps
+**4. IND-T12 pricing (next).** Economic capital = annual VaR99.9 − EL, allocated by Euler contributions; cost in bps
 per year against fee; regulatory proxy beside it; flag when cost exceeds the threshold share of the fee.
 Annual view only.
 
