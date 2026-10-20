@@ -58,6 +58,8 @@ export interface SimSnapshotOptions {
   ratingPdTable?: RatingPdTable;
   baselHaircuts?: BaselHaircuts;
   profile?: CloseoutProfile;
+  /** User-entered credit spreads by borrower id; each overrides the rating table for that borrower. */
+  borrowerCredit?: Record<string, { spread_bps: number; recovery?: number | null }>;
 }
 
 /**
@@ -131,9 +133,19 @@ export async function buildSimSnapshot(options: SimSnapshotOptions): Promise<Ind
   const securities = tickers.map((t) => securityRecord(bySymbol(t)!));
 
   const cp = new Map(COUNTERPARTIES.map((c) => [c.id, c]));
-  const borrowers: BorrowerRecord[] = [...new Set(loanRecords.map((l) => l.borrower_id))].sort().map((id) => ({
-    id, name: cp.get(id)!.name, rating: cp.get(id)!.rating as Rating, spread_bps: null, recovery: null, credit_provenance: "sim",
-  }));
+  const credit = options.borrowerCredit ?? {};
+  const borrowerIds = [...new Set(loanRecords.map((l) => l.borrower_id))].sort();
+  const unknown = Object.keys(credit).filter((id) => !borrowerIds.includes(id));
+  if (unknown.length) throw new Error(`borrowerCredit names unknown borrower ${unknown.join(", ")}`);
+  const borrowers: BorrowerRecord[] = borrowerIds.map((id) => {
+    const entered = credit[id];
+    return {
+      id, name: cp.get(id)!.name, rating: cp.get(id)!.rating as Rating,
+      spread_bps: entered ? entered.spread_bps : null,
+      recovery: entered ? (entered.recovery ?? null) : null,
+      credit_provenance: entered ? "user_input" : "sim",
+    };
+  });
   const owners: OwnerRecord[] = [...new Set(loanRecords.map((l) => l.owner_id))].sort().map((id) => ({ id, name: cp.get(id)!.name }));
 
   const cash = collateral.filter((c) => c.kind === "CASH").reduce((a, c) => a + c.cash_amount!, 0);

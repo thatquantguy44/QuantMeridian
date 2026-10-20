@@ -189,6 +189,19 @@ describe("buildSimSnapshot", () => {
     expect(custom.snapshot_hash).not.toBe(snapshot.snapshot_hash);
   });
 
+  test("a user-entered credit spread overrides the rating table for that borrower alone", async () => {
+    const id = snapshot.borrowers[0].id;
+    const custom = await buildSimSnapshot({ asOf: AS_OF, borrowerCredit: { [id]: { spread_bps: 240, recovery: 0.35 } } });
+    const entered = custom.borrowers.find((b) => b.id === id)!;
+    expect([entered.spread_bps, entered.recovery, entered.credit_provenance]).toEqual([240, 0.35, "user_input"]);
+    for (const b of custom.borrowers.filter((x) => x.id !== id)) expect([b.spread_bps, b.recovery, b.credit_provenance]).toEqual([null, null, "sim"]);
+    expect(custom.snapshot_hash).not.toBe(snapshot.snapshot_hash);
+    expect(snapshotIssues(custom)).toEqual([]);
+    const noRecovery = await buildSimSnapshot({ asOf: AS_OF, borrowerCredit: { [id]: { spread_bps: 100 } } });
+    expect(noRecovery.borrowers.find((b) => b.id === id)!.recovery).toBeNull();
+    await expect(buildSimSnapshot({ asOf: AS_OF, borrowerCredit: { nobody: { spread_bps: 100 } } })).rejects.toThrow(/unknown borrower nobody/);
+  });
+
   test("honours run, model, pricing and profile options", async () => {
     const custom = await buildSimSnapshot({
       asOf: AS_OF,
