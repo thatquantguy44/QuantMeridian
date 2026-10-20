@@ -1,0 +1,178 @@
+# Spec020 build handoff: Borrower default and indemnification risk (INDEM)
+
+**Updated:** 2026-10-20
+
+**Branch:** `spec020-indemnification-scope` (PR link below).
+
+**State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The model core is built and tested in Python:
+the contract, the close-out profile, market paths, the default copula, the close-out shortfall, risk
+metrics and the engine that runs them. There is **no HTTP API, no UI page and no reinvestment pool yet**,
+and no result is assembled for the terminal. Phase 2 (the optimizer) is not approved: decision 10 is open.
+
+| Task | What | Status |
+|---|---|---|
+| IND-T01, T02 | Decisions and approval; real-firm name fixed | Done |
+| IND-T03 | Contracts: 4 JSON Schemas, TS types and hashes, Python hashes, shared fixtures | Done (both languages) |
+| IND-T04 | SLAB book extension (`getIndemnificationBookExtension`), rescaled pool view, SIM snapshot builder | Done |
+| IND-T04a | Rating PD table and spread override (`credit.py`) | Done |
+| IND-T04b | Run modes and event grid (`grid.py`, activity in `closeout.py`) | Done |
+| IND-T05 | Market factors and security prices (`market.py`) | Done |
+| IND-T06 | Default copula, wrong-way link, Student-t (`defaults.py`) | Done |
+| IND-T06b | Close-out profile resolution and snapshot validation (`profile.py`, `schema.py`) | Done |
+| IND-T07 | Close-out shortfall and exposure (`book.py`, `closeout.py`) | Done (pool realization is a hook) |
+| IND-T08 | Metrics and engine | **In progress**: metrics and engine done; convergence check and result assembly not |
+| IND-T09 | Euler allocation, owner and channel attribution | **In progress**: Euler function done |
+| IND-T06a | Reinvestment pool | **Not started** (the contract has no pool parameters yet) |
+| IND-T10 – T12 | Basel cross-check, sensitivities and stresses, pricing | Not started |
+| IND-T13 | Service API | Not started |
+| IND-T14 | UI page, route, nav, profile editor | Not started |
+| IND-T15 | Validation report, benchmark, as-built | Not started |
+| IND-T16 – T21 | Phase 2 optimizer | Not approved |
+
+Test counts at handoff: 141 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+`ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
+
+## Start here
+
+1. `SPEC.md` (requirements, acceptance criteria, **decision log**: decisions 1–9 are all recorded there).
+2. `PLAN.md`, especially the block headed **Implementation choices that refine the text above**, which records
+   where the code differs from or sharpens the original plan.
+3. `TASKS.md` for status and evidence.
+4. `services/indemnification_api/README.md` for setup and the module map.
+5. `contracts/indemnification/README.md` for the wire contract.
+
+`AGENTS.md` points at the Agent Skills for spec012 (Sources & Uses) work only. It does not apply here, but
+`npm run check:agent-skills-pin` still passes.
+
+## How to work on it
+
+```bash
+# Python (about 35 s)
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e "services/indemnification_api[dev]" ruff
+cd services/indemnification_api && ruff check . && pytest -q
+
+# TypeScript (repo root)
+npm ci && npx tsc --noEmit && npx vitest run
+```
+
+**Changing the contract** (anything under `contracts/indemnification/*.schema.json`, the fixtures, the default
+profile, or `buildSimSnapshot`): edit the schema, the TS types in `src/lib/indemnificationContract.ts`
+(plus the `Fields<T>` parity maps in its test), `validation.py` and `snapshotIssues` if there is a
+cross-field rule, and the fixtures; then run
+
+```bash
+npx vite-node scripts/refresh-indemnification-fixtures.ts
+```
+
+It recomputes every hash and re-exports the SIM book, and is idempotent. Three suites fail if a fixture is
+stale: `indemnificationContract.test.ts`, `indemnificationBook.test.ts`, and `tests/test_contracts.py`.
+
+## Design that is not obvious from the code
+
+- **Two loss estimators.** Expected loss uses the exact conditional probability of default in each step given
+  the path's factors (`defaults.conditional_step_probs`); VaR, expected shortfall and Euler contributions use
+  sampled defaults. They estimate the same EL and a test checks they agree. Reason: a one-month desk run of an
+  A-rated borrower sees about 2 defaults in 50,000 paths.
+- **Desk-view tails are degenerate for investment-grade books.** With almost no defaults, sampled VaR99.9 is
+  usually 0. That is the honest answer for one month, not a bug. Consider showing the number of paths with any
+  default beside every tail metric, and use the annual view for tail risk.
+- **Exposure is margin-period-of-risk exposure** (`max(0, loans at d+M − collateral at last call)`), not
+  current exposure, which would be exactly zero for a daily-margined book.
+- **Wrong-way link.** Each borrower has a sign (`book.signs`): +1 if its exposure rises with equities. The
+  no-wrong-way run sets `rho_w = 0` and moves that weight onto the shared credit factor, so latent variance and
+  borrower-to-borrower correlation are unchanged.
+- **Prices are simulated daily** to the horizon plus the longest close-out period; `run.step` only sets the
+  grid for defaults and exposures. The market after a default is the path's real continuation.
+- **Per-chunk seed streams** (`engine.CHUNK_PATHS = 5000`): changing the chunk size changes results. The first
+  half of the chunks is a valid half-size run, which the convergence check needs.
+- **Rating table is in the snapshot**, not a hidden file in the service, so results never depend on one.
+- **Collateral** is re-derived from margin × loan value at each margin call. Holdings in the snapshot give the
+  cash/non-cash split, the non-cash composition and the wrong-way sign; a margin sweep means changing the
+  loans' `margin_pct`.
+- **Hooks already in `closeout.evaluate`** for the pool: `activity(day)` (which loans are on, shape `(L,)` or
+  `(n, L)`) and `realization(k, day)` (cash collateral's realizable fraction, shape `(n, B)`, default 1).
+- `simulate(snapshot, hazards=...)` overrides credit inputs; it exists so tests can set zero hazards.
+
+## Next steps, in order
+
+**1. Finish IND-T08 (small).** Add `results.py` with `build_result(snapshot, output)` returning a dict that
+validates against `result-1.0.schema.json`: model card (`profile_hash`, `snapshot_hash`, seed, paths, mode,
+data label, limitations text saying results are synthetic), `effective_settings` from `profile.resolve_all`,
+program and per-borrower metrics from `metrics.channel_metrics` for the three variants, and the program
+exposure profile (mean, P95, P99 per event day). Add the convergence check: compare the first half of
+`output.chunk_bounds` with the full run for `el`, `pfe99` and `es99` (where the standard error is above 0) and
+pass when each shift is under 2 standard errors of the half run; report `checked: false` when there is only
+one chunk. Test by validating the output with `conftest.validator_for("result-1.0.schema.json")`. Leave
+`sensitivities`, `stresses` and `cross_check` empty until their tasks. The exposure metrics (EPE, PFE) are
+repeated in the total and default channels and are zero in the reinvestment channel; say so in the schema
+description.
+
+**2. IND-T09 attribution.** Per-owner default losses pro rata to each owner's initial loan value within the
+borrower; reinvestment by `pool.owner_shares`. Euler contributions already sum exactly to ES
+(`metrics.euler_expected_shortfall`); add them to the result as `euler_es99`.
+
+**3. IND-T06a reinvestment pool (largest remaining model piece).** First a contract change (#2): add
+`model.returns` (open-loan return hazard per year, recallable multiplier, stress sensitivity) and
+`model.pool_risk` (credit beta, issuer hazard and recovery per credit bucket; daily liquidity fraction per
+liquidity bucket). Sketch agreed during the build:
+- Each open loan returns at an exponential time; the multiplier rises when equities fall. Pass an `(n, L)`
+  activity matrix to `evaluate`. In the annual view a returned loan is replaced one step later.
+- Pool positions are revalued by the credit-spread factor (spread duration ≈ WAM/252 times the bucket's
+  beta); BANK and CREDIT positions can default. Liabilities are cash collateral on active CASH loans.
+- Outflows are paid T+0, then T+1, T+7, then forced sales of TERM assets at the profile's impact cost
+  (ADV = daily liquidity fraction × allocation). Reinvestment loss = peak over the grid of
+  `max(0, liabilities − pool NAV)`.
+- Cash collateral at a borrower's default is worth par × the realization ratio for that borrower's slice; pass
+  it as `realization`. Remove a defaulted borrower's liabilities from the pool from its default time so the
+  two channels do not double count (AC-010).
+- Acceptance: AC-009 (all-overnight pool loses nothing; a single term asset matches a hand calculation) and
+  AC-010 (channels sum to the total on every path).
+
+**4. IND-T10 Basel cross-check.** `E* = max(0, E(1+He) − C(1−Hc−Hfx))`, haircuts scaled by `sqrt(MPOR/10)`,
+labelled illustrative. Put the haircut table in the snapshot (contract change #3) for the same reason as the
+rating table. Compare with Monte Carlo PFE99 in `cross_check`.
+
+**5. IND-T11 sensitivities and stresses.** Sensitivities reuse the same seed (common random numbers) while
+sweeping margin, MPOR, `rho_w`, a collateral substitution, or any numeric profile setting. Stresses need
+conditioned paths: add a shock to the simulated log prices from a chosen day and force the default (largest
+borrower with a −20% equity move; a +60% squeeze on the most concentrated hard-to-borrow loan; +150 bp rates;
+15% FX, which has no effect on a USD-only book; the reinvestment run once the pool exists). Per-scenario
+profile overrides are required (IND-020).
+
+**6. IND-T12 pricing.** Economic capital = annual VaR99.9 − EL, allocated by Euler contributions; cost in bps
+per year against fee; regulatory proxy beside it; flag when cost exceeds the threshold share of the fee.
+Annual view only.
+
+**7. IND-T13 service API.** FastAPI app, token auth, health, a run endpoint taking a snapshot and returning a
+result, in-memory run history with hashes (no database), a capability manifest like
+`services/money_market_api/capability-manifest.json`, port 8018. Then the terminal server route that builds
+the snapshot with `buildSimSnapshot` and calls it; look at how the SXU and collateral routes do it.
+
+**8. IND-T14 UI.** Page at `/securities-lending/indemnification`: `INDEM` entry in `src/lib/nav.ts` (FINANCE
+group, next to `SQZ`; update `nav.test.ts`), toggle in `settings/modules.config.json`, `on("INDEM")` route in
+`src/App.tsx`, the tabs listed in `PLAN.md`, the close-out profile editor, and a mode switch (desk is the
+default). Every figure shows seed, path count, standard error and the `SIM` label (AC-008).
+
+**9. IND-T15.** Validation report, benchmark at 50,000 paths, as-built notes. Phase 2 starts only after this.
+
+## Known issues and risks
+
+- **Speed.** 5,000 paths on the SIM book: desk 2.5 s, annual (weekly) 14 s, so a 50,000-path annual run is
+  about 2.5 minutes. The loops in `closeout.evaluate` over event steps are the cost. Profile before adding
+  the pool; float32 for log prices and fewer temporary arrays are the first things to try.
+- **Memory.** Exposures need `paths × borrowers × (event days + 1) × 4` bytes; the engine refuses more than
+  2 GB. The service will need a clearer error and perhaps coarser steps by default for annual runs.
+- **Test time** is about 35 s, mostly the 100,000–400,000-path statistical tests. Keep them; they are what
+  catches modelling errors.
+- **Parameters are illustrative.** The rating PD table, factor volatilities and correlations, jump
+  parameters, copula correlations, risk weights and cost of capital are placeholders labelled as such. The SIM
+  book's figures (for example desk EL of roughly $8k on a $6.5B book) are smoke numbers, not results.
+- **Concentration threshold.** In the SIM book the largest loan is 18% of average daily volume, so with the
+  25% default only hard-to-borrow names get the longer close-out period.
+
+## Open owner decisions
+
+- **Decision 10** (phase 2 optimizer settings). Blocks phase 2 only. See `SPEC.md`.
+- Whether the UI should print "not estimable" for tail metrics when too few paths contain any default
+  (see the desk-view note above).

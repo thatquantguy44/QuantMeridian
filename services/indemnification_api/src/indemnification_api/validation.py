@@ -68,9 +68,13 @@ def snapshot_issues(snapshot: dict[str, Any]) -> list[str]:
             issues.append(f"loan {loan['id']} names unknown security {loan['security_id']}")
     for holding in snapshot["collateral"]:
         if holding["borrower_id"] not in ids["borrower"]:
-            issues.append(f"collateral {holding['id']} names unknown borrower {holding['borrower_id']}")
+            issues.append(
+                f"collateral {holding['id']} names unknown borrower {holding['borrower_id']}"
+            )
         if holding["security_id"] is not None and holding["security_id"] not in ids["security"]:
-            issues.append(f"collateral {holding['id']} names unknown security {holding['security_id']}")
+            issues.append(
+                f"collateral {holding['id']} names unknown security {holding['security_id']}"
+            )
 
     shares = snapshot["pool"]["owner_shares"]
     for share in shares:
@@ -96,7 +100,12 @@ def snapshot_issues(snapshot: dict[str, Any]) -> list[str]:
             issues.append(f"profile asset class override names unknown asset class {key}")
 
     levels = [("defaults", profile["defaults"])]
-    for level in ("asset_class_overrides", "pool_bucket_overrides", "borrower_overrides", "position_overrides"):
+    for level in (
+        "asset_class_overrides",
+        "pool_bucket_overrides",
+        "borrower_overrides",
+        "position_overrides",
+    ):
         levels.extend(profile[level].items())
     for where, settings in levels:
         cap = settings.get("cost_cap_bps")

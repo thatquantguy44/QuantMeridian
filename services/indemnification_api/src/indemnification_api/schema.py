@@ -1,7 +1,8 @@
 """Snapshot validation before any simulation (spec020 IND-001, AC-013).
 
-A snapshot is rejected, with every problem named, when it breaks the JSON Schema, the cross-field rules
-in ``validation.snapshot_issues``, or its own ``snapshot_hash``. Nothing is repaired or defaulted.
+A snapshot is rejected, with every problem named, when it breaks the JSON Schema, the cross-field
+rules in ``validation.snapshot_issues``, or its own ``snapshot_hash``. Nothing is repaired or
+defaulted.
 """
 
 from __future__ import annotations
@@ -48,7 +49,9 @@ def _validators() -> dict[str, Draft202012Validator]:
     registry = Registry().with_resources(
         (schema["$id"], Resource.from_contents(schema)) for schema in schemas.values()
     )
-    return {name: Draft202012Validator(schema, registry=registry) for name, schema in schemas.items()}
+    return {
+        name: Draft202012Validator(schema, registry=registry) for name, schema in schemas.items()
+    }
 
 
 def validator(schema_file: str) -> Draft202012Validator:

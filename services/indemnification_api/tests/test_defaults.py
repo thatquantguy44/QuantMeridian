@@ -1,10 +1,13 @@
-"""Default times: one-factor copula with a wrong-way link and a Student-t sensitivity
-(spec020 decision 3, IND-004, IND-007, IND-019, AC-012)."""
+"""Default times: one-factor copula with a wrong-way link and a Student-t sensitivity (spec020
+decision 3, IND-004, IND-007, IND-019, AC-012).
+"""
 
 import math
 
 import numpy as np
 import pytest
+from scipy.stats import multivariate_normal, norm
+
 from indemnification_api.defaults import (
     conditional_step_probs,
     default_steps,
@@ -13,15 +16,22 @@ from indemnification_api.defaults import (
     latent_mean,
 )
 from indemnification_api.grid import build_grid
-from scipy.stats import multivariate_normal, norm
 
 N = 400_000
 RHO_D, RHO_W, NU = 0.25, 0.30, 5
 
 
 def run_grid(horizon=252, step="monthly"):
-    return build_grid({"mode": "annual", "seed": 1, "paths": 5000, "preview": False,
-                       "horizon_days": horizon, "step": step})
+    return build_grid(
+        {
+            "mode": "annual",
+            "seed": 1,
+            "paths": 5000,
+            "preview": False,
+            "horizon_days": horizon,
+            "step": step,
+        }
+    )
 
 
 def pd_to_hazard(pd):
@@ -64,8 +74,10 @@ def test_marginal_default_probability_by_half_a_year(draws):
 def test_wrong_way_sign_sets_the_direction_of_the_equity_link(draws):
     z_eq = draws[0]
     t = tau(draws)
-    d0 = (t[:, 0] <= 1.0).astype(float)      # sign +1: exposure rises with equity -> defaults when equity is high
-    d1 = (t[:, 1] <= 1.0).astype(float)      # sign -1: defaults when equity is low
+    d0 = (t[:, 0] <= 1.0).astype(
+        float
+    )  # sign +1: exposure rises with equity -> defaults when equity is high
+    d1 = (t[:, 1] <= 1.0).astype(float)  # sign -1: defaults when equity is low
     se = 1 / math.sqrt(N)
     assert np.corrcoef(d0, z_eq)[0, 1] > 8 * se
     assert np.corrcoef(d1, z_eq)[0, 1] < -8 * se
@@ -76,8 +88,10 @@ def test_no_wrong_way_run_has_no_equity_link_and_reuses_the_same_noise(draws):
     t_off = tau(draws, rho_w=0.0)
     d = (t_off[:, 0] <= 1.0).astype(float)
     assert abs(np.corrcoef(d, z_eq)[0, 1]) < 4 / math.sqrt(N)
-    # Turning the link off moves its weight onto the shared credit factor, so the latent variance and the
-    # same-sign borrower correlation are unchanged. With the equity factor at zero the runs differ only by
+    # Turning the link off moves its weight onto the shared credit factor, so the latent variance
+    # and the
+    # same-sign borrower correlation are unchanged. With the equity factor at zero the runs differ
+    # only by
     # that reweighting of the shared factor, on identical draws.
     zero = np.zeros(N)
     on = latent_mean(zero, noise, SIGNS, RHO_D, RHO_W)
@@ -116,7 +130,9 @@ def test_opposite_wrong_way_signs_lower_the_latent_correlation(draws):
     assert j_opposite < j_same
     # latent correlation is rho_d - rho_w^2 * (1 - s_i s_j) = 0.25 - 0.09 * 2 = 0.07
     x = norm.ppf(0.04)
-    expected = multivariate_normal(mean=[0, 0], cov=[[1, RHO_D - 2 * RHO_W**2], [RHO_D - 2 * RHO_W**2, 1]]).cdf([x, x])
+    expected = multivariate_normal(
+        mean=[0, 0], cov=[[1, RHO_D - 2 * RHO_W**2], [RHO_D - 2 * RHO_W**2, 1]]
+    ).cdf([x, x])
     assert abs(j_opposite - expected) < 4 * math.sqrt(expected / N)
 
 
@@ -149,7 +165,7 @@ def test_rho_w_squared_above_rho_d_is_rejected(draws):
 
 
 def test_default_steps_map_times_to_the_grid():
-    grid = run_grid(horizon=252, step="monthly")           # 0, 21, 42, ... 252
+    grid = run_grid(horizon=252, step="monthly")  # 0, 21, 42, ... 252
     years = np.array([[0.0001, 21 / 252, 21.5 / 252, 1.0, 1.0001, 5.0]])
     assert default_steps(years, grid).tolist() == [[1, 1, 2, 12, 0, 0]]
 
@@ -162,7 +178,7 @@ def test_conditional_probabilities_average_to_the_marginal_and_to_the_sampled_de
         probs = conditional_step_probs(HAZARDS, a, noise, RHO_D, grid, kind=kind, nu=NU)
         assert probs.shape == (N, 3, 12)
         assert probs.min() >= 0 and probs.max() <= 1 + 1e-12
-        cumulative = probs.sum(axis=2)                       # P(default by horizon | factors)
+        cumulative = probs.sum(axis=2)  # P(default by horizon | factors)
         for b, pd in enumerate([0.04, 0.04, 0.0006]):
             se = cumulative[:, b].std(ddof=1) / math.sqrt(N)
             assert abs(cumulative[:, b].mean() - pd) < 4 * se, (kind, b)

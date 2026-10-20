@@ -12,8 +12,8 @@ _RECORD_ARRAYS = ("securities", "borrowers", "owners", "loans", "collateral")
 def snapshot_hash(snapshot: dict[str, Any]) -> str:
     """SHA-256 of the canonical JSON of the snapshot without ``snapshot_hash``.
 
-    Arrays of records are sorted by id (pool owner shares by owner_id), so record order never changes
-    the hash.
+    Arrays of records are sorted by id (pool owner shares by owner_id), so record order never
+    changes the hash.
     """
     body = {key: value for key, value in snapshot.items() if key != "snapshot_hash"}
     for name in _RECORD_ARRAYS:
@@ -28,3 +28,8 @@ def snapshot_hash(snapshot: dict[str, Any]) -> str:
 def profile_hash(profile: dict[str, Any]) -> str:
     """SHA-256 of the canonical JSON of a close-out profile, recorded on the model card."""
     return canonical_hash(profile)
+
+
+def seal(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """A copy of the snapshot with ``snapshot_hash`` recomputed (for callers that build one)."""
+    return {**snapshot, "snapshot_hash": snapshot_hash(snapshot)}

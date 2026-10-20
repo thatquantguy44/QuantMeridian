@@ -7,6 +7,7 @@ hash vectors, so a hash or schema change that only one language notices fails th
 import copy
 
 from conftest import load
+
 from indemnification_api.contracts import profile_hash, snapshot_hash
 
 VECTORS = load("fixtures/hash-vectors.json")
@@ -21,8 +22,18 @@ def test_fixtures_validate(validator_for, snapshot):
     result = load("fixtures/result.example.json")
     assert errors(validator_for("result-1.0.schema.json"), result) == []
     assert errors(validator_for("model-card-1.0.schema.json"), result["model_card"]) == []
-    assert errors(validator_for("closeout-profile-1.0.schema.json"), load("closeout-profile.default.json")) == []
-    assert errors(validator_for("rating-pd-table-1.0.schema.json"), load("rating-pd-table.default.json")) == []
+    assert (
+        errors(
+            validator_for("closeout-profile-1.0.schema.json"), load("closeout-profile.default.json")
+        )
+        == []
+    )
+    assert (
+        errors(
+            validator_for("rating-pd-table-1.0.schema.json"), load("rating-pd-table.default.json")
+        )
+        == []
+    )
     assert snapshot["rating_pd_table"] == load("rating-pd-table.default.json")
 
 

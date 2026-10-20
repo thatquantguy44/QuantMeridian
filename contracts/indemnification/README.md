@@ -17,8 +17,14 @@ same schemas and fixtures.
 | `fixtures/snapshot.example.json` | Small valid snapshot (two borrowers, three loans). Labelled SIM; names are fictional. |
 | `fixtures/result.example.json` | Valid result. **Shape example only: its numbers are not model output.** |
 | `fixtures/hash-vectors.json` | SHA-256 vectors both languages must reproduce. |
+| `fixtures/sim-book.example.json` | The simulated book (108 loans, 16 borrowers) from `buildSimSnapshot`; labelled SIM. |
 
 Rules the schemas cannot state (`rho_w^2 <= rho_d`, unique ids, references between records, pool owner shares
 summing to 1, profile override keys naming real borrowers, positions, asset classes and buckets, a cost cap not
 below the half-spread floor) are checked by `snapshotIssues` in the TypeScript module. The service (IND-T13)
 must reject a snapshot with any issue before simulating.
+
+After any change to a schema, a fixture, the default profile or `buildSimSnapshot`, run
+`npx vite-node scripts/refresh-indemnification-fixtures.ts`. It recomputes every hash, rewrites
+`hash-vectors.json` and re-exports `fixtures/sim-book.example.json`, and is idempotent. The TypeScript and
+Python test suites fail if a fixture is stale.

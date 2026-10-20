@@ -1,11 +1,11 @@
 """Canonical JSON and SHA-256 hashing shared with the TypeScript client (spec020 IND-001).
 
-The terminal hashes snapshots in the browser and the service recomputes the same hash, so
-both sides must produce byte-identical text. Same rules as the Sources & Uses service's
-canonical.py (spec012), copied rather than imported so the services stay independent. The rules
-follow JavaScript's `JSON.stringify` on a value whose object keys are sorted: no whitespace, numbers in ECMAScript Number-to-String form,
-non-ASCII characters left raw, and lone surrogates escaped. Non-finite numbers are rejected.
-Values are never rounded.
+The terminal hashes snapshots in the browser and the service recomputes the same hash, so both sides
+must produce byte-identical text. Same rules as the Sources & Uses service's canonical.py (spec012),
+copied rather than imported so the services stay independent. The rules follow JavaScript's
+`JSON.stringify` on a value whose object keys are sorted: no whitespace, numbers in ECMAScript
+Number-to-String form, non-ASCII characters left raw, and lone surrogates escaped. Non-finite
+numbers are rejected. Values are never rounded.
 """
 
 from __future__ import annotations

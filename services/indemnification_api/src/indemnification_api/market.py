@@ -1,13 +1,14 @@
 """Market factor paths and security prices (spec020 PLAN section 1, IND-003).
 
-Four correlated Gaussian factors (equity return, yield change, credit spread change, FX return) drive
-every security through its loadings: equity beta, minus rate duration, minus spread duration. Each
-security also has idiosyncratic noise sized so its total daily volatility matches the snapshot, and
-hard-to-borrow securities can take upward squeeze jumps. Log prices carry a drift that makes every
-price a martingale, so no security has a built-in trend.
+Four correlated Gaussian factors (equity return, yield change, credit spread change, FX return)
+drive every security through its loadings: equity beta, minus rate duration, minus spread duration.
+Each security also has idiosyncratic noise sized so its total daily volatility matches the snapshot,
+and hard-to-borrow securities can take upward squeeze jumps. Log prices carry a drift that makes
+every price a martingale, so no security has a built-in trend.
 
-Prices are simulated daily. All draws for a call are made in a fixed order from the caller's generator,
-so a seed reproduces a run exactly and variants of a run (such as the no-wrong-way run) can reuse them.
+Prices are simulated daily. All draws for a call are made in a fixed order from the caller's
+generator, so a seed reproduces a run exactly and variants of a run (such as the no-wrong-way run)
+can reuse them.
 """
 
 from __future__ import annotations
@@ -28,16 +29,16 @@ IDIO_FLOOR = 0.25  # idiosyncratic vol is at least this share of a security's to
 class MarketModel:
     security_ids: list[str]
     index: dict[str, int]
-    price0: np.ndarray                  # (S,) starting prices
-    factor_vol_daily: np.ndarray        # (4,)
-    factor_corr: np.ndarray             # (4, 4)
-    factor_root: np.ndarray             # (4, 4), factor_root @ factor_root.T == factor_corr
-    factor_cov_daily: np.ndarray        # (4, 4)
-    loadings: np.ndarray                # (S, 4)
-    idio_daily: np.ndarray              # (S,)
-    drift_daily: np.ndarray             # (S,)
-    jump_on: np.ndarray                 # (S,) bool
-    jump_columns: list[int]             # security indices that jump
+    price0: np.ndarray  # (S,) starting prices
+    factor_vol_daily: np.ndarray  # (4,)
+    factor_corr: np.ndarray  # (4, 4)
+    factor_root: np.ndarray  # (4, 4), factor_root @ factor_root.T == factor_corr
+    factor_cov_daily: np.ndarray  # (4, 4)
+    loadings: np.ndarray  # (S, 4)
+    idio_daily: np.ndarray  # (S,)
+    drift_daily: np.ndarray  # (S,)
+    jump_on: np.ndarray  # (S,) bool
+    jump_columns: list[int]  # security indices that jump
     jump_intensity_daily: float
     jump_mean: float
     jump_sd: float
@@ -47,13 +48,15 @@ class MarketModel:
 class Paths:
     """Cumulative factor levels and log prices relative to day 0, for days 0..days."""
 
-    factors: np.ndarray                 # (n, days + 1, 4)
-    log_price: np.ndarray               # (n, days + 1, S)
-    jump_counts: np.ndarray             # (n, J) jumps per path for each jumping security
+    factors: np.ndarray  # (n, days + 1, 4)
+    log_price: np.ndarray  # (n, days + 1, S)
+    jump_counts: np.ndarray  # (n, J) jumps per path for each jumping security
 
     def standardized_equity(self, horizon_days: int, model: MarketModel) -> np.ndarray:
         """Cumulative equity factor return at the horizon, scaled to unit variance."""
-        return self.factors[:, horizon_days, 0] / (model.factor_vol_daily[0] * math.sqrt(horizon_days))
+        return self.factors[:, horizon_days, 0] / (
+            model.factor_vol_daily[0] * math.sqrt(horizon_days)
+        )
 
 
 def build_market(snapshot: dict[str, Any]) -> MarketModel:
@@ -104,9 +107,7 @@ def build_market(snapshot: dict[str, Any]) -> MarketModel:
     )
 
 
-def simulate_paths(
-    model: MarketModel, rng: np.random.Generator, n_paths: int, days: int
-) -> Paths:
+def simulate_paths(model: MarketModel, rng: np.random.Generator, n_paths: int, days: int) -> Paths:
     n_sec = len(model.security_ids)
     n_jump = len(model.jump_columns)
     z = rng.standard_normal((n_paths, days, 4))
@@ -114,10 +115,12 @@ def simulate_paths(
     counts = rng.poisson(model.jump_intensity_daily, (n_paths, days, n_jump))
     jump_z = rng.standard_normal((n_paths, days, n_jump))
 
-    d_factor = (z @ model.factor_root.T) * model.factor_vol_daily        # (n, days, 4)
+    d_factor = (z @ model.factor_root.T) * model.factor_vol_daily  # (n, days, 4)
     returns = d_factor @ model.loadings.T + eps * model.idio_daily + model.drift_daily
     if n_jump:
-        returns[:, :, model.jump_columns] += counts * model.jump_mean + np.sqrt(counts) * model.jump_sd * jump_z
+        returns[:, :, model.jump_columns] += (
+            counts * model.jump_mean + np.sqrt(counts) * model.jump_sd * jump_z
+        )
 
     factors = np.zeros((n_paths, days + 1, 4))
     np.cumsum(d_factor, axis=1, out=factors[:, 1:, :])

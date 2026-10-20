@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+
 from indemnification_api.schema import SnapshotRejected, require_valid_snapshot, validate_snapshot
 
 
@@ -20,17 +21,35 @@ def test_the_fixture_is_valid(snapshot):
 @pytest.mark.parametrize(
     "name, mutate",
     [
-        ("a close-out period of zero", lambda s: s["closeout_profile"]["defaults"].update(mpor_liquid_days=0)),
-        ("a close-out period above 60", lambda s: s["closeout_profile"]["defaults"].update(mpor_other_days=61)),
-        ("an impact exponent of zero", lambda s: s["closeout_profile"]["defaults"].update(impact_alpha=0)),
-        ("an unknown profile setting", lambda s: s["closeout_profile"]["defaults"].update(impact_kappa=1)),
-        ("an unknown override setting", lambda s: s["closeout_profile"]["borrower_overrides"].update(B1={"nope": 1})),
+        (
+            "a close-out period of zero",
+            lambda s: s["closeout_profile"]["defaults"].update(mpor_liquid_days=0),
+        ),
+        (
+            "a close-out period above 60",
+            lambda s: s["closeout_profile"]["defaults"].update(mpor_other_days=61),
+        ),
+        (
+            "an impact exponent of zero",
+            lambda s: s["closeout_profile"]["defaults"].update(impact_alpha=0),
+        ),
+        (
+            "an unknown profile setting",
+            lambda s: s["closeout_profile"]["defaults"].update(impact_kappa=1),
+        ),
+        (
+            "an unknown override setting",
+            lambda s: s["closeout_profile"]["borrower_overrides"].update(B1={"nope": 1}),
+        ),
         ("fewer than 1,000 paths", lambda s: s["run"].update(paths=999)),
         ("a horizon over five years", lambda s: s["run"].update(horizon_days=1261)),
         ("an unknown top-level field", lambda s: s.update(extra=1)),
         ("a term loan with no maturity", lambda s: s["loans"][1].update(maturity_days=None)),
         ("a malformed hash", lambda s: s.update(snapshot_hash="abc")),
-        ("a probability of one in the PD table", lambda s: s["rating_pd_table"]["pd_1y"].update(CCC=1)),
+        (
+            "a probability of one in the PD table",
+            lambda s: s["rating_pd_table"]["pd_1y"].update(CCC=1),
+        ),
     ],
 )
 def test_schema_violations_are_rejected_with_a_path(snapshot, name, mutate):

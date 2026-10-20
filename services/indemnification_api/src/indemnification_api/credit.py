@@ -1,8 +1,8 @@
 """Borrower default probabilities (spec020 decision 2, IND-018).
 
-Each borrower has a constant hazard rate. By default it comes from the snapshot's rating to
-one-year PD table, ``hazard = -ln(1 - PD_1y)``. A user-entered credit spread overrides the table for
-that borrower, ``hazard = spread / (1 - recovery)``. The source of each hazard is carried into the
+Each borrower has a constant hazard rate. By default it comes from the snapshot's rating to one-year
+PD table, ``hazard = -ln(1 - PD_1y)``. A user-entered credit spread overrides the table for that
+borrower, ``hazard = spread / (1 - recovery)``. The source of each hazard is carried into the
 results and the model card.
 """
 

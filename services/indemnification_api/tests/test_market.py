@@ -5,6 +5,7 @@ import math
 
 import numpy as np
 import pytest
+
 from indemnification_api.market import FACTORS, build_market, simulate_paths
 
 
@@ -33,7 +34,9 @@ def test_loadings_follow_beta_and_durations(model):
     assert model.loadings[ust].tolist() == [0.0, -4.2, 0.0, 0.0]
 
 
-def test_total_daily_vol_matches_the_security_when_the_systematic_part_fits_inside_it(model, snapshot):
+def test_total_daily_vol_matches_the_security_when_the_systematic_part_fits_inside_it(
+    model, snapshot
+):
     for sec in snapshot["securities"]:
         i = model.index[sec["id"]]
         cov = model.factor_cov_daily
@@ -44,7 +47,7 @@ def test_total_daily_vol_matches_the_security_when_the_systematic_part_fits_insi
 
 def test_idiosyncratic_vol_is_floored_when_the_factor_part_exceeds_the_security_vol(snapshot):
     s = copy.deepcopy(snapshot)
-    s["securities"][0]["daily_vol"] = 0.001       # EQ1 beta 1 x 1.13% equity vol dwarfs this
+    s["securities"][0]["daily_vol"] = 0.001  # EQ1 beta 1 x 1.13% equity vol dwarfs this
     m = build_market(s)
     assert m.idio_daily[m.index["EQ1"]] == pytest.approx(0.25 * 0.001)
 
@@ -98,9 +101,9 @@ def test_log_price_volatility_matches_the_security_for_a_non_jump_name(paths, mo
 
 def test_only_hard_to_borrow_securities_jump_and_at_the_stated_rate(model):
     big = simulate_paths(model, rng(11), n_paths=4000, days=252)
-    lam = 1.0                                       # fixture jump_intensity_annual
+    lam = 1.0  # fixture jump_intensity_annual
     jumpers = {s for s, i in model.index.items() if model.jump_on[i]}
-    assert jumpers == {"EQ2"}                       # the only hard-to-borrow security
+    assert jumpers == {"EQ2"}  # the only hard-to-borrow security
     counts = big.jump_counts[:, model.jump_columns.index(model.index["EQ2"])]
     se = math.sqrt(lam / 4000)
     assert abs(counts.mean() - lam) < 5 * se

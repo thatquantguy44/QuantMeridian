@@ -5,6 +5,7 @@ import math
 
 import pytest
 from conftest import load
+
 from indemnification_api.credit import (
     default_probability,
     hazard_from_pd,
@@ -18,8 +19,12 @@ TABLE = load("rating-pd-table.default.json")
 
 def borrower(**overrides):
     base = {
-        "id": "B1", "name": "Alderwood Capital", "rating": "A", "spread_bps": None,
-        "recovery": None, "credit_provenance": "sim",
+        "id": "B1",
+        "name": "Alderwood Capital",
+        "rating": "A",
+        "spread_bps": None,
+        "recovery": None,
+        "credit_provenance": "sim",
     }
     return {**base, **overrides}
 
@@ -43,7 +48,9 @@ def test_constant_hazard_gives_the_half_year_pd_from_the_one_year_pd():
 def test_spread_to_hazard_is_spread_over_one_minus_recovery():
     # 240 bps, 40% recovery: hazard = 0.024 / 0.6 = 0.04, one-year PD = 1 - exp(-0.04) = 0.039211
     assert hazard_from_spread(240, 0.4) == pytest.approx(0.04, rel=1e-15)
-    assert default_probability(hazard_from_spread(240, 0.4), 1.0) == pytest.approx(0.0392106, abs=1e-7)
+    assert default_probability(hazard_from_spread(240, 0.4), 1.0) == pytest.approx(
+        0.0392106, abs=1e-7
+    )
 
 
 def test_table_borrower_uses_the_rating_table():
@@ -56,7 +63,9 @@ def test_table_borrower_uses_the_rating_table():
 
 
 def test_spread_overrides_the_table_and_uses_the_default_recovery_when_none_is_entered():
-    credit = resolve_borrower_credit(borrower(rating="BBB", spread_bps=240), TABLE, default_recovery=0.4)
+    credit = resolve_borrower_credit(
+        borrower(rating="BBB", spread_bps=240), TABLE, default_recovery=0.4
+    )
     assert credit.source == "USER_SPREAD"
     assert credit.hazard == pytest.approx(0.04, rel=1e-15)
     assert credit.recovery == 0.4
@@ -64,7 +73,9 @@ def test_spread_overrides_the_table_and_uses_the_default_recovery_when_none_is_e
 
 
 def test_an_entered_recovery_beats_the_default():
-    credit = resolve_borrower_credit(borrower(spread_bps=300, recovery=0.25), TABLE, default_recovery=0.4)
+    credit = resolve_borrower_credit(
+        borrower(spread_bps=300, recovery=0.25), TABLE, default_recovery=0.4
+    )
     assert credit.hazard == pytest.approx(0.03 / 0.75, rel=1e-15)
     assert credit.recovery == 0.25
 

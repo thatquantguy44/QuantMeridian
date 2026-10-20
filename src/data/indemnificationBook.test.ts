@@ -113,6 +113,12 @@ describe("buildSimSnapshot", () => {
     expect(snapshotIssues(snapshot)).toEqual([]);
   });
 
+  test("the shared sim-book fixture is current", async () => {
+    const file = JSON.parse(readFileSync(new URL("../../contracts/indemnification/fixtures/sim-book.example.json", import.meta.url), "utf-8"));
+    const fresh = await buildSimSnapshot({ asOf: "2026-10-20", run: { paths: 5000, preview: true } });
+    expect(file).toEqual(fresh);
+  });
+
   test("carries a correct hash and is deterministic", async () => {
     expect(snapshot.snapshot_hash).toBe(await snapshotHash(snapshot));
     expect((await buildSimSnapshot({ asOf: AS_OF })).snapshot_hash).toBe(snapshot.snapshot_hash);

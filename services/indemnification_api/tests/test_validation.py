@@ -1,12 +1,14 @@
 """Cross-field snapshot rules the JSON Schema cannot state (spec020 IND-001).
 
-Mirrors snapshotIssues in src/lib/indemnificationContract.ts; the same negative cases run in both suites.
+Mirrors snapshotIssues in src/lib/indemnificationContract.ts; the same negative cases run in both
+suites.
 """
 
 import copy
 import re
 
 import pytest
+
 from indemnification_api.validation import snapshot_issues
 
 
@@ -21,8 +23,16 @@ def test_the_fixture_is_consistent(snapshot):
 
 
 CASES = [
-    ("a non-symmetric factor correlation matrix", lambda s: s["model"]["market"]["factor_corr"][0].__setitem__(1, 0.3), r"not symmetric"),
-    ("a diagonal that is not 1", lambda s: s["model"]["market"]["factor_corr"][2].__setitem__(2, 0.9), r"diagonal \[2\]"),
+    (
+        "a non-symmetric factor correlation matrix",
+        lambda s: s["model"]["market"]["factor_corr"][0].__setitem__(1, 0.3),
+        r"not symmetric",
+    ),
+    (
+        "a diagonal that is not 1",
+        lambda s: s["model"]["market"]["factor_corr"][2].__setitem__(2, 0.9),
+        r"diagonal \[2\]",
+    ),
     (
         "a factor correlation matrix that is not positive semi-definite",
         lambda s: s["model"]["market"].update(
@@ -32,12 +42,36 @@ CASES = [
     ),
     ("rho_w squared above rho_d", lambda s: s["model"].update(rho_w=0.6), r"rho_w\^2"),
     ("a duplicate loan id", lambda s: s["loans"][1].update(id="L1"), r"duplicate loan id L1"),
-    ("a loan with an unknown borrower", lambda s: s["loans"][0].update(borrower_id="B9"), r"unknown borrower B9"),
-    ("a loan with an unknown owner", lambda s: s["loans"][0].update(owner_id="O9"), r"unknown owner O9"),
-    ("a loan with an unknown security", lambda s: s["loans"][0].update(security_id="XX"), r"unknown security XX"),
-    ("collateral with an unknown security", lambda s: s["collateral"][1].update(security_id="XX"), r"unknown security XX"),
-    ("pool shares that do not sum to one", lambda s: s["pool"]["owner_shares"][0].update(share=0.5), r"sum to 0\.9"),
-    ("a pool share for an unknown owner", lambda s: s["pool"]["owner_shares"][0].update(owner_id="O9"), r"unknown owner O9"),
+    (
+        "a loan with an unknown borrower",
+        lambda s: s["loans"][0].update(borrower_id="B9"),
+        r"unknown borrower B9",
+    ),
+    (
+        "a loan with an unknown owner",
+        lambda s: s["loans"][0].update(owner_id="O9"),
+        r"unknown owner O9",
+    ),
+    (
+        "a loan with an unknown security",
+        lambda s: s["loans"][0].update(security_id="XX"),
+        r"unknown security XX",
+    ),
+    (
+        "collateral with an unknown security",
+        lambda s: s["collateral"][1].update(security_id="XX"),
+        r"unknown security XX",
+    ),
+    (
+        "pool shares that do not sum to one",
+        lambda s: s["pool"]["owner_shares"][0].update(share=0.5),
+        r"sum to 0\.9",
+    ),
+    (
+        "a pool share for an unknown owner",
+        lambda s: s["pool"]["owner_shares"][0].update(owner_id="O9"),
+        r"unknown owner O9",
+    ),
     (
         "a position override for an unknown position",
         lambda s: s["closeout_profile"]["position_overrides"].update(L9={"impact_k": 1}),
@@ -60,7 +94,9 @@ CASES = [
     ),
     (
         "a cost cap below the floor",
-        lambda s: s["closeout_profile"]["defaults"].update(half_spread_floor_bps=20, cost_cap_bps=10),
+        lambda s: s["closeout_profile"]["defaults"].update(
+            half_spread_floor_bps=20, cost_cap_bps=10
+        ),
         r"cost_cap_bps \(10\) is below",
     ),
     (
