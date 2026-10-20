@@ -2,7 +2,7 @@
 
 **Updated:** 2026-10-20
 
-**Branch:** `spec020-indemnification-scope` (PR link below).
+**Branch:** `spec020-indemnification-scope`, open as [PR #188](https://github.com/thatquantguy44/QuantMeridian/pull/188) against `main`.
 
 **State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The model core is built and tested in Python:
 the contract, the close-out profile, market paths, the default copula, the close-out shortfall, risk
