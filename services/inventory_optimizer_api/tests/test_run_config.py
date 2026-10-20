@@ -1,10 +1,12 @@
-"""RunConfig allowlist mapping and MIP/QP conflict enforcement (AC-011).
+"""RunConfig allowlist mapping, and discrete features with stability reaching the engine (AC-011).
 
 config_adapter.engine_overrides() is the only place a client-supplied RunConfig reaches the
 pinned engine's InventoryOptimizerConfig. Previously this was only exercised indirectly (via a
 monkeypatched RunConfigurationError in test_status_matrix.py, or implicitly inside
-test_contract_parity.py's happy path) -- never with a real MIP-requiring request driving a real
-conflict, and never checked for round-trip completeness. This file closes that gap.
+test_contract_parity.py's happy path) -- never with a real MIP-requiring request, and never
+checked for round-trip completeness. This file closes that gap. Since the 0020 pin the service
+no longer refuses discrete features with a stability penalty (MIP_QP_CONFLICT); the engine
+solves them as a stability-linearized MIP.
 """
 
 from __future__ import annotations
@@ -17,8 +19,9 @@ from fastapi.testclient import TestClient
 from inventory_optimizer.config import InventoryOptimizerConfig
 from inventory_optimizer.domain.requests import OptimizationRequest
 
-from inventory_optimizer_api.config_adapter import RunConfigurationError, engine_overrides
-from inventory_optimizer_api.contracts import RunConfig, SyntheticConfig
+from inventory_optimizer_api.config_adapter import engine_overrides
+from inventory_optimizer_api.contracts import RunConfig, SourceDisclosure, SyntheticConfig
+from inventory_optimizer_api.datasets import envelope_from_request
 from inventory_optimizer_api.synthetic import generate_dataset, generate_request
 
 
@@ -81,7 +84,7 @@ def test_unknown_run_config_field_is_rejected_by_the_api(api_client: TestClient)
     assert response.json()["code"] == "REQUEST_CONTRACT_INVALID"
 
 
-# --- MIP/QP conflict: each trigger, in isolation --------------------------------------------
+# --- Discrete features with a stability penalty: no service guard (0018 T-020 / AC-011) -------
 
 
 @pytest.mark.parametrize(
@@ -94,33 +97,33 @@ def test_unknown_run_config_field_is_rejected_by_the_api(api_client: TestClient)
     ],
     ids=["all_or_none", "minimum_active_quantity", "lot_size", "maximum_active_routes"],
 )
-def test_each_mip_trigger_conflicts_with_positive_stability_penalty(
-    mutate: Callable[[dict], None],
+@pytest.mark.parametrize("penalty", [0.0, 0.1])
+def test_each_mip_trigger_passes_through_with_any_stability_penalty(
+    mutate: Callable[[dict], None], penalty: float
 ) -> None:
     request = _mutated_request(mutate)
 
-    with pytest.raises(RunConfigurationError) as exc_info:
-        engine_overrides(request, RunConfig(allocation_stability_penalty=0.1))
+    overrides = engine_overrides(request, RunConfig(allocation_stability_penalty=penalty))
 
-    assert exc_info.value.issues[0].code == "MIP_QP_CONFLICT"
+    assert overrides["objective"]["allocation_stability_penalty"] == penalty
 
 
-@pytest.mark.parametrize(
-    "mutate",
-    [
-        lambda payload: payload["routes"][0].update(all_or_none=True),
-        lambda payload: payload["routes"][0].update(lot_size_shares=100.0),
-    ],
-    ids=["all_or_none", "lot_size"],
-)
-def test_mip_trigger_without_stability_penalty_is_allowed(
-    mutate: Callable[[dict], None],
-) -> None:
-    request = _mutated_request(mutate)
-
-    overrides = engine_overrides(request, RunConfig(allocation_stability_penalty=0.0))
-
-    assert overrides["objective"]["allocation_stability_penalty"] == 0.0
+def test_mip_with_stability_solves_as_the_linearized_variant(api_client: TestClient) -> None:
+    """AC-011: the request the old guard refused now reaches the engine, which solves and verifies
+    it as a stability-linearized MIP."""
+    request = _mutated_request(lambda payload: payload["routes"][0].update(lot_size_shares=100.0))
+    source = SourceDisclosure(mode="synthetic", label="lot-size probe")
+    dataset = envelope_from_request(request, source=source).model_dump(mode="json")
+    response = api_client.post(
+        "/v1/runs",
+        json={"dataset": dataset, "run_config": {"allocation_stability_penalty": 0.1}},
+        headers=auth_headers(idempotency=True),
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()["result"]
+    assert result["formulation"]["variant"] == "mip_linearized_stability"
+    assert result["formulation"]["integer_variable_count"] > 0
+    assert result["verification"]["passed"] is True
 
 
 def test_no_mip_features_with_positive_stability_penalty_is_allowed() -> None:

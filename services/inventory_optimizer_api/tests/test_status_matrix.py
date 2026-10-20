@@ -133,7 +133,7 @@ def test_run_configuration_conflict_returns_422(
 ) -> None:
     def raise_config_error(*_args: object, **_kwargs: object):
         raise RunConfigurationError(
-            (LocatedIssue(code="MIP_QP_CONFLICT", message="conflict", location="run_config"),)
+            (LocatedIssue(code="CONFIG_REJECTED", message="conflict", location="run_config"),)
         )
 
     monkeypatch.setattr(app_module, "solve", raise_config_error)

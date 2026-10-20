@@ -111,8 +111,10 @@ pin-only branch `feat/ibal-0020-pin` per spec013 decision 1. Stacked on it, `fea
 adds `POST /v1/explain` and `POST /v1/sweep`, opt-in ranging and MIP progress on runs, the workbench
 Sensitivity and Infeasibility tabs, and model statistics, timings and MIP progress in Diagnostics
 (both branches pushed, no PR opened yet). `spec013` IBAL-001, -002, -003, -004, -005 and -007 are
-done; IBAL-006 (presenter mode: viewport/keyboard execution) and IBAL-008 (as-built evidence) are in
-progress. The showcase books are LPs, not MIPs; older notes saying otherwise were wrong.
+done. 2026-10-19: IBAL-006 is done too: the user-edited continuation (decision 3) is built and the
+demo-path suite (`test/ibal-demo-path.spec.ts`, local only) passes at 375, 768 and 1440 px; only
+IBAL-008 (as-built evidence) stays open. The showcase books are LPs, not MIPs; older notes saying
+otherwise were wrong.
 
 ## Cross-repo follow-up: EcoMedallion (MMKT rate feed) — tracked 2026-10-17
 

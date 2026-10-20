@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Panel, Tag } from "@/components/ui/Panel";
 import { ExplanationSummary, ModelStatisticsView, SensitivityView } from "@/app/inventory-optimizer/Diagnostics";
 import {
-  getIbalShowcaseBooks, runIbalShowcase,
+  getIbalShowcaseBooks, IbalRequestError, runIbalShowcase, runIbalShowcaseEdited,
   type IbalCapabilities, type IbalHealth, type IbalResult, type IbalSensitivity,
-  type IbalShowcaseCatalog, type IbalShowcaseComparison, type IbalShowcaseRun,
+  type IbalShowcaseCatalog, type IbalShowcaseComparison, type IbalShowcaseEditedRun, type IbalShowcaseRun,
 } from "@/lib/inventoryOptimizer";
 
 const STEPS = ["base", "shock", "diagnose", "repair", "compare"] as const;
@@ -27,7 +27,7 @@ function DisclosureTable({ title, value }: { title: string; value: unknown }) {
 
 function TrustStrip({ result, commit }: { result: IbalResult | null; commit: string }) {
   if (!result) return null;
-  return <dl className="grid gap-x-4 gap-y-1 rounded border border-term-border bg-term-panel-2 p-2 text-[10px] sm:grid-cols-2 xl:grid-cols-3">
+  return <dl className="grid grid-cols-1 gap-x-4 gap-y-1 rounded border border-term-border bg-term-panel-2 p-2 text-[10px] sm:grid-cols-2 xl:grid-cols-3 [&>div]:min-w-0">
     <div><dt className="text-term-text-mute">Solve / verification</dt><dd className="font-mono text-term-text">{result.status} / {result.verification?.passed ? "VERIFIED" : "NOT VERIFIED"}</dd></div>
     <div><dt className="text-term-text-mute">Objective USD</dt><dd className="font-mono text-term-text">{result.verification?.passed && result.status === "optimal" ? amount(result.economics?.total_value_usd) : "No recommendation"}</dd></div>
     <div><dt className="text-term-text-mute">Termination</dt><dd className="font-mono text-term-text">{result.termination_reason ?? result.solver?.termination_reason ?? "—"}</dd></div>
@@ -67,7 +67,8 @@ function CompareRows({ comparison }: { comparison: IbalShowcaseComparison | null
   </div>;
 }
 
-function DomainDisclosures({ result, capabilities }: { result: IbalResult | null; capabilities: IbalCapabilities | null }) {
+/** Agency and prime result sections, when the engine returned them and the pin advertises them. */
+export function DomainDisclosures({ result, capabilities }: { result: IbalResult | null; capabilities: IbalCapabilities | null }) {
   if (!result || !capabilities) return null;
   const agency = result.agency as Record<string, unknown> | null;
   const prime = result.prime as Record<string, unknown> | null;
@@ -103,6 +104,61 @@ function EngineDiagnostics({ result, capabilities, sensitivity }: { result: Ibal
       {sensitivity !== undefined && <details className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Sensitivity ranges (base book)</summary><div className="mt-2"><SensitivityView sensitivity={sensitivity} maxRows={20} /></div></details>}
     </div>
   </div>;
+}
+
+/** Spec013 decision 3: after the guided sequence the presenter may edit a request by hand. The
+ * engine solves it and compares it with the book's base solve the same way as the repair; the run
+ * is labelled user-edited. The terminal only sends the edited JSON and renders what comes back. */
+function UserEditedRun({ run, bookId, commit }: { run: IbalShowcaseRun; bookId: string; commit: string }) {
+  const [from, setFrom] = useState<"repair" | "base">("repair");
+  const start = (which: "repair" | "base") => JSON.stringify((which === "repair" ? run.artifacts.repair_request : run.artifacts.base_request) ?? {}, null, 2);
+  const [text, setText] = useState(() => start("repair"));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ message: string; issues: string[] } | null>(null);
+  const [edited, setEdited] = useState<IbalShowcaseEditedRun | null>(null);
+  if (!run.artifacts.repair_request && !run.artifacts.base_request) return null;
+
+  async function solve() {
+    setBusy(true); setError(null); setEdited(null);
+    try {
+      let request: unknown;
+      try { request = JSON.parse(text); } catch { throw new IbalRequestError("The edited request is not valid JSON."); }
+      if (!request || typeof request !== "object" || Array.isArray(request)) throw new IbalRequestError("The edited request must be a JSON object.");
+      const response = await runIbalShowcaseEdited(bookId, request as Record<string, unknown>);
+      if (response.engine_commit !== commit) throw new IbalRequestError("The edited run does not match the reviewed engine pin.");
+      setEdited(response);
+    } catch (cause) {
+      setError({ message: cause instanceof Error ? cause.message : "The edited run failed.",
+        issues: cause instanceof IbalRequestError ? cause.issues.map((issue) => issue.message) : [] });
+    } finally { setBusy(false); }
+  }
+
+  return <details className="rounded border border-term-border p-2" data-testid="showcase-user-edited">
+    <summary className="cursor-pointer font-semibold text-term-text">Continue with your own edit <span className="font-mono text-term-amber">USER-EDITED</span></summary>
+    <div className="mt-2 space-y-2">
+      <p className="text-term-text-mute">Edit the request below and solve it. The engine compares the result with this book&apos;s base solve, as it compared the repair. The run is labelled user-edited; it is not one of the pinned guided steps.</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-term-text-dim">Start from
+          <select aria-label="Edited request starting point" value={from} onChange={(event) => { const next = event.target.value as "repair" | "base"; setFrom(next); setText(start(next)); setEdited(null); setError(null); }} className="mt-1 block rounded border border-term-border bg-term-panel-2 px-2 py-1 text-term-text">
+            <option value="repair">Repaired request</option>
+            <option value="base">Base request</option>
+          </select>
+        </label>
+        <button type="button" className="term-btn" onClick={() => { setText(start(from)); setEdited(null); setError(null); }}>Reset edit</button>
+        <button type="button" className="rounded bg-term-amber px-3 py-1.5 font-semibold text-black disabled:opacity-40" disabled={busy} onClick={() => void solve()}>{busy ? "Solving edited request…" : "Solve edited request"}</button>
+      </div>
+      <textarea aria-label="Edited request JSON" value={text} onChange={(event) => setText(event.target.value)} spellCheck={false} rows={12} className="block w-full rounded border border-term-border bg-term-panel-2 p-2 font-mono text-[10px] text-term-text" />
+      {error && <div role="alert" className="rounded border border-term-down/40 bg-term-down/10 p-2 text-term-down">{error.message}{error.issues.length > 0 && <ul className="mt-1 list-inside list-disc">{error.issues.map((item) => <li key={item}>{item}</li>)}</ul>}</div>}
+      {edited && <div className="space-y-2" data-testid="showcase-user-edited-result">
+        <p role="status" className="text-term-text"><span className="font-mono text-term-amber">USER-EDITED</span> · {edited.edited_result.status}, {edited.edited_result.verification?.passed ? "verified" : "not verified"}</p>
+        <TrustStrip result={edited.edited_result} commit={edited.engine_commit} />
+        {edited.comparison ? <><p className="text-term-text-dim">User-edited vs base:</p><CompareRows comparison={edited.comparison} /></>
+          : <p className="text-term-text-mute">No comparison: {edited.comparison_skipped_reason}.</p>}
+        <BindingRows result={edited.edited_result} />
+        <AllocationRows result={edited.edited_result} />
+      </div>}
+    </div>
+  </details>;
 }
 
 export function IbalShowcase({ health, capabilities }: { health: IbalHealth | null; capabilities: IbalCapabilities | null }) {
@@ -143,7 +199,7 @@ export function IbalShowcase({ health, capabilities }: { health: IbalHealth | nu
 
   return <Panel title="Guided InventoryBallast showcase" code="SIM" className="mx-2 mt-2" subtitle="base → shock → diagnose → repair → compare"
     right={<Tag tone={run?.report.passed ? "up" : error ? "down" : "neutral"}>{run?.report.passed ? "VERIFIED SIM" : "LOCAL SIM"}</Tag>}>
-    <div className="space-y-3 p-3 text-[11px]">
+    <div className="space-y-3 p-3 text-[11px]" data-testid="ibal-showcase">
       <p className="rounded border border-term-amber/30 bg-term-amber/5 p-2 text-term-text-dim">SIMULATED DATA · local service · no live positions, order, or governance gate. The presenter flow uses the pinned engine's checked-in books and named repairs.</p>
       {!enabled && <p role="status" className="text-term-amber">Showcase unavailable: {health?.error_category ?? (health?.ready ? "the pinned service does not advertise showcase output" : "optimizer service is not ready")}. Recheck service health above.</p>}
       {enabled && <div className="flex flex-wrap items-end gap-2">
@@ -166,6 +222,7 @@ export function IbalShowcase({ health, capabilities }: { health: IbalHealth | nu
         <EngineDiagnostics result={result ?? null} capabilities={capabilities} sensitivity={step === "base" ? run.artifacts.base_sensitivity : undefined} />
         {comparison && <CompareRows comparison={comparison} />}
         {step === "compare" && <CompareRows comparison={run.artifacts.shock_comparison} />}
+        {step === "compare" && run.report.passed && <UserEditedRun key={`${bookId}:${run.report.config_hash}`} run={run} bookId={bookId} commit={run.engine_commit} />}
         <DomainDisclosures result={result ?? null} capabilities={capabilities} />
         {step === "diagnose" && <details open={result?.status === "infeasible"} className="rounded border border-term-border p-2"><summary className="cursor-pointer font-semibold text-term-text">Infeasibility explanation</summary><ul className="mt-1 list-inside list-disc text-term-text-mute">{(run.artifacts.diagnosis?.warnings ?? []).map((item) => <li key={item}>{item}</li>)}</ul><ExplanationSummary explanation={run.artifacts.diagnosis?.infeasibility_explanation ?? null} /></details>}
       </>}

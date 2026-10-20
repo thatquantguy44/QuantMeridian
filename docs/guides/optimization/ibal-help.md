@@ -79,6 +79,7 @@ Directly under the engine status strip. It runs the pinned engine's own checked-
 | Disclosures | Economics components, demand and unfilled flow, availability buffers, concentration; agency (owners, mandates, indemnification) and prime (coverage, external borrows, excluded sources) when the engine advertises them |
 | Diagnose step | Unfilled demand, excluded sources, coverage and reason-code counts, plus the infeasibility and sensitivity limits |
 | Compare step | Verified comparison flag, objective change (USD), allocation drivers, driver reconciliation and economic attribution; matched, new and unmatched entities stay separate |
+| **Continue with your own edit** (compare step, after a verified run) | Edit the repaired or the base request as JSON and **Solve edited request**. The engine solves it and compares it with the book's base solve, the same way it compared the repair. The run is labelled `USER-EDITED`. Only an optimal, verified run is compared; otherwise the reason is shown. The engine's own validation messages appear if it rejects the edit. **Reset edit** restores the starting request. |
 
 If the panel says "Showcase unavailable", the service is not ready or the pinned engine does not advertise showcase output; use **Recheck** on the status strip.
 
