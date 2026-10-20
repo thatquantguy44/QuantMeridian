@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quantmeridian:indemnification:closeout-profile:1.0",
+  "title": "Close-out profile 1.0 (spec020 IND-020)",
+  "description": "Every close-out and liquidity-cost setting. Overrides resolve position, then borrower, then asset class or pool bucket, then defaults. Unknown settings are rejected.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile_schema_version", "name", "profile_version", "defaults", "asset_class_overrides", "pool_bucket_overrides", "borrower_overrides", "position_overrides"],
+  "properties": {
+    "profile_schema_version": {"const": "1.0"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 80},
+    "profile_version": {"type": "integer", "minimum": 1},
+    "defaults": {"$ref": "#/$defs/Settings"},
+    "asset_class_overrides": {"type": "object", "additionalProperties": {"$ref": "#/$defs/SettingsOverride"}},
+    "pool_bucket_overrides": {"type": "object", "additionalProperties": {"$ref": "#/$defs/SettingsOverride"}},
+    "borrower_overrides": {"type": "object", "additionalProperties": {"$ref": "#/$defs/SettingsOverride"}},
+    "position_overrides": {"type": "object", "additionalProperties": {"$ref": "#/$defs/PositionOverride"}}
+  },
+  "$defs": {
+    "Settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mpor_liquid_days", "mpor_other_days", "mpor_concentrated_days", "mpor_pool_forced_sale_days", "mpor_fixed_days", "addon_days", "concentration_threshold_pct_adv", "htb_uses_concentrated_period", "impact_k", "impact_alpha", "half_spread_floor_bps", "cost_cap_bps", "stress_beta", "stress_factor", "unwind", "margin_call_every_days"],
+      "properties": {
+        "mpor_liquid_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_other_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_concentrated_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_pool_forced_sale_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_fixed_days": {"type": ["integer", "null"], "minimum": 1, "maximum": 60},
+        "addon_days": {"type": "integer", "minimum": 0, "maximum": 40},
+        "concentration_threshold_pct_adv": {"type": "number", "minimum": 0, "maximum": 1000},
+        "htb_uses_concentrated_period": {"type": "boolean"},
+        "impact_k": {"type": "number", "minimum": 0},
+        "impact_alpha": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "half_spread_floor_bps": {"type": "number", "minimum": 0},
+        "cost_cap_bps": {"type": ["number", "null"], "minimum": 0},
+        "stress_beta": {"type": "number", "minimum": 0},
+        "stress_factor": {"enum": ["equity", "credit_spread", "rates", "fx"]},
+        "unwind": {"enum": ["end_of_period", "even"]},
+        "margin_call_every_days": {"type": "integer", "minimum": 1, "maximum": 20}
+      }
+    },
+    "SettingsOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "mpor_liquid_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_other_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_concentrated_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_pool_forced_sale_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_fixed_days": {"type": ["integer", "null"], "minimum": 1, "maximum": 60},
+        "addon_days": {"type": "integer", "minimum": 0, "maximum": 40},
+        "concentration_threshold_pct_adv": {"type": "number", "minimum": 0, "maximum": 1000},
+        "htb_uses_concentrated_period": {"type": "boolean"},
+        "impact_k": {"type": "number", "minimum": 0},
+        "impact_alpha": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "half_spread_floor_bps": {"type": "number", "minimum": 0},
+        "cost_cap_bps": {"type": ["number", "null"], "minimum": 0},
+        "stress_beta": {"type": "number", "minimum": 0},
+        "stress_factor": {"enum": ["equity", "credit_spread", "rates", "fx"]},
+        "unwind": {"enum": ["end_of_period", "even"]},
+        "margin_call_every_days": {"type": "integer", "minimum": 1, "maximum": 20}
+      }
+    },
+    "PositionOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "mpor_liquid_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_other_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_concentrated_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_pool_forced_sale_days": {"type": "integer", "minimum": 1, "maximum": 60},
+        "mpor_fixed_days": {"type": ["integer", "null"], "minimum": 1, "maximum": 60},
+        "addon_days": {"type": "integer", "minimum": 0, "maximum": 40},
+        "concentration_threshold_pct_adv": {"type": "number", "minimum": 0, "maximum": 1000},
+        "htb_uses_concentrated_period": {"type": "boolean"},
+        "impact_k": {"type": "number", "minimum": 0},
+        "impact_alpha": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "half_spread_floor_bps": {"type": "number", "minimum": 0},
+        "cost_cap_bps": {"type": ["number", "null"], "minimum": 0},
+        "stress_beta": {"type": "number", "minimum": 0},
+        "stress_factor": {"enum": ["equity", "credit_spread", "rates", "fx"]},
+        "unwind": {"enum": ["end_of_period", "even"]},
+        "margin_call_every_days": {"type": "integer", "minimum": 1, "maximum": 20},
+        "adv_units": {"type": "number", "exclusiveMinimum": 0},
+        "daily_vol": {"type": "number", "exclusiveMinimum": 0}
+      }
+    }
+  }
+}

@@ -56,6 +56,7 @@ Every close-out and liquidity setting comes from a named, versioned close-out pr
 | Setting | Default | Range | Can be set per |
 |---|---|---|---|
 | Close-out period (MPOR), business days | 5 liquid equities and G7 govts; 10 other bonds, smaller-company equities, EM; 10 hard-to-borrow or concentrated; 5 TERM pool forced sale | integer 1–60 | global, asset class, pool bucket, borrower, position |
+| Fixed close-out period (`mpor_fixed_days`): when set at a level, replaces the four period settings above for the positions that level covers | none | integer 1–60 | global, asset class, pool bucket, borrower, position |
 | Close-out add-on days (e.g. for a borrower with a history of disputes) | 0 | integer 0–40 | borrower, position |
 | Concentration threshold for the longer period | 25% of ADV | 0–1000% | global, asset class |
 | Hard-to-borrow uses the longer period | on | on / off | global, asset class |

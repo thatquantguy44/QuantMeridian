@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quantmeridian:indemnification:result:1.0",
+  "title": "Indemnification result 1.0 (spec020 IND-006 to IND-014, IND-017)",
+  "description": "One run's output. Every number carries a Monte Carlo standard error where one exists. Losses are reported by channel (default_shortfall, reinvestment) and in total. Gaussian results come with and without the wrong-way link on the same random draws.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["api_schema_version", "run_id", "snapshot_hash", "created_at", "source", "run", "model_card", "effective_settings", "program", "exposure_profile", "borrowers", "owners", "cross_check", "sensitivities", "stresses"],
+  "properties": {
+    "api_schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "snapshot_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "source": {"enum": ["SIM", "USER_INPUT", "MIXED"]},
+    "run": {"$ref": "#/$defs/RunEcho"},
+    "model_card": {"$ref": "urn:quantmeridian:indemnification:model-card:1.0"},
+    "effective_settings": {"type": "array", "items": {"$ref": "#/$defs/EffectiveSettings"}},
+    "program": {"$ref": "#/$defs/ProgramMetrics"},
+    "exposure_profile": {"$ref": "#/$defs/ExposureProfile"},
+    "borrowers": {"type": "array", "items": {"$ref": "#/$defs/BorrowerResult"}},
+    "owners": {"type": "array", "items": {"$ref": "#/$defs/OwnerResult"}},
+    "cross_check": {"$ref": "#/$defs/CrossCheck"},
+    "sensitivities": {"type": "array", "items": {"$ref": "#/$defs/Sensitivity"}},
+    "stresses": {"type": "array", "items": {"$ref": "#/$defs/Stress"}}
+  },
+  "$defs": {
+    "Metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["value", "std_error"],
+      "properties": {
+        "value": {"type": "number"},
+        "std_error": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "Metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["el", "epe", "pfe95", "pfe99", "var99", "var999", "es99", "es999"],
+      "properties": {
+        "el": {"$ref": "#/$defs/Metric"},
+        "epe": {"$ref": "#/$defs/Metric"},
+        "pfe95": {"$ref": "#/$defs/Metric"},
+        "pfe99": {"$ref": "#/$defs/Metric"},
+        "var99": {"$ref": "#/$defs/Metric"},
+        "var999": {"$ref": "#/$defs/Metric"},
+        "es99": {"$ref": "#/$defs/Metric"},
+        "es999": {"$ref": "#/$defs/Metric"}
+      }
+    },
+    "ChannelMetrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["total", "default_shortfall", "reinvestment"],
+      "properties": {
+        "total": {"$ref": "#/$defs/Metrics"},
+        "default_shortfall": {"$ref": "#/$defs/Metrics"},
+        "reinvestment": {"$ref": "#/$defs/Metrics"}
+      }
+    },
+    "WrongWayMetrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["with_wrong_way", "without_wrong_way"],
+      "properties": {
+        "with_wrong_way": {"$ref": "#/$defs/ChannelMetrics"},
+        "without_wrong_way": {"$ref": "#/$defs/ChannelMetrics"}
+      }
+    },
+    "ProgramMetrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gaussian", "student_t"],
+      "properties": {
+        "gaussian": {"$ref": "#/$defs/WrongWayMetrics"},
+        "student_t": {"oneOf": [{"$ref": "#/$defs/ChannelMetrics"}, {"type": "null"}]}
+      }
+    },
+    "RunEcho": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "seed", "paths", "preview", "horizon_days", "step"],
+      "properties": {
+        "mode": {"enum": ["desk", "annual"]},
+        "seed": {"type": "integer", "minimum": 0},
+        "paths": {"type": "integer", "minimum": 1000},
+        "preview": {"type": "boolean"},
+        "horizon_days": {"type": "integer", "minimum": 21},
+        "step": {"enum": ["daily", "weekly", "monthly"]}
+      }
+    },
+    "ExposureProfile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["times_days", "ee", "pfe95", "pfe99"],
+      "properties": {
+        "times_days": {"type": "array", "items": {"type": "number", "minimum": 0}},
+        "ee": {"type": "array", "items": {"type": "number", "minimum": 0}},
+        "pfe95": {"type": "array", "items": {"type": "number", "minimum": 0}},
+        "pfe99": {"type": "array", "items": {"type": "number", "minimum": 0}}
+      }
+    },
+    "EffectiveSettings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["position_id", "kind", "mpor_days", "settings", "source_levels"],
+      "properties": {
+        "position_id": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["loan", "collateral", "pool_position"]},
+        "mpor_days": {"type": "integer", "minimum": 1},
+        "settings": {"$ref": "urn:quantmeridian:indemnification:closeout-profile:1.0#/$defs/Settings"},
+        "source_levels": {
+          "type": "object",
+          "additionalProperties": {"enum": ["position", "borrower", "asset_class", "pool_bucket", "default"]}
+        }
+      }
+    },
+    "BorrowerPricing": {
+      "type": "object", "additionalProperties": false,
+      "required": ["average_loan_value", "fee_bps", "expected_loss_bps", "economic_capital", "economic_capital_cost_bps", "indemnification_cost_bps", "regulatory_proxy_cost_bps", "flagged"],
+      "properties": {
+        "average_loan_value": {"type": "number", "minimum": 0},
+        "fee_bps": {"type": "number", "minimum": 0},
+        "expected_loss_bps": {"type": "number", "minimum": 0},
+        "economic_capital": {"type": "number", "minimum": 0},
+        "economic_capital_cost_bps": {"type": "number", "minimum": 0},
+        "indemnification_cost_bps": {"type": "number", "minimum": 0},
+        "regulatory_proxy_cost_bps": {"type": "number", "minimum": 0},
+        "flagged": {"type": "boolean"}
+      }
+    },
+    "BorrowerResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["borrower_id", "credit_source", "pd_1y", "hazard", "metrics", "euler_es99", "exposure_profile", "pricing"],
+      "properties": {
+        "borrower_id": {"type": "string", "minLength": 1},
+        "credit_source": {"enum": ["RATING_TABLE", "USER_SPREAD"]},
+        "pd_1y": {"type": "number", "minimum": 0, "maximum": 1},
+        "hazard": {"type": "number", "minimum": 0},
+        "metrics": {"$ref": "#/$defs/WrongWayMetrics"},
+        "euler_es99": {"$ref": "#/$defs/Metric"},
+        "exposure_profile": {"$ref": "#/$defs/ExposureProfile"},
+        "pricing": {"oneOf": [{"$ref": "#/$defs/BorrowerPricing"}, {"type": "null"}]}
+      }
+    },
+    "OwnerResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["owner_id", "el"],
+      "properties": {
+        "owner_id": {"type": "string", "minLength": 1},
+        "el": {
+          "type": "object", "additionalProperties": false,
+          "required": ["total", "default_shortfall", "reinvestment"],
+          "properties": {
+            "total": {"$ref": "#/$defs/Metric"},
+            "default_shortfall": {"$ref": "#/$defs/Metric"},
+            "reinvestment": {"$ref": "#/$defs/Metric"}
+          }
+        }
+      }
+    },
+    "CrossCheck": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "borrowers"],
+      "properties": {
+        "label": {"type": "string"},
+        "borrowers": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["borrower_id", "exposure", "collateral", "e_star", "mc_pfe99"],
+            "properties": {
+              "borrower_id": {"type": "string", "minLength": 1},
+              "exposure": {"type": "number", "minimum": 0},
+              "collateral": {"type": "number", "minimum": 0},
+              "e_star": {"type": "number", "minimum": 0},
+              "mc_pfe99": {"type": "number", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "Sensitivity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parameter", "values", "el", "pfe99"],
+      "properties": {
+        "parameter": {"type": "string", "minLength": 1},
+        "values": {"type": "array", "items": {"type": "number"}},
+        "el": {"type": "array", "items": {"$ref": "#/$defs/Metric"}},
+        "pfe99": {"type": "array", "items": {"$ref": "#/$defs/Metric"}}
+      }
+    },
+    "Stress": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "by_borrower", "by_owner"],
+      "properties": {
+        "id": {"enum": ["largest_borrower_default", "squeeze", "rates_shock", "fx_shock", "reinvestment_run"]},
+        "label": {"type": "string"},
+        "by_borrower": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["borrower_id", "default_shortfall", "reinvestment"],
+            "properties": {
+              "borrower_id": {"type": "string", "minLength": 1},
+              "default_shortfall": {"type": "number", "minimum": 0},
+              "reinvestment": {"type": "number", "minimum": 0}
+            }
+          }
+        },
+        "by_owner": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["owner_id", "default_shortfall", "reinvestment"],
+            "properties": {
+              "owner_id": {"type": "string", "minLength": 1},
+              "default_shortfall": {"type": "number", "minimum": 0},
+              "reinvestment": {"type": "number", "minimum": 0}
+            }
+          }
+        }
+      }
+    }
+  }
+}

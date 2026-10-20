@@ -1,0 +1,27 @@
+{
+  "profile_schema_version": "1.0",
+  "name": "default",
+  "profile_version": 1,
+  "defaults": {
+    "mpor_liquid_days": 5,
+    "mpor_other_days": 10,
+    "mpor_concentrated_days": 10,
+    "mpor_pool_forced_sale_days": 5,
+    "mpor_fixed_days": null,
+    "addon_days": 0,
+    "concentration_threshold_pct_adv": 25,
+    "htb_uses_concentrated_period": true,
+    "impact_k": 0.5,
+    "impact_alpha": 0.5,
+    "half_spread_floor_bps": 0,
+    "cost_cap_bps": null,
+    "stress_beta": 0,
+    "stress_factor": "equity",
+    "unwind": "end_of_period",
+    "margin_call_every_days": 1
+  },
+  "asset_class_overrides": {},
+  "pool_bucket_overrides": {},
+  "borrower_overrides": {},
+  "position_overrides": {}
+}
