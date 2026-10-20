@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { COUNTERPARTIES } from "@/data/universe";
 import {
   profileHash, snapshotHash, snapshotIssues,
-  isPositiveSemiDefinite, type BorrowerRecord, type CloseoutProfile, type MarketModel, type CloseoutSettings, type CollateralHoldingRecord,
+  isPositiveSemiDefinite, type PoolRisk, type ReturnModel, type BorrowerRecord, type CloseoutProfile, type MarketModel, type CloseoutSettings, type CollateralHoldingRecord,
   type IndemnificationSnapshot, type LoanRecord, type ModelSettings, type PositionOverride,
   RATING_ORDER, type RatingPdTable, type RunSettings, type SecurityRecord,
 } from "./indemnificationContract";
@@ -39,7 +39,12 @@ const SETTINGS: Fields<CloseoutSettings> = {
 };
 const POSITION_OVERRIDE: Fields<PositionOverride> = { ...SETTINGS, adv_units: true, daily_vol: true };
 const RUN: Fields<RunSettings> = { mode: true, seed: true, paths: true, preview: true, horizon_days: true, step: true };
-const MODEL: Fields<ModelSettings> = { rho_d: true, rho_w: true, student_t_enabled: true, student_t_nu: true, default_recovery: true, market: true };
+const MODEL: Fields<ModelSettings> = { rho_d: true, rho_w: true, student_t_enabled: true, student_t_nu: true, default_recovery: true, market: true, returns: true, pool_risk: true };
+const RETURNS: Fields<ReturnModel> = { open_loan_hazard_annual: true, recallable_multiplier: true, stress_sensitivity: true };
+const POOL_RISK: Fields<PoolRisk> = {
+  credit_beta: true, issuer_hazard_annual: true, issuer_recovery: true, issuer_stress_sensitivity: true,
+  daily_liquidity_fraction: true, forced_sale_floor_bps: true,
+};
 const MARKET: Fields<MarketModel> = {
   equity_vol_annual: true, rates_vol_bps_daily: true, spread_vol_bps_daily: true, fx_vol_annual: true, factor_corr: true,
   jump_intensity_annual: true, jump_mean: true, jump_sd: true,
@@ -116,6 +121,8 @@ describe("TypeScript types match the schemas", () => {
     expect(keys(RUN)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Run));
     expect(keys(MODEL)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Model));
     expect(keys(MARKET)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.MarketModel));
+    expect(keys(RETURNS)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.ReturnModel));
+    expect(keys(POOL_RISK)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.PoolRisk));
     expect(keys(SECURITY)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Security));
     expect(keys(BORROWER)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Borrower));
     expect(keys(LOAN)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Loan));
@@ -236,6 +243,10 @@ describe("snapshot validation", () => {
   bad("a factor correlation outside [-1, 1]", (s) => { s.model.market.factor_corr[0][1] = 1.5; });
   bad("a factor correlation matrix that is not 4 by 4", (s) => { s.model.market.factor_corr.pop(); });
   bad("a zero equity volatility", (s) => { s.model.market.equity_vol_annual = 0; });
+  bad("a negative loan return hazard", (s) => { s.model.returns.open_loan_hazard_annual = -1; });
+  bad("a recallable multiplier below 1", (s) => { s.model.returns.recallable_multiplier = 0.5; });
+  bad("a missing credit bucket in the pool risk", (s) => { delete (s.model.pool_risk.credit_beta as Partial<Record<string, number>>).BANK; });
+  bad("a zero daily liquidity fraction", (s) => { s.model.pool_risk.daily_liquidity_fraction.TERM = 0; });
   bad("a recovery of 100%", (s) => { s.model.default_recovery = 1; });
   bad("a Student-t with fewer than 3 degrees of freedom", (s) => { s.model.student_t_nu = 2; });
   bad("an unknown rating", (s) => { (s.borrowers[0] as unknown as Record<string, unknown>).rating = "AAAA"; });

@@ -55,6 +55,41 @@
       "jump_intensity_annual": 1,
       "jump_mean": 0.12,
       "jump_sd": 0.08
+    },
+    "returns": {
+      "open_loan_hazard_annual": 3,
+      "recallable_multiplier": 1.5,
+      "stress_sensitivity": 0.5
+    },
+    "pool_risk": {
+      "credit_beta": {
+        "HQLA": 0,
+        "AGENCY": 0.1,
+        "A1/P1": 0.4,
+        "BANK": 1,
+        "CREDIT": 1.5
+      },
+      "issuer_hazard_annual": {
+        "HQLA": 0,
+        "AGENCY": 0,
+        "A1/P1": 0.001,
+        "BANK": 0.004,
+        "CREDIT": 0.01
+      },
+      "issuer_recovery": 0.4,
+      "issuer_stress_sensitivity": 1,
+      "daily_liquidity_fraction": {
+        "T+0": 1,
+        "T+1": 0.5,
+        "T+7": 0.25,
+        "TERM": 0.1
+      },
+      "forced_sale_floor_bps": {
+        "T+0": 0,
+        "T+1": 1,
+        "T+7": 3,
+        "TERM": 25
+      }
     }
   },
   "pricing": {
@@ -2919,5 +2954,5 @@
     "source_total": 29286756250.51558,
     "note": "Reinvestment pool rescaled to the book's cash collateral; liquidity and credit mix unchanged."
   },
-  "snapshot_hash": "c6147333a8b5afb8a83b52d2784bb22d995103e2707c72eaa7527aba844ae7f7"
+  "snapshot_hash": "cd292c714e209e2020d7acb0bbf393ad46b7a05e79d8529ea771895ff4b6ca51"
 }

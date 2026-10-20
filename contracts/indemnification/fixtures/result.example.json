@@ -1,7 +1,7 @@
 {
   "api_schema_version": "1.0",
   "run_id": "0123456789abcdef0123456789abcdef",
-  "snapshot_hash": "3a19a02771069e3890443aacdc3bc2a1cd8b63bef71a248c4b96a71ddaf0353a",
+  "snapshot_hash": "5f43b2308341b9170b047f7d8f7d3b4fb951dea706d846c16537e942ae035206",
   "created_at": "2026-10-20T12:00:00Z",
   "source": "SIM",
   "run": {
@@ -15,7 +15,7 @@
   "model_card": {
     "model_card_schema_version": "1.0",
     "model_version": "fixture-1",
-    "snapshot_hash": "3a19a02771069e3890443aacdc3bc2a1cd8b63bef71a248c4b96a71ddaf0353a",
+    "snapshot_hash": "5f43b2308341b9170b047f7d8f7d3b4fb951dea706d846c16537e942ae035206",
     "profile_name": "default",
     "profile_hash": "f64e4e3cfcbef5ca008886d2646a493b5bfe32a1f2ad38a35d8f72bdc4455f13",
     "mode": "desk",

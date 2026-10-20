@@ -2,7 +2,7 @@ import { Rng } from "@/lib/rng";
 import {
   API_SCHEMA_VERSION, snapshotHash,
   type BorrowerRecord, type CloseoutProfile, type CollateralHoldingRecord, type IndemnificationSnapshot,
-  type LoanRecord, type MarketModel, type ModelSettings, type OwnerRecord, type PoolPositionRecord, type PricingSettings,
+  type LoanRecord, type MarketModel, type ModelSettings, type PoolRisk, type ReturnModel, type OwnerRecord, type PoolPositionRecord, type PricingSettings,
   type Rating, type RatingPdTable, type RunSettings, type SecurityRecord,
 } from "@/lib/indemnificationContract";
 import DEFAULT_PROFILE from "../../contracts/indemnification/closeout-profile.default.json";
@@ -29,8 +29,18 @@ export const DEFAULT_MARKET: MarketModel = {
   jump_mean: 0.12,
   jump_sd: 0.08,
 };
+export const DEFAULT_RETURNS: ReturnModel = { open_loan_hazard_annual: 3, recallable_multiplier: 1.5, stress_sensitivity: 0.5 };
+export const DEFAULT_POOL_RISK: PoolRisk = {
+  credit_beta: { HQLA: 0, AGENCY: 0.1, "A1/P1": 0.4, BANK: 1, CREDIT: 1.5 },
+  issuer_hazard_annual: { HQLA: 0, AGENCY: 0, "A1/P1": 0.001, BANK: 0.004, CREDIT: 0.01 },
+  issuer_recovery: 0.4,
+  issuer_stress_sensitivity: 1,
+  daily_liquidity_fraction: { "T+0": 1, "T+1": 0.5, "T+7": 0.25, TERM: 0.1 },
+  forced_sale_floor_bps: { "T+0": 0, "T+1": 1, "T+7": 3, TERM: 25 },
+};
 export const DEFAULT_MODEL: ModelSettings = {
   rho_d: 0.25, rho_w: 0.3, student_t_enabled: true, student_t_nu: 5, default_recovery: 0.4, market: DEFAULT_MARKET,
+  returns: DEFAULT_RETURNS, pool_risk: DEFAULT_POOL_RISK,
 };
 export const DEFAULT_PRICING: PricingSettings = {
   cost_of_capital: 0.1,
@@ -138,7 +148,12 @@ export async function buildSimSnapshot(options: SimSnapshotOptions): Promise<Ind
     source: { label: "SIM", book_seed: "sl-loan-1+indem-book-1", generator_version: GENERATOR_VERSION },
     currency: "USD",
     run: { ...DEFAULT_RUN, ...options.run },
-    model: { ...DEFAULT_MODEL, ...options.model, market: { ...DEFAULT_MARKET, ...options.model?.market } },
+    model: {
+      ...DEFAULT_MODEL, ...options.model,
+      market: { ...DEFAULT_MARKET, ...options.model?.market },
+      returns: { ...DEFAULT_RETURNS, ...options.model?.returns },
+      pool_risk: { ...DEFAULT_POOL_RISK, ...options.model?.pool_risk },
+    },
     pricing: { ...DEFAULT_PRICING, ...options.pricing },
     rating_pd_table: options.ratingPdTable ?? (JSON.parse(JSON.stringify(DEFAULT_RATING_TABLE)) as RatingPdTable),
     closeout_profile: options.profile ?? (JSON.parse(JSON.stringify(DEFAULT_PROFILE)) as CloseoutProfile),

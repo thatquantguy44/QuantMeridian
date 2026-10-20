@@ -74,6 +74,23 @@ export interface MarketModel {
   jump_mean: number;
   jump_sd: number;
 }
+/** How open loans come back (waves when equities fall). */
+export interface ReturnModel {
+  open_loan_hazard_annual: number;
+  recallable_multiplier: number;
+  stress_sensitivity: number;
+}
+export type CreditBucket = "HQLA" | "AGENCY" | "A1/P1" | "BANK" | "CREDIT";
+export type LiquidityBucket = "T+0" | "T+1" | "T+7" | "TERM";
+/** Risk of the cash collateral reinvestment pool. */
+export interface PoolRisk {
+  credit_beta: Record<CreditBucket, number>;
+  issuer_hazard_annual: Record<CreditBucket, number>;
+  issuer_recovery: number;
+  issuer_stress_sensitivity: number;
+  daily_liquidity_fraction: Record<LiquidityBucket, number>;
+  forced_sale_floor_bps: Record<LiquidityBucket, number>;
+}
 export interface ModelSettings {
   rho_d: number;
   rho_w: number;
@@ -81,6 +98,8 @@ export interface ModelSettings {
   student_t_nu: number;
   default_recovery: number;
   market: MarketModel;
+  returns: ReturnModel;
+  pool_risk: PoolRisk;
 }
 export interface RiskWeights {
   aaa_to_aa_minus: number;
@@ -150,8 +169,8 @@ export interface CollateralHoldingRecord {
 export interface PoolPositionRecord {
   id: string;
   instrument: string;
-  liquidity_bucket: "T+0" | "T+1" | "T+7" | "TERM";
-  credit_bucket: "HQLA" | "AGENCY" | "A1/P1" | "BANK" | "CREDIT";
+  liquidity_bucket: LiquidityBucket;
+  credit_bucket: CreditBucket;
   allocation: number;
   yield_bps: number;
   wam_days: number;

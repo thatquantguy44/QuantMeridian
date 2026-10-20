@@ -190,7 +190,9 @@
         "student_t_enabled",
         "student_t_nu",
         "default_recovery",
-        "market"
+        "market",
+        "returns",
+        "pool_risk"
       ],
       "properties": {
         "rho_d": {
@@ -218,6 +220,12 @@
         },
         "market": {
           "$ref": "#/$defs/MarketModel"
+        },
+        "returns": {
+          "$ref": "#/$defs/ReturnModel"
+        },
+        "pool_risk": {
+          "$ref": "#/$defs/PoolRisk"
         }
       }
     },
@@ -774,6 +782,198 @@
           "type": "number",
           "minimum": 0,
           "maximum": 2
+        }
+      }
+    },
+    "ReturnModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "How open loans come back (spec020 PLAN section 4). An open loan returns at an exponential time with hazard base * (recallable_multiplier if the loan is recallable) * exp(stress_sensitivity * max(0, -Z_eq)), where Z_eq is the standardized equity factor return over the run horizon, so returns come in waves when equities fall.",
+      "required": [
+        "open_loan_hazard_annual",
+        "recallable_multiplier",
+        "stress_sensitivity"
+      ],
+      "properties": {
+        "open_loan_hazard_annual": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "recallable_multiplier": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "stress_sensitivity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "PoolRisk": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Risk of the cash collateral reinvestment pool (spec020 PLAN section 4). A position's value moves with the credit spread factor times credit_beta times its spread duration (WAM / 252). BANK, CREDIT and A1/P1 issuers can default (constant hazard, scaled up when spreads have widened by issuer_stress_sensitivity). A forced sale costs at least forced_sale_floor_bps for its liquidity bucket and is sized against daily_liquidity_fraction of the position per day.",
+      "required": [
+        "credit_beta",
+        "issuer_hazard_annual",
+        "issuer_recovery",
+        "issuer_stress_sensitivity",
+        "daily_liquidity_fraction",
+        "forced_sale_floor_bps"
+      ],
+      "properties": {
+        "credit_beta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "HQLA",
+            "AGENCY",
+            "A1/P1",
+            "BANK",
+            "CREDIT"
+          ],
+          "properties": {
+            "HQLA": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "AGENCY": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "A1/P1": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "BANK": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "CREDIT": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            }
+          }
+        },
+        "issuer_hazard_annual": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "HQLA",
+            "AGENCY",
+            "A1/P1",
+            "BANK",
+            "CREDIT"
+          ],
+          "properties": {
+            "HQLA": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "AGENCY": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "A1/P1": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "BANK": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "CREDIT": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            }
+          }
+        },
+        "issuer_recovery": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "issuer_stress_sensitivity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "daily_liquidity_fraction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "T+0",
+            "T+1",
+            "T+7",
+            "TERM"
+          ],
+          "properties": {
+            "T+0": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "T+1": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "T+7": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "TERM": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "forced_sale_floor_bps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "T+0",
+            "T+1",
+            "T+7",
+            "TERM"
+          ],
+          "properties": {
+            "T+0": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "T+1": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "T+7": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "TERM": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            }
+          }
         }
       }
     }

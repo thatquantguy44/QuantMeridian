@@ -1,6 +1,6 @@
 {
   "api_schema_version": "1.0",
-  "snapshot_hash": "3a19a02771069e3890443aacdc3bc2a1cd8b63bef71a248c4b96a71ddaf0353a",
+  "snapshot_hash": "5f43b2308341b9170b047f7d8f7d3b4fb951dea706d846c16537e942ae035206",
   "as_of": "2026-10-20",
   "source": {
     "label": "SIM",
@@ -56,6 +56,41 @@
       "jump_intensity_annual": 1,
       "jump_mean": 0.12,
       "jump_sd": 0.08
+    },
+    "returns": {
+      "open_loan_hazard_annual": 3,
+      "recallable_multiplier": 1.5,
+      "stress_sensitivity": 0.5
+    },
+    "pool_risk": {
+      "credit_beta": {
+        "HQLA": 0,
+        "AGENCY": 0.1,
+        "A1/P1": 0.4,
+        "BANK": 1,
+        "CREDIT": 1.5
+      },
+      "issuer_hazard_annual": {
+        "HQLA": 0,
+        "AGENCY": 0,
+        "A1/P1": 0.001,
+        "BANK": 0.004,
+        "CREDIT": 0.01
+      },
+      "issuer_recovery": 0.4,
+      "issuer_stress_sensitivity": 1,
+      "daily_liquidity_fraction": {
+        "T+0": 1,
+        "T+1": 0.5,
+        "T+7": 0.25,
+        "TERM": 0.1
+      },
+      "forced_sale_floor_bps": {
+        "T+0": 0,
+        "T+1": 1,
+        "T+7": 3,
+        "TERM": 25
+      }
     }
   },
   "pricing": {
