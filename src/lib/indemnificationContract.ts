@@ -63,12 +63,24 @@ export interface RunSettings {
   horizon_days: number;
   step: StepSize;
 }
+/** Factor model for prices. Factor order for factor_corr: equity, rates, credit_spread, fx. */
+export interface MarketModel {
+  equity_vol_annual: number;
+  rates_vol_bps_daily: number;
+  spread_vol_bps_daily: number;
+  fx_vol_annual: number;
+  factor_corr: number[][];
+  jump_intensity_annual: number;
+  jump_mean: number;
+  jump_sd: number;
+}
 export interface ModelSettings {
   rho_d: number;
   rho_w: number;
   student_t_enabled: boolean;
   student_t_nu: number;
   default_recovery: number;
+  market: MarketModel;
 }
 export interface RiskWeights {
   aaa_to_aa_minus: number;
@@ -226,6 +238,17 @@ export function snapshotIssues(snapshot: IndemnificationSnapshot): string[] {
     }
   }
 
+  const corr = model.market.factor_corr;
+  const size = corr.length;
+  let correlationOk = true;
+  for (let i = 0; i < size; i++) {
+    if (Math.abs(corr[i][i] - 1) > 1e-12) { issues.push(`market.factor_corr diagonal [${i}] must be 1`); correlationOk = false; }
+    for (let j = i + 1; j < size; j++) {
+      if (Math.abs(corr[i][j] - corr[j][i]) > 1e-12) { issues.push(`market.factor_corr is not symmetric at [${i}][${j}]`); correlationOk = false; }
+    }
+  }
+  if (correlationOk && !isPositiveSemiDefinite(corr)) issues.push("market.factor_corr is not positive semi-definite");
+
   const idSets: Record<string, Set<string>> = {};
   const collect = (name: string, records: { id: string }[]) => {
     const seen = new Set<string>();
@@ -286,4 +309,25 @@ export function snapshotIssues(snapshot: IndemnificationSnapshot): string[] {
     }
   }
   return issues;
+}
+
+/** Cholesky with a small tolerance: true when the symmetric matrix has no meaningfully negative eigenvalue. */
+export function isPositiveSemiDefinite(matrix: number[][], tolerance = 1e-10): boolean {
+  const n = matrix.length;
+  const l: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let sum = matrix[i][j];
+      for (let k = 0; k < j; k++) sum -= l[i][k] * l[j][k];
+      if (i === j) {
+        if (sum < -tolerance) return false;
+        l[i][i] = Math.sqrt(Math.max(sum, 0));
+      } else if (l[j][j] > Math.sqrt(tolerance)) {
+        l[i][j] = sum / l[j][j];
+      } else if (Math.abs(sum) > tolerance * 1e3) {
+        return false;
+      }
+    }
+  }
+  return true;
 }

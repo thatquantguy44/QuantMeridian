@@ -2,7 +2,7 @@ import { Rng } from "@/lib/rng";
 import {
   API_SCHEMA_VERSION, snapshotHash,
   type BorrowerRecord, type CloseoutProfile, type CollateralHoldingRecord, type IndemnificationSnapshot,
-  type LoanRecord, type ModelSettings, type OwnerRecord, type PoolPositionRecord, type PricingSettings,
+  type LoanRecord, type MarketModel, type ModelSettings, type OwnerRecord, type PoolPositionRecord, type PricingSettings,
   type Rating, type RatingPdTable, type RunSettings, type SecurityRecord,
 } from "@/lib/indemnificationContract";
 import DEFAULT_PROFILE from "../../contracts/indemnification/closeout-profile.default.json";
@@ -19,7 +19,19 @@ import { COUNTERPARTIES, bySymbol, type Security } from "./universe";
 export const GENERATOR_VERSION = "indem-book-1";
 
 export const DEFAULT_RUN: RunSettings = { mode: "desk", seed: 1, paths: 50000, preview: false, horizon_days: 21, step: "daily" };
-export const DEFAULT_MODEL: ModelSettings = { rho_d: 0.25, rho_w: 0.3, student_t_enabled: true, student_t_nu: 5, default_recovery: 0.4 };
+export const DEFAULT_MARKET: MarketModel = {
+  equity_vol_annual: 0.18,
+  rates_vol_bps_daily: 6,
+  spread_vol_bps_daily: 4,
+  fx_vol_annual: 0.08,
+  factor_corr: [[1, 0.1, -0.6, 0.2], [0.1, 1, -0.2, 0], [-0.6, -0.2, 1, -0.1], [0.2, 0, -0.1, 1]],
+  jump_intensity_annual: 1,
+  jump_mean: 0.12,
+  jump_sd: 0.08,
+};
+export const DEFAULT_MODEL: ModelSettings = {
+  rho_d: 0.25, rho_w: 0.3, student_t_enabled: true, student_t_nu: 5, default_recovery: 0.4, market: DEFAULT_MARKET,
+};
 export const DEFAULT_PRICING: PricingSettings = {
   cost_of_capital: 0.1,
   flag_threshold: 0.5,
@@ -126,7 +138,7 @@ export async function buildSimSnapshot(options: SimSnapshotOptions): Promise<Ind
     source: { label: "SIM", book_seed: "sl-loan-1+indem-book-1", generator_version: GENERATOR_VERSION },
     currency: "USD",
     run: { ...DEFAULT_RUN, ...options.run },
-    model: { ...DEFAULT_MODEL, ...options.model },
+    model: { ...DEFAULT_MODEL, ...options.model, market: { ...DEFAULT_MARKET, ...options.model?.market } },
     pricing: { ...DEFAULT_PRICING, ...options.pricing },
     rating_pd_table: options.ratingPdTable ?? (JSON.parse(JSON.stringify(DEFAULT_RATING_TABLE)) as RatingPdTable),
     closeout_profile: options.profile ?? (JSON.parse(JSON.stringify(DEFAULT_PROFILE)) as CloseoutProfile),

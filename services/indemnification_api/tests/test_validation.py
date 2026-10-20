@@ -21,6 +21,15 @@ def test_the_fixture_is_consistent(snapshot):
 
 
 CASES = [
+    ("a non-symmetric factor correlation matrix", lambda s: s["model"]["market"]["factor_corr"][0].__setitem__(1, 0.3), r"not symmetric"),
+    ("a diagonal that is not 1", lambda s: s["model"]["market"]["factor_corr"][2].__setitem__(2, 0.9), r"diagonal \[2\]"),
+    (
+        "a factor correlation matrix that is not positive semi-definite",
+        lambda s: s["model"]["market"].update(
+            factor_corr=[[1, 0.9, 0.9, 0], [0.9, 1, -0.9, 0], [0.9, -0.9, 1, 0], [0, 0, 0, 1]]
+        ),
+        r"not positive semi-definite",
+    ),
     ("rho_w squared above rho_d", lambda s: s["model"].update(rho_w=0.6), r"rho_w\^2"),
     ("a duplicate loan id", lambda s: s["loans"][1].update(id="L1"), r"duplicate loan id L1"),
     ("a loan with an unknown borrower", lambda s: s["loans"][0].update(borrower_id="B9"), r"unknown borrower B9"),

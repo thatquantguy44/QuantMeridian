@@ -1,6 +1,6 @@
 {
   "api_schema_version": "1.0",
-  "snapshot_hash": "d32eb4a58bea883c72637fdf611f66bfcd9826679de0d37b1c5a9b611351b252",
+  "snapshot_hash": "3a19a02771069e3890443aacdc3bc2a1cd8b63bef71a248c4b96a71ddaf0353a",
   "as_of": "2026-10-20",
   "source": {
     "label": "SIM",
@@ -21,7 +21,42 @@
     "rho_w": 0.3,
     "student_t_enabled": true,
     "student_t_nu": 5,
-    "default_recovery": 0.4
+    "default_recovery": 0.4,
+    "market": {
+      "equity_vol_annual": 0.18,
+      "rates_vol_bps_daily": 6,
+      "spread_vol_bps_daily": 4,
+      "fx_vol_annual": 0.08,
+      "factor_corr": [
+        [
+          1,
+          0.1,
+          -0.6,
+          0.2
+        ],
+        [
+          0.1,
+          1,
+          -0.2,
+          0
+        ],
+        [
+          -0.6,
+          -0.2,
+          1,
+          -0.1
+        ],
+        [
+          0.2,
+          0,
+          -0.1,
+          1
+        ]
+      ],
+      "jump_intensity_annual": 1,
+      "jump_mean": 0.12,
+      "jump_sd": 0.08
+    }
   },
   "pricing": {
     "cost_of_capital": 0.1,

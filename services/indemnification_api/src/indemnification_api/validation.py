@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
+
 RATING_ORDER = [
     "AAA", "AA+", "AA", "AA-", "A+", "A", "A-", "BBB+", "BBB", "BBB-",
     "BB+", "BB", "BB-", "B+", "B", "B-", "CCC",
@@ -21,6 +23,19 @@ def snapshot_issues(snapshot: dict[str, Any]) -> list[str]:
     profile = snapshot["closeout_profile"]
     if model["rho_w"] ** 2 > model["rho_d"]:
         issues.append(f"rho_w^2 ({model['rho_w'] ** 2}) must not exceed rho_d ({model['rho_d']})")
+
+    corr = np.array(model["market"]["factor_corr"], dtype=float)
+    corr_ok = True
+    for i in range(corr.shape[0]):
+        if abs(corr[i, i] - 1) > 1e-12:
+            issues.append(f"market.factor_corr diagonal [{i}] must be 1")
+            corr_ok = False
+        for j in range(i + 1, corr.shape[0]):
+            if abs(corr[i, j] - corr[j, i]) > 1e-12:
+                issues.append(f"market.factor_corr is not symmetric at [{i}][{j}]")
+                corr_ok = False
+    if corr_ok and np.linalg.eigvalsh(corr).min() < -1e-10:
+        issues.append("market.factor_corr is not positive semi-definite")
 
     pd = snapshot["rating_pd_table"]["pd_1y"]
     for better, worse in zip(RATING_ORDER, RATING_ORDER[1:], strict=False):

@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { COUNTERPARTIES } from "@/data/universe";
 import {
   profileHash, snapshotHash, snapshotIssues,
-  type BorrowerRecord, type CloseoutProfile, type CloseoutSettings, type CollateralHoldingRecord,
+  isPositiveSemiDefinite, type BorrowerRecord, type CloseoutProfile, type MarketModel, type CloseoutSettings, type CollateralHoldingRecord,
   type IndemnificationSnapshot, type LoanRecord, type ModelSettings, type PositionOverride,
   RATING_ORDER, type RatingPdTable, type RunSettings, type SecurityRecord,
 } from "./indemnificationContract";
@@ -39,7 +39,11 @@ const SETTINGS: Fields<CloseoutSettings> = {
 };
 const POSITION_OVERRIDE: Fields<PositionOverride> = { ...SETTINGS, adv_units: true, daily_vol: true };
 const RUN: Fields<RunSettings> = { mode: true, seed: true, paths: true, preview: true, horizon_days: true, step: true };
-const MODEL: Fields<ModelSettings> = { rho_d: true, rho_w: true, student_t_enabled: true, student_t_nu: true, default_recovery: true };
+const MODEL: Fields<ModelSettings> = { rho_d: true, rho_w: true, student_t_enabled: true, student_t_nu: true, default_recovery: true, market: true };
+const MARKET: Fields<MarketModel> = {
+  equity_vol_annual: true, rates_vol_bps_daily: true, spread_vol_bps_daily: true, fx_vol_annual: true, factor_corr: true,
+  jump_intensity_annual: true, jump_mean: true, jump_sd: true,
+};
 const SECURITY: Fields<SecurityRecord> = {
   id: true, label: true, asset_class: true, liquidity_class: true, hard_to_borrow: true, currency: true, price: true,
   adv_units: true, daily_vol: true, equity_beta: true, rate_duration: true, spread_duration: true,
@@ -111,6 +115,7 @@ describe("TypeScript types match the schemas", () => {
     expect(keys(POSITION_OVERRIDE)).toEqual(schemaKeys(PROFILE_SCHEMA.$defs.PositionOverride));
     expect(keys(RUN)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Run));
     expect(keys(MODEL)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Model));
+    expect(keys(MARKET)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.MarketModel));
     expect(keys(SECURITY)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Security));
     expect(keys(BORROWER)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Borrower));
     expect(keys(LOAN)).toEqual(schemaKeys(SNAPSHOT_SCHEMA.$defs.Loan));
@@ -228,6 +233,9 @@ describe("snapshot validation", () => {
   bad("a margin below 100%", (s) => { s.loans[0].margin_pct = 99; });
   bad("cash collateral that names a security", (s) => { s.collateral[0].security_id = "UST1"; });
   bad("security collateral with no quantity", (s) => { s.collateral[1].quantity = null; });
+  bad("a factor correlation outside [-1, 1]", (s) => { s.model.market.factor_corr[0][1] = 1.5; });
+  bad("a factor correlation matrix that is not 4 by 4", (s) => { s.model.market.factor_corr.pop(); });
+  bad("a zero equity volatility", (s) => { s.model.market.equity_vol_annual = 0; });
   bad("a recovery of 100%", (s) => { s.model.default_recovery = 1; });
   bad("a Student-t with fewer than 3 degrees of freedom", (s) => { s.model.student_t_nu = 2; });
   bad("an unknown rating", (s) => { (s.borrowers[0] as unknown as Record<string, unknown>).rating = "AAAA"; });
@@ -239,6 +247,12 @@ describe("snapshot validation", () => {
       expect(snapshotIssues(snapshot).some((m) => expected.test(m)), snapshotIssues(snapshot).join("; ")).toBe(true);
     });
   issue("a PD table that decreases with worse credit", (s) => { s.rating_pd_table.pd_1y.BBB = 0.0001; }, /PD for BBB- is below|PD for BBB is below/);
+  issue("a non-symmetric factor correlation matrix", (s) => { s.model.market.factor_corr[0][1] = 0.3; }, /not symmetric/);
+  issue("a factor correlation matrix with a diagonal that is not 1", (s) => { s.model.market.factor_corr[2][2] = 0.9; }, /diagonal \[2\]/);
+  issue("a factor correlation matrix that is not positive semi-definite", (s) => {
+    const c = s.model.market.factor_corr;
+    c[0][1] = c[1][0] = 0.9; c[0][2] = c[2][0] = 0.9; c[1][2] = c[2][1] = -0.9;
+  }, /not positive semi-definite/);
   issue("rho_w squared above rho_d", (s) => { s.model.rho_w = 0.6; }, /rho_w\^2/);
   issue("a duplicate loan id", (s) => { s.loans[1].id = "L1"; }, /duplicate loan id L1/);
   issue("a loan with an unknown borrower", (s) => { s.loans[0].borrower_id = "B9"; }, /unknown borrower B9/);

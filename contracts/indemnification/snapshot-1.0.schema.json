@@ -189,7 +189,8 @@
         "rho_w",
         "student_t_enabled",
         "student_t_nu",
-        "default_recovery"
+        "default_recovery",
+        "market"
       ],
       "properties": {
         "rho_d": {
@@ -214,6 +215,9 @@
           "type": "number",
           "minimum": 0,
           "exclusiveMaximum": 1
+        },
+        "market": {
+          "$ref": "#/$defs/MarketModel"
         }
       }
     },
@@ -703,6 +707,73 @@
             "null"
           ],
           "maxLength": 500
+        }
+      }
+    },
+    "MarketModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Factor model for prices (spec020 PLAN section 1). Factor order for factor_corr: equity, rates, credit_spread, fx. Annual vols are for returns; rates and spread vols are daily yield and spread changes in basis points. Squeeze jumps apply to hard-to-borrow securities only.",
+      "required": [
+        "equity_vol_annual",
+        "rates_vol_bps_daily",
+        "spread_vol_bps_daily",
+        "fx_vol_annual",
+        "factor_corr",
+        "jump_intensity_annual",
+        "jump_mean",
+        "jump_sd"
+      ],
+      "properties": {
+        "equity_vol_annual": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2
+        },
+        "rates_vol_bps_daily": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 200
+        },
+        "spread_vol_bps_daily": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 200
+        },
+        "fx_vol_annual": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2
+        },
+        "factor_corr": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1
+            }
+          }
+        },
+        "jump_intensity_annual": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "jump_mean": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 2
+        },
+        "jump_sd": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
         }
       }
     }
