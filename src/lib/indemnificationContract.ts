@@ -133,6 +133,18 @@ export interface RatingPdTable {
   pd_1y: Record<Rating, number>;
 }
 
+export interface MaturityBands { le_1y: number; "1y_to_5y": number; gt_5y: number }
+/** Supervisory haircuts for the Basel comprehensive approach cross-check, scaled by sqrt(MPOR / base). */
+export interface BaselHaircuts {
+  label: "ILLUSTRATIVE" | "USER_INPUT";
+  base_mpor_days: number;
+  equity_main_index: number;
+  equity_other: number;
+  sovereign: MaturityBands;
+  corporate: MaturityBands;
+  fx_mismatch: number;
+}
+
 export interface BorrowerRecord {
   id: string;
   name: string;
@@ -194,6 +206,7 @@ export interface IndemnificationSnapshot {
   model: ModelSettings;
   pricing: PricingSettings;
   rating_pd_table: RatingPdTable;
+  basel_haircuts: BaselHaircuts;
   closeout_profile: CloseoutProfile;
   securities: SecurityRecord[];
   borrowers: BorrowerRecord[];

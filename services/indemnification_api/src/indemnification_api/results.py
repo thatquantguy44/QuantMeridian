@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 
 from . import MODEL_VERSION
+from .basel import comprehensive_approach
 from .contracts import profile_hash
 from .engine import GAUSSIAN_NO_WW, GAUSSIAN_WW, STUDENT_T_WW, RunOutput, VariantLosses
 from .metrics import Metric, channel_metrics, euler_metrics
@@ -29,6 +30,11 @@ LIMITATIONS = (
 NO_POOL_NOTE = (
     " The snapshot has no reinvestment pool, so the reinvestment channel is not modelled and "
     "reports zero."
+)
+CROSS_CHECK_LABEL = (
+    "Basel comprehensive approach at the start of the run, with illustrative supervisory haircuts "
+    "scaled by sqrt(MPOR / base); read it beside the Monte Carlo PFE99 (peak over the horizon). "
+    "A reasonableness bound, not regulatory capital."
 )
 PREVIEW_NOTE = " Preview run with a reduced path count; do not use for reported figures."
 DESK_NOTE = (
@@ -222,6 +228,15 @@ def build_result(
             }
         )
 
+    mc_pfe99 = {
+        b["borrower_id"]: b["metrics"]["with_wrong_way"]["default_shortfall"]["pfe99"]["value"]
+        for b in borrowers
+    }
+    cross_check = [
+        {**row, "mc_pfe99": mc_pfe99[row["borrower_id"]]}
+        for row in comprehensive_approach(snapshot)
+    ]
+
     limitations = LIMITATIONS + ("" if output.extras.get("pool_modelled") else NO_POOL_NOTE)
     limitations += PREVIEW_NOTE if run["preview"] else ""
     limitations += DESK_NOTE if run["mode"] == "desk" else ""
@@ -261,10 +276,7 @@ def build_result(
         "exposure_profile": _profile(program_exposure, output),
         "borrowers": borrowers,
         "owners": owners,
-        "cross_check": {
-            "label": "Basel comprehensive approach cross-check not yet computed",
-            "borrowers": [],
-        },
+        "cross_check": {"label": CROSS_CHECK_LABEL, "borrowers": cross_check},
         "sensitivities": [],
         "stresses": [],
     }

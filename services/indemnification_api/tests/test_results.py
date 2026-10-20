@@ -212,7 +212,7 @@ def test_a_preview_run_says_so_and_is_not_presented_as_a_reported_figure(sim_boo
 def test_the_placeholders_for_later_tasks_are_present_and_valid(desk):
     _, result = desk
     assert result["sensitivities"] == [] and result["stresses"] == []
-    assert result["cross_check"]["borrowers"] == [] and result["cross_check"]["label"]
+    assert result["cross_check"]["label"]
 
 
 def test_a_failed_estimator_agreement_check_is_reported_not_hidden(snapshot):
@@ -256,3 +256,18 @@ def test_a_mini_book_with_a_cash_loan_also_builds(snapshot, validator_for):
     snap = seal(snap)
     result = build_result(snap, simulate(snap), created_at=CREATED)
     assert errors(validator_for("result-1.0.schema.json"), result) == []
+
+
+def test_the_basel_cross_check_sits_beside_each_borrowers_monte_carlo_pfe(desk):
+    snap, result = desk
+    rows = result["cross_check"]["borrowers"]
+    assert [r["borrower_id"] for r in rows] == [b["borrower_id"] for b in result["borrowers"]]
+    by_id = {b["borrower_id"]: b for b in result["borrowers"]}
+    for r in rows:
+        assert r["e_star"] >= 0 and r["exposure"] > 0 and r["collateral"] > 0
+        mc = by_id[r["borrower_id"]]["metrics"]["with_wrong_way"]["default_shortfall"]["pfe99"][
+            "value"
+        ]
+        assert r["mc_pfe99"] == mc
+    assert "illustrative" in result["cross_check"]["label"].lower()
+    assert "not regulatory capital" in result["cross_check"]["label"]

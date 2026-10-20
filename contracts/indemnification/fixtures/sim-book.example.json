@@ -103,6 +103,23 @@
       "unrated": 1
     }
   },
+  "basel_haircuts": {
+    "label": "ILLUSTRATIVE",
+    "base_mpor_days": 10,
+    "equity_main_index": 0.15,
+    "equity_other": 0.25,
+    "sovereign": {
+      "le_1y": 0.005,
+      "1y_to_5y": 0.02,
+      "gt_5y": 0.04
+    },
+    "corporate": {
+      "le_1y": 0.02,
+      "1y_to_5y": 0.06,
+      "gt_5y": 0.12
+    },
+    "fx_mismatch": 0.08
+  },
   "rating_pd_table": {
     "table_version": 1,
     "label": "ILLUSTRATIVE",
@@ -2954,5 +2971,5 @@
     "source_total": 29286756250.51558,
     "note": "Reinvestment pool rescaled to the book's cash collateral; liquidity and credit mix unchanged."
   },
-  "snapshot_hash": "cd292c714e209e2020d7acb0bbf393ad46b7a05e79d8529ea771895ff4b6ca51"
+  "snapshot_hash": "ea4b3db1f2959187e756ca2d4dc1c2513587d0eed01adb83b5af732815637f79"
 }

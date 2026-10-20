@@ -2,7 +2,7 @@
   "_comment": "SHA-256 vectors both languages must reproduce. snapshot: snapshotHash of fixtures/snapshot.example.json without snapshot_hash (record arrays sorted by id). profile: SHA-256 of the canonical JSON of the profile.",
   "snapshot": {
     "file": "snapshot.example.json",
-    "hash": "5f43b2308341b9170b047f7d8f7d3b4fb951dea706d846c16537e942ae035206"
+    "hash": "749b03a8ffbb0dda43a2fa1fd4a099a6e8618f1c8e732a2a4c3bfcc4f5c8cc55"
   },
   "profiles": [
     {

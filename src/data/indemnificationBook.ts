@@ -1,11 +1,12 @@
 import { Rng } from "@/lib/rng";
 import {
   API_SCHEMA_VERSION, snapshotHash,
-  type BorrowerRecord, type CloseoutProfile, type CollateralHoldingRecord, type IndemnificationSnapshot,
+  type BorrowerRecord, type CloseoutProfile, type CollateralHoldingRecord, type BaselHaircuts, type IndemnificationSnapshot,
   type LoanRecord, type MarketModel, type ModelSettings, type PoolRisk, type ReturnModel, type OwnerRecord, type PoolPositionRecord, type PricingSettings,
   type Rating, type RatingPdTable, type RunSettings, type SecurityRecord,
 } from "@/lib/indemnificationContract";
 import DEFAULT_PROFILE from "../../contracts/indemnification/closeout-profile.default.json";
+import DEFAULT_BASEL from "../../contracts/indemnification/basel-haircuts.default.json";
 import DEFAULT_RATING_TABLE from "../../contracts/indemnification/rating-pd-table.default.json";
 import { getReinvestmentPositions, type ReinvestmentPosition } from "./reinvestment";
 import { getIndemnificationBookExtension, getLoanBook } from "./securitiesLending";
@@ -55,6 +56,7 @@ export interface SimSnapshotOptions {
   model?: Partial<ModelSettings>;
   pricing?: Partial<PricingSettings>;
   ratingPdTable?: RatingPdTable;
+  baselHaircuts?: BaselHaircuts;
   profile?: CloseoutProfile;
 }
 
@@ -155,6 +157,7 @@ export async function buildSimSnapshot(options: SimSnapshotOptions): Promise<Ind
       pool_risk: { ...DEFAULT_POOL_RISK, ...options.model?.pool_risk },
     },
     pricing: { ...DEFAULT_PRICING, ...options.pricing },
+    basel_haircuts: options.baselHaircuts ?? (JSON.parse(JSON.stringify(DEFAULT_BASEL)) as BaselHaircuts),
     rating_pd_table: options.ratingPdTable ?? (JSON.parse(JSON.stringify(DEFAULT_RATING_TABLE)) as RatingPdTable),
     closeout_profile: options.profile ?? (JSON.parse(JSON.stringify(DEFAULT_PROFILE)) as CloseoutProfile),
     securities,

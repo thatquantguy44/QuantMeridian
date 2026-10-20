@@ -7,7 +7,7 @@
 **State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The model core is built and tested in Python:
 the contract, the close-out profile, market paths, the default copula, loan returns, the reinvestment pool,
 the close-out shortfall, risk metrics, the engine and the result/model-card assembly. There is **no HTTP API
-and no UI page yet**, and the Basel cross-check, sensitivities, stresses and pricing are not built. Phase 2 (the optimizer) is not approved: decision 10 is open.
+and no UI page yet**, and the sensitivities, named stresses and pricing are not built. Phase 2 (the optimizer) is not approved: decision 10 is open.
 
 | Task | What | Status |
 |---|---|---|
@@ -23,13 +23,14 @@ and no UI page yet**, and the Basel cross-check, sensitivities, stresses and pri
 | IND-T08 | Metrics, engine, result and model card (`metrics.py`, `engine.py`, `results.py`) | Done |
 | IND-T09 | Euler allocation, owner and channel attribution | Done |
 | IND-T06a | Loan returns and the reinvestment pool (`returns.py`, `pool.py`) | Done |
-| IND-T10 – T12 | Basel cross-check, sensitivities and stresses, pricing | Not started |
+| IND-T10 | Basel comprehensive approach cross-check (`basel.py`, contract `basel_haircuts`) | Done |
+| IND-T11, T12 | Sensitivities and stresses; pricing | Not started |
 | IND-T13 | Service API | Not started |
 | IND-T14 | UI page, route, nav, profile editor | Not started |
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 
-Test counts at handoff: 188 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
+Test counts at handoff: 199 Python (`services/indemnification_api`), 916 TypeScript (whole repo).
 `ruff check` is clean. CI has a new `indem-service` job that runs both for Python 3.12.
 
 ## Start here
@@ -103,11 +104,11 @@ reinvestment channel is not modelled for a snapshot with no pool. The "condition
 agree" check has little power when defaults are rare (the SIM book over one month); it is a real check only on
 books with plenty of defaults.
 
-**2. IND-T10 Basel cross-check.** `E* = max(0, E(1+He) − C(1−Hc−Hfx))`, haircuts scaled by `sqrt(MPOR/10)`,
-labelled illustrative. Put the haircut table in the snapshot (contract change #3) for the same reason as the
-rating table. Compare with Monte Carlo PFE99 in `cross_check`.
+**2. (Done.) IND-T10.** `basel.comprehensive_approach(snapshot)` feeds `cross_check` in the result, beside each
+borrower's Monte Carlo PFE99. The haircut table is part of the snapshot (`basel_haircuts`, labelled
+illustrative).
 
-**3. IND-T11 sensitivities and stresses.** Sensitivities reuse the same seed (common random numbers) while
+**3. IND-T11 sensitivities and stresses (next).** Sensitivities reuse the same seed (common random numbers) while
 sweeping margin, MPOR, `rho_w`, a collateral substitution, or any numeric profile setting. Stresses need
 conditioned paths: add a shock to the simulated log prices from a chosen day and force the default (largest
 borrower with a −20% equity move; a +60% squeeze on the most concentrated hard-to-borrow loan; +150 bp rates;

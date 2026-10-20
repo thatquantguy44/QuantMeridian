@@ -1,0 +1,17 @@
+{
+  "label": "ILLUSTRATIVE",
+  "base_mpor_days": 10,
+  "equity_main_index": 0.15,
+  "equity_other": 0.25,
+  "sovereign": {
+    "le_1y": 0.005,
+    "1y_to_5y": 0.02,
+    "gt_5y": 0.04
+  },
+  "corporate": {
+    "le_1y": 0.02,
+    "1y_to_5y": 0.06,
+    "gt_5y": 0.12
+  },
+  "fx_mismatch": 0.08
+}

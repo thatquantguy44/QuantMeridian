@@ -1,6 +1,6 @@
 {
   "api_schema_version": "1.0",
-  "snapshot_hash": "5f43b2308341b9170b047f7d8f7d3b4fb951dea706d846c16537e942ae035206",
+  "snapshot_hash": "749b03a8ffbb0dda43a2fa1fd4a099a6e8618f1c8e732a2a4c3bfcc4f5c8cc55",
   "as_of": "2026-10-20",
   "source": {
     "label": "SIM",
@@ -127,6 +127,23 @@
       "CCC": 0.25,
       "NR": 0.01
     }
+  },
+  "basel_haircuts": {
+    "label": "ILLUSTRATIVE",
+    "base_mpor_days": 10,
+    "equity_main_index": 0.15,
+    "equity_other": 0.25,
+    "sovereign": {
+      "le_1y": 0.005,
+      "1y_to_5y": 0.02,
+      "gt_5y": 0.04
+    },
+    "corporate": {
+      "le_1y": 0.02,
+      "1y_to_5y": 0.06,
+      "gt_5y": 0.12
+    },
+    "fx_mismatch": 0.08
   },
   "closeout_profile": {
     "profile_schema_version": "1.0",

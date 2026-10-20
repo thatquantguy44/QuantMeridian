@@ -15,6 +15,7 @@
     "model",
     "pricing",
     "rating_pd_table",
+    "basel_haircuts",
     "closeout_profile",
     "securities",
     "borrowers",
@@ -53,6 +54,9 @@
     },
     "rating_pd_table": {
       "$ref": "urn:quantmeridian:indemnification:rating-pd-table:1.0"
+    },
+    "basel_haircuts": {
+      "$ref": "#/$defs/BaselHaircuts"
     },
     "closeout_profile": {
       "$ref": "urn:quantmeridian:indemnification:closeout-profile:1.0"
@@ -974,6 +978,100 @@
               "maximum": 10000
             }
           }
+        }
+      }
+    },
+    "BaselHaircuts": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Supervisory haircuts for the Basel comprehensive approach cross-check (spec020 IND-009), at base_mpor_days and scaled by sqrt(MPOR / base_mpor_days). Illustrative: they follow the shape of the standard supervisory table, not a specific rulebook edition. Residual maturity bands are chosen from a security's rate duration (up to 1, up to 5, over 5).",
+      "required": [
+        "label",
+        "base_mpor_days",
+        "equity_main_index",
+        "equity_other",
+        "sovereign",
+        "corporate",
+        "fx_mismatch"
+      ],
+      "properties": {
+        "label": {
+          "enum": [
+            "ILLUSTRATIVE",
+            "USER_INPUT"
+          ]
+        },
+        "base_mpor_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "equity_main_index": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "equity_other": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "sovereign": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "le_1y",
+            "1y_to_5y",
+            "gt_5y"
+          ],
+          "properties": {
+            "le_1y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "1y_to_5y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "gt_5y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "corporate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "le_1y",
+            "1y_to_5y",
+            "gt_5y"
+          ],
+          "properties": {
+            "le_1y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "1y_to_5y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "gt_5y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "fx_mismatch": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         }
       }
     }

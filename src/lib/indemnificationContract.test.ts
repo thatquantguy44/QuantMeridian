@@ -61,7 +61,7 @@ const LOAN: Fields<LoanRecord> = {
 const COLLATERAL: Fields<CollateralHoldingRecord> = { id: true, borrower_id: true, kind: true, security_id: true, quantity: true, cash_amount: true, provenance: true };
 const SNAPSHOT_FIELDS: Fields<IndemnificationSnapshot> = {
   api_schema_version: true, snapshot_hash: true, as_of: true, source: true, currency: true, run: true, model: true,
-  pricing: true, rating_pd_table: true, closeout_profile: true, securities: true, borrowers: true, owners: true, loans: true, collateral: true, pool: true,
+  pricing: true, rating_pd_table: true, basel_haircuts: true, closeout_profile: true, securities: true, borrowers: true, owners: true, loans: true, collateral: true, pool: true,
 };
 
 let ajv: Ajv2020;
@@ -247,6 +247,8 @@ describe("snapshot validation", () => {
   bad("a recallable multiplier below 1", (s) => { s.model.returns.recallable_multiplier = 0.5; });
   bad("a missing credit bucket in the pool risk", (s) => { delete (s.model.pool_risk.credit_beta as Partial<Record<string, number>>).BANK; });
   bad("a zero daily liquidity fraction", (s) => { s.model.pool_risk.daily_liquidity_fraction.TERM = 0; });
+  bad("a Basel haircut above 100%", (s) => { s.basel_haircuts.equity_other = 1.5; });
+  bad("a missing maturity band", (s) => { delete (s.basel_haircuts.sovereign as unknown as Partial<Record<string, number>>)["1y_to_5y"]; });
   bad("a recovery of 100%", (s) => { s.model.default_recovery = 1; });
   bad("a Student-t with fewer than 3 degrees of freedom", (s) => { s.model.student_t_nu = 2; });
   bad("an unknown rating", (s) => { (s.borrowers[0] as unknown as Record<string, unknown>).rating = "AAAA"; });
