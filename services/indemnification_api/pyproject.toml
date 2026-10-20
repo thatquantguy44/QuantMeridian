@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "indemnification-api"
+version = "0.1.0"
+description = "Borrower default and reinvestment indemnification risk model service for QuantMeridian INDEM (spec020)."
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=2.0,<3",
+  "scipy>=1.14,<2",
+  "jsonschema>=4.23,<5",
+  "referencing>=0.35",
+  "fastapi>=0.116,<1",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "httpx>=0.27",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/indemnification_api"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"capability-manifest.json" = "indemnification_api/capability-manifest.json"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+filterwarnings = ["error::RuntimeWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

@@ -1,0 +1,1186 @@
+{
+  "api_schema_version": "1.0",
+  "run_id": "0123456789abcdef0123456789abcdef",
+  "snapshot_hash": "749b03a8ffbb0dda43a2fa1fd4a099a6e8618f1c8e732a2a4c3bfcc4f5c8cc55",
+  "created_at": "2026-10-20T12:00:00Z",
+  "source": "SIM",
+  "run": {
+    "mode": "desk",
+    "seed": 20201020,
+    "paths": 1000,
+    "preview": true,
+    "horizon_days": 21,
+    "step": "daily"
+  },
+  "model_card": {
+    "model_card_schema_version": "1.0",
+    "model_version": "fixture-1",
+    "snapshot_hash": "749b03a8ffbb0dda43a2fa1fd4a099a6e8618f1c8e732a2a4c3bfcc4f5c8cc55",
+    "profile_name": "default",
+    "profile_hash": "f64e4e3cfcbef5ca008886d2646a493b5bfe32a1f2ad38a35d8f72bdc4455f13",
+    "mode": "desk",
+    "seed": 20201020,
+    "paths": 1000,
+    "preview": true,
+    "horizon_days": 21,
+    "step": "daily",
+    "convergence": {
+      "checked": false,
+      "max_shift_in_standard_errors": null,
+      "passed": null
+    },
+    "validation": [
+      {
+        "check": "contract fixture only",
+        "passed": true,
+        "note": "Shape example; not model output."
+      }
+    ],
+    "data_label": "SIM",
+    "limitations": "Synthetic data and illustrative parameters. Shape example only; not evidence of real-world risk."
+  },
+  "effective_settings": [
+    {
+      "position_id": "L1",
+      "kind": "loan",
+      "mpor_days": 5,
+      "settings": {
+        "mpor_liquid_days": 5,
+        "mpor_other_days": 10,
+        "mpor_concentrated_days": 10,
+        "mpor_pool_forced_sale_days": 5,
+        "mpor_fixed_days": null,
+        "addon_days": 0,
+        "concentration_threshold_pct_adv": 25,
+        "htb_uses_concentrated_period": true,
+        "impact_k": 0.5,
+        "impact_alpha": 0.5,
+        "half_spread_floor_bps": 0,
+        "cost_cap_bps": null,
+        "stress_beta": 0,
+        "stress_factor": "equity",
+        "unwind": "end_of_period",
+        "margin_call_every_days": 1
+      },
+      "source_levels": {
+        "mpor_liquid_days": "default",
+        "mpor_other_days": "default",
+        "mpor_concentrated_days": "default",
+        "mpor_pool_forced_sale_days": "default",
+        "mpor_fixed_days": "default",
+        "addon_days": "default",
+        "concentration_threshold_pct_adv": "default",
+        "htb_uses_concentrated_period": "default",
+        "impact_k": "default",
+        "impact_alpha": "default",
+        "half_spread_floor_bps": "default",
+        "cost_cap_bps": "default",
+        "stress_beta": "default",
+        "stress_factor": "default",
+        "unwind": "default",
+        "margin_call_every_days": "default"
+      }
+    },
+    {
+      "position_id": "L2",
+      "kind": "loan",
+      "mpor_days": 5,
+      "settings": {
+        "mpor_liquid_days": 5,
+        "mpor_other_days": 10,
+        "mpor_concentrated_days": 10,
+        "mpor_pool_forced_sale_days": 5,
+        "mpor_fixed_days": null,
+        "addon_days": 0,
+        "concentration_threshold_pct_adv": 25,
+        "htb_uses_concentrated_period": true,
+        "impact_k": 0.5,
+        "impact_alpha": 0.5,
+        "half_spread_floor_bps": 0,
+        "cost_cap_bps": null,
+        "stress_beta": 0,
+        "stress_factor": "equity",
+        "unwind": "end_of_period",
+        "margin_call_every_days": 1
+      },
+      "source_levels": {
+        "mpor_liquid_days": "default",
+        "mpor_other_days": "default",
+        "mpor_concentrated_days": "default",
+        "mpor_pool_forced_sale_days": "default",
+        "mpor_fixed_days": "default",
+        "addon_days": "default",
+        "concentration_threshold_pct_adv": "default",
+        "htb_uses_concentrated_period": "default",
+        "impact_k": "default",
+        "impact_alpha": "default",
+        "half_spread_floor_bps": "default",
+        "cost_cap_bps": "default",
+        "stress_beta": "default",
+        "stress_factor": "default",
+        "unwind": "default",
+        "margin_call_every_days": "default"
+      }
+    },
+    {
+      "position_id": "L3",
+      "kind": "loan",
+      "mpor_days": 5,
+      "settings": {
+        "mpor_liquid_days": 5,
+        "mpor_other_days": 10,
+        "mpor_concentrated_days": 10,
+        "mpor_pool_forced_sale_days": 5,
+        "mpor_fixed_days": null,
+        "addon_days": 0,
+        "concentration_threshold_pct_adv": 25,
+        "htb_uses_concentrated_period": true,
+        "impact_k": 0.5,
+        "impact_alpha": 0.5,
+        "half_spread_floor_bps": 0,
+        "cost_cap_bps": null,
+        "stress_beta": 0,
+        "stress_factor": "equity",
+        "unwind": "end_of_period",
+        "margin_call_every_days": 1
+      },
+      "source_levels": {
+        "mpor_liquid_days": "default",
+        "mpor_other_days": "default",
+        "mpor_concentrated_days": "default",
+        "mpor_pool_forced_sale_days": "default",
+        "mpor_fixed_days": "default",
+        "addon_days": "default",
+        "concentration_threshold_pct_adv": "default",
+        "htb_uses_concentrated_period": "default",
+        "impact_k": "default",
+        "impact_alpha": "default",
+        "half_spread_floor_bps": "default",
+        "cost_cap_bps": "default",
+        "stress_beta": "default",
+        "stress_factor": "default",
+        "unwind": "default",
+        "margin_call_every_days": "default"
+      }
+    }
+  ],
+  "program": {
+    "gaussian": {
+      "with_wrong_way": {
+        "total": {
+          "el": {
+            "value": 1000,
+            "std_error": 50
+          },
+          "epe": {
+            "value": 15000,
+            "std_error": 750
+          },
+          "pfe95": {
+            "value": 90000,
+            "std_error": 4500
+          },
+          "pfe99": {
+            "value": 150000,
+            "std_error": 7500
+          },
+          "var99": {
+            "value": 120000,
+            "std_error": 6000
+          },
+          "var999": {
+            "value": 260000,
+            "std_error": 13000
+          },
+          "es99": {
+            "value": 180000,
+            "std_error": 9000
+          },
+          "es999": {
+            "value": 300000,
+            "std_error": 15000
+          }
+        },
+        "default_shortfall": {
+          "el": {
+            "value": 700,
+            "std_error": 35
+          },
+          "epe": {
+            "value": 10500,
+            "std_error": 525
+          },
+          "pfe95": {
+            "value": 63000,
+            "std_error": 3150
+          },
+          "pfe99": {
+            "value": 105000,
+            "std_error": 5250
+          },
+          "var99": {
+            "value": 84000,
+            "std_error": 4200
+          },
+          "var999": {
+            "value": 182000,
+            "std_error": 9100
+          },
+          "es99": {
+            "value": 126000,
+            "std_error": 6300
+          },
+          "es999": {
+            "value": 210000,
+            "std_error": 10500
+          }
+        },
+        "reinvestment": {
+          "el": {
+            "value": 300,
+            "std_error": 15
+          },
+          "epe": {
+            "value": 4500,
+            "std_error": 225
+          },
+          "pfe95": {
+            "value": 27000,
+            "std_error": 1350
+          },
+          "pfe99": {
+            "value": 45000,
+            "std_error": 2250
+          },
+          "var99": {
+            "value": 36000,
+            "std_error": 1800
+          },
+          "var999": {
+            "value": 78000,
+            "std_error": 3900
+          },
+          "es99": {
+            "value": 54000,
+            "std_error": 2700
+          },
+          "es999": {
+            "value": 90000,
+            "std_error": 4500
+          }
+        }
+      },
+      "without_wrong_way": {
+        "total": {
+          "el": {
+            "value": 800,
+            "std_error": 40
+          },
+          "epe": {
+            "value": 12000,
+            "std_error": 600
+          },
+          "pfe95": {
+            "value": 72000,
+            "std_error": 3600
+          },
+          "pfe99": {
+            "value": 120000,
+            "std_error": 6000
+          },
+          "var99": {
+            "value": 96000,
+            "std_error": 4800
+          },
+          "var999": {
+            "value": 208000,
+            "std_error": 10400
+          },
+          "es99": {
+            "value": 144000,
+            "std_error": 7200
+          },
+          "es999": {
+            "value": 240000,
+            "std_error": 12000
+          }
+        },
+        "default_shortfall": {
+          "el": {
+            "value": 560,
+            "std_error": 28
+          },
+          "epe": {
+            "value": 8400,
+            "std_error": 420
+          },
+          "pfe95": {
+            "value": 50400,
+            "std_error": 2520
+          },
+          "pfe99": {
+            "value": 84000,
+            "std_error": 4200
+          },
+          "var99": {
+            "value": 67200,
+            "std_error": 3360
+          },
+          "var999": {
+            "value": 145600,
+            "std_error": 7280
+          },
+          "es99": {
+            "value": 100800,
+            "std_error": 5040
+          },
+          "es999": {
+            "value": 168000,
+            "std_error": 8400
+          }
+        },
+        "reinvestment": {
+          "el": {
+            "value": 240,
+            "std_error": 12
+          },
+          "epe": {
+            "value": 3600,
+            "std_error": 180
+          },
+          "pfe95": {
+            "value": 21600,
+            "std_error": 1080
+          },
+          "pfe99": {
+            "value": 36000,
+            "std_error": 1800
+          },
+          "var99": {
+            "value": 28800,
+            "std_error": 1440
+          },
+          "var999": {
+            "value": 62400,
+            "std_error": 3120
+          },
+          "es99": {
+            "value": 43200,
+            "std_error": 2160
+          },
+          "es999": {
+            "value": 72000,
+            "std_error": 3600
+          }
+        }
+      }
+    },
+    "student_t": {
+      "total": {
+        "el": {
+          "value": 1200,
+          "std_error": 60
+        },
+        "epe": {
+          "value": 18000,
+          "std_error": 900
+        },
+        "pfe95": {
+          "value": 108000,
+          "std_error": 5400
+        },
+        "pfe99": {
+          "value": 180000,
+          "std_error": 9000
+        },
+        "var99": {
+          "value": 144000,
+          "std_error": 7200
+        },
+        "var999": {
+          "value": 312000,
+          "std_error": 15600
+        },
+        "es99": {
+          "value": 216000,
+          "std_error": 10800
+        },
+        "es999": {
+          "value": 360000,
+          "std_error": 18000
+        }
+      },
+      "default_shortfall": {
+        "el": {
+          "value": 840,
+          "std_error": 42
+        },
+        "epe": {
+          "value": 12600,
+          "std_error": 630
+        },
+        "pfe95": {
+          "value": 75600,
+          "std_error": 3780
+        },
+        "pfe99": {
+          "value": 126000,
+          "std_error": 6300
+        },
+        "var99": {
+          "value": 100800,
+          "std_error": 5040
+        },
+        "var999": {
+          "value": 218400,
+          "std_error": 10920
+        },
+        "es99": {
+          "value": 151200,
+          "std_error": 7560
+        },
+        "es999": {
+          "value": 252000,
+          "std_error": 12600
+        }
+      },
+      "reinvestment": {
+        "el": {
+          "value": 360,
+          "std_error": 18
+        },
+        "epe": {
+          "value": 5400,
+          "std_error": 270
+        },
+        "pfe95": {
+          "value": 32400,
+          "std_error": 1620
+        },
+        "pfe99": {
+          "value": 54000,
+          "std_error": 2700
+        },
+        "var99": {
+          "value": 43200,
+          "std_error": 2160
+        },
+        "var999": {
+          "value": 93600,
+          "std_error": 4680
+        },
+        "es99": {
+          "value": 64800,
+          "std_error": 3240
+        },
+        "es999": {
+          "value": 108000,
+          "std_error": 5400
+        }
+      }
+    }
+  },
+  "exposure_profile": {
+    "times_days": [
+      0,
+      1,
+      2,
+      3,
+      5
+    ],
+    "ee": [
+      0,
+      1000,
+      1500,
+      1800,
+      2000
+    ],
+    "pfe95": [
+      0,
+      5000,
+      7000,
+      8000,
+      9000
+    ],
+    "pfe99": [
+      0,
+      8000,
+      11000,
+      12500,
+      14000
+    ]
+  },
+  "borrowers": [
+    {
+      "borrower_id": "B1",
+      "credit_source": "RATING_TABLE",
+      "pd_1y": 0.0012,
+      "hazard": 0.0012,
+      "metrics": {
+        "with_wrong_way": {
+          "total": {
+            "el": {
+              "value": 400,
+              "std_error": 20
+            },
+            "epe": {
+              "value": 6000,
+              "std_error": 300
+            },
+            "pfe95": {
+              "value": 36000,
+              "std_error": 1800
+            },
+            "pfe99": {
+              "value": 60000,
+              "std_error": 3000
+            },
+            "var99": {
+              "value": 48000,
+              "std_error": 2400
+            },
+            "var999": {
+              "value": 104000,
+              "std_error": 5200
+            },
+            "es99": {
+              "value": 72000,
+              "std_error": 3600
+            },
+            "es999": {
+              "value": 120000,
+              "std_error": 6000
+            }
+          },
+          "default_shortfall": {
+            "el": {
+              "value": 280,
+              "std_error": 14
+            },
+            "epe": {
+              "value": 4200,
+              "std_error": 210
+            },
+            "pfe95": {
+              "value": 25200,
+              "std_error": 1260
+            },
+            "pfe99": {
+              "value": 42000,
+              "std_error": 2100
+            },
+            "var99": {
+              "value": 33600,
+              "std_error": 1680
+            },
+            "var999": {
+              "value": 72800,
+              "std_error": 3640
+            },
+            "es99": {
+              "value": 50400,
+              "std_error": 2520
+            },
+            "es999": {
+              "value": 84000,
+              "std_error": 4200
+            }
+          },
+          "reinvestment": {
+            "el": {
+              "value": 120,
+              "std_error": 6
+            },
+            "epe": {
+              "value": 1800,
+              "std_error": 90
+            },
+            "pfe95": {
+              "value": 10800,
+              "std_error": 540
+            },
+            "pfe99": {
+              "value": 18000,
+              "std_error": 900
+            },
+            "var99": {
+              "value": 14400,
+              "std_error": 720
+            },
+            "var999": {
+              "value": 31200,
+              "std_error": 1560
+            },
+            "es99": {
+              "value": 21600,
+              "std_error": 1080
+            },
+            "es999": {
+              "value": 36000,
+              "std_error": 1800
+            }
+          }
+        },
+        "without_wrong_way": {
+          "total": {
+            "el": {
+              "value": 320,
+              "std_error": 16
+            },
+            "epe": {
+              "value": 4800,
+              "std_error": 240
+            },
+            "pfe95": {
+              "value": 28800,
+              "std_error": 1440
+            },
+            "pfe99": {
+              "value": 48000,
+              "std_error": 2400
+            },
+            "var99": {
+              "value": 38400,
+              "std_error": 1920
+            },
+            "var999": {
+              "value": 83200,
+              "std_error": 4160
+            },
+            "es99": {
+              "value": 57600,
+              "std_error": 2880
+            },
+            "es999": {
+              "value": 96000,
+              "std_error": 4800
+            }
+          },
+          "default_shortfall": {
+            "el": {
+              "value": 224,
+              "std_error": 11.2
+            },
+            "epe": {
+              "value": 3360,
+              "std_error": 168
+            },
+            "pfe95": {
+              "value": 20160,
+              "std_error": 1008
+            },
+            "pfe99": {
+              "value": 33600,
+              "std_error": 1680
+            },
+            "var99": {
+              "value": 26880,
+              "std_error": 1344
+            },
+            "var999": {
+              "value": 58240,
+              "std_error": 2912
+            },
+            "es99": {
+              "value": 40320,
+              "std_error": 2016
+            },
+            "es999": {
+              "value": 67200,
+              "std_error": 3360
+            }
+          },
+          "reinvestment": {
+            "el": {
+              "value": 96,
+              "std_error": 4.8
+            },
+            "epe": {
+              "value": 1440,
+              "std_error": 72
+            },
+            "pfe95": {
+              "value": 8640,
+              "std_error": 432
+            },
+            "pfe99": {
+              "value": 14400,
+              "std_error": 720
+            },
+            "var99": {
+              "value": 11520,
+              "std_error": 576
+            },
+            "var999": {
+              "value": 24960,
+              "std_error": 1248
+            },
+            "es99": {
+              "value": 17280,
+              "std_error": 864
+            },
+            "es999": {
+              "value": 28800,
+              "std_error": 1440
+            }
+          }
+        }
+      },
+      "euler_es99": {
+        "value": 40000,
+        "std_error": 500
+      },
+      "exposure_profile": {
+        "times_days": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "ee": [
+          0,
+          1000,
+          1500,
+          1800,
+          2000
+        ],
+        "pfe95": [
+          0,
+          5000,
+          7000,
+          8000,
+          9000
+        ],
+        "pfe99": [
+          0,
+          8000,
+          11000,
+          12500,
+          14000
+        ]
+      },
+      "pricing": {
+        "average_loan_value": 21000000,
+        "fee_bps": 28,
+        "expected_loss_bps": 4,
+        "economic_capital": 900000,
+        "economic_capital_cost_bps": 43,
+        "indemnification_cost_bps": 47,
+        "regulatory_proxy_cost_bps": 30,
+        "flagged": false
+      }
+    },
+    {
+      "borrower_id": "B2",
+      "credit_source": "USER_SPREAD",
+      "pd_1y": 0.04,
+      "hazard": 0.04,
+      "metrics": {
+        "with_wrong_way": {
+          "total": {
+            "el": {
+              "value": 600,
+              "std_error": 30
+            },
+            "epe": {
+              "value": 9000,
+              "std_error": 450
+            },
+            "pfe95": {
+              "value": 54000,
+              "std_error": 2700
+            },
+            "pfe99": {
+              "value": 90000,
+              "std_error": 4500
+            },
+            "var99": {
+              "value": 72000,
+              "std_error": 3600
+            },
+            "var999": {
+              "value": 156000,
+              "std_error": 7800
+            },
+            "es99": {
+              "value": 108000,
+              "std_error": 5400
+            },
+            "es999": {
+              "value": 180000,
+              "std_error": 9000
+            }
+          },
+          "default_shortfall": {
+            "el": {
+              "value": 420,
+              "std_error": 21
+            },
+            "epe": {
+              "value": 6300,
+              "std_error": 315
+            },
+            "pfe95": {
+              "value": 37800,
+              "std_error": 1890
+            },
+            "pfe99": {
+              "value": 63000,
+              "std_error": 3150
+            },
+            "var99": {
+              "value": 50400,
+              "std_error": 2520
+            },
+            "var999": {
+              "value": 109200,
+              "std_error": 5460
+            },
+            "es99": {
+              "value": 75600,
+              "std_error": 3780
+            },
+            "es999": {
+              "value": 126000,
+              "std_error": 6300
+            }
+          },
+          "reinvestment": {
+            "el": {
+              "value": 180,
+              "std_error": 9
+            },
+            "epe": {
+              "value": 2700,
+              "std_error": 135
+            },
+            "pfe95": {
+              "value": 16200,
+              "std_error": 810
+            },
+            "pfe99": {
+              "value": 27000,
+              "std_error": 1350
+            },
+            "var99": {
+              "value": 21600,
+              "std_error": 1080
+            },
+            "var999": {
+              "value": 46800,
+              "std_error": 2340
+            },
+            "es99": {
+              "value": 32400,
+              "std_error": 1620
+            },
+            "es999": {
+              "value": 54000,
+              "std_error": 2700
+            }
+          }
+        },
+        "without_wrong_way": {
+          "total": {
+            "el": {
+              "value": 480,
+              "std_error": 24
+            },
+            "epe": {
+              "value": 7200,
+              "std_error": 360
+            },
+            "pfe95": {
+              "value": 43200,
+              "std_error": 2160
+            },
+            "pfe99": {
+              "value": 72000,
+              "std_error": 3600
+            },
+            "var99": {
+              "value": 57600,
+              "std_error": 2880
+            },
+            "var999": {
+              "value": 124800,
+              "std_error": 6240
+            },
+            "es99": {
+              "value": 86400,
+              "std_error": 4320
+            },
+            "es999": {
+              "value": 144000,
+              "std_error": 7200
+            }
+          },
+          "default_shortfall": {
+            "el": {
+              "value": 336,
+              "std_error": 16.8
+            },
+            "epe": {
+              "value": 5040,
+              "std_error": 252
+            },
+            "pfe95": {
+              "value": 30240,
+              "std_error": 1512
+            },
+            "pfe99": {
+              "value": 50400,
+              "std_error": 2520
+            },
+            "var99": {
+              "value": 40320,
+              "std_error": 2016
+            },
+            "var999": {
+              "value": 87360,
+              "std_error": 4368
+            },
+            "es99": {
+              "value": 60480,
+              "std_error": 3024
+            },
+            "es999": {
+              "value": 100800,
+              "std_error": 5040
+            }
+          },
+          "reinvestment": {
+            "el": {
+              "value": 144,
+              "std_error": 7.2
+            },
+            "epe": {
+              "value": 2160,
+              "std_error": 108
+            },
+            "pfe95": {
+              "value": 12960,
+              "std_error": 648
+            },
+            "pfe99": {
+              "value": 21600,
+              "std_error": 1080
+            },
+            "var99": {
+              "value": 17280,
+              "std_error": 864
+            },
+            "var999": {
+              "value": 37440,
+              "std_error": 1872
+            },
+            "es99": {
+              "value": 25920,
+              "std_error": 1296
+            },
+            "es999": {
+              "value": 43200,
+              "std_error": 2160
+            }
+          }
+        }
+      },
+      "euler_es99": {
+        "value": 60000,
+        "std_error": 500
+      },
+      "exposure_profile": {
+        "times_days": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "ee": [
+          0,
+          1000,
+          1500,
+          1800,
+          2000
+        ],
+        "pfe95": [
+          0,
+          5000,
+          7000,
+          8000,
+          9000
+        ],
+        "pfe99": [
+          0,
+          8000,
+          11000,
+          12500,
+          14000
+        ]
+      },
+      "pricing": {
+        "average_loan_value": 21000000,
+        "fee_bps": 28,
+        "expected_loss_bps": 4,
+        "economic_capital": 900000,
+        "economic_capital_cost_bps": 43,
+        "indemnification_cost_bps": 47,
+        "regulatory_proxy_cost_bps": 30,
+        "flagged": true
+      }
+    }
+  ],
+  "owners": [
+    {
+      "owner_id": "O1",
+      "el": {
+        "total": {
+          "value": 700,
+          "std_error": 30
+        },
+        "default_shortfall": {
+          "value": 500,
+          "std_error": 25
+        },
+        "reinvestment": {
+          "value": 200,
+          "std_error": 10
+        }
+      }
+    },
+    {
+      "owner_id": "O2",
+      "el": {
+        "total": {
+          "value": 300,
+          "std_error": 15
+        },
+        "default_shortfall": {
+          "value": 200,
+          "std_error": 12
+        },
+        "reinvestment": {
+          "value": 100,
+          "std_error": 5
+        }
+      }
+    }
+  ],
+  "cross_check": {
+    "label": "Basel comprehensive approach; illustrative haircuts",
+    "borrowers": [
+      {
+        "borrower_id": "B1",
+        "exposure": 122000000,
+        "collateral": 121890000,
+        "e_star": 2500000,
+        "mc_pfe99": 9000
+      },
+      {
+        "borrower_id": "B2",
+        "exposure": 3600000,
+        "collateral": 3780000,
+        "e_star": 180000,
+        "mc_pfe99": 14000
+      }
+    ]
+  },
+  "sensitivities": [
+    {
+      "parameter": "margin_pct",
+      "values": [
+        102,
+        105,
+        110
+      ],
+      "el": [
+        {
+          "value": 1000,
+          "std_error": 50
+        },
+        {
+          "value": 700,
+          "std_error": 40
+        },
+        {
+          "value": 400,
+          "std_error": 30
+        }
+      ],
+      "pfe99": [
+        {
+          "value": 150000,
+          "std_error": 5000
+        },
+        {
+          "value": 110000,
+          "std_error": 4000
+        },
+        {
+          "value": 60000,
+          "std_error": 3000
+        }
+      ],
+      "el_default_shortfall": [
+        {
+          "value": 700,
+          "std_error": 50
+        },
+        {
+          "value": 490,
+          "std_error": 40
+        },
+        {
+          "value": 280,
+          "std_error": 30
+        }
+      ],
+      "el_reinvestment": [
+        {
+          "value": 300,
+          "std_error": 50
+        },
+        {
+          "value": 210,
+          "std_error": 40
+        },
+        {
+          "value": 120,
+          "std_error": 30
+        }
+      ]
+    }
+  ],
+  "stresses": [
+    {
+      "id": "reinvestment_run",
+      "label": "Reinvestment pool run",
+      "by_borrower": [
+        {
+          "borrower_id": "B1",
+          "default_shortfall": 0,
+          "reinvestment": 50000
+        },
+        {
+          "borrower_id": "B2",
+          "default_shortfall": 0,
+          "reinvestment": 20000
+        }
+      ],
+      "by_owner": [
+        {
+          "owner_id": "O1",
+          "default_shortfall": 0,
+          "reinvestment": 42000
+        },
+        {
+          "owner_id": "O2",
+          "default_shortfall": 0,
+          "reinvestment": 28000
+        }
+      ]
+    }
+  ]
+}

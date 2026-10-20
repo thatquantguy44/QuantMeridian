@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quantmeridian:indemnification:error:1.0",
+  "title": "Indemnification service error 1.0 (spec020 IND-T13)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "api_schema_version",
+    "code",
+    "category",
+    "message"
+  ],
+  "properties": {
+    "api_schema_version": {
+      "const": "1.0"
+    },
+    "code": {
+      "enum": [
+        "REQUEST_CONTRACT_INVALID",
+        "SNAPSHOT_INVALID",
+        "RUN_TOO_LARGE",
+        "BODY_TOO_LARGE",
+        "SERVICE_BUSY",
+        "IDEMPOTENCY_CONFLICT",
+        "RUN_NOT_FOUND",
+        "MODEL_ERROR"
+      ]
+    },
+    "category": {
+      "enum": [
+        "validation",
+        "capacity",
+        "conflict",
+        "not_found",
+        "internal"
+      ]
+    },
+    "message": {
+      "type": "string"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

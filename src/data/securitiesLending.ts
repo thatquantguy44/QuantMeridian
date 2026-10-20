@@ -1,5 +1,5 @@
 import { Rng } from "@/lib/rng";
-import { LENDABLE, BORROWERS, BENEFICIAL_OWNERS, type Security, type Counterparty } from "./universe";
+import { LENDABLE, BORROWERS, BENEFICIAL_OWNERS, bySymbol, type Security, type Counterparty } from "./universe";
 
 /** Every value in this module is simulated desk data (spec009 REQ-033; the agent desk-data route requires "SIM"). */
 export const DATA_SOURCE = "SIM" as const;
@@ -230,4 +230,82 @@ export function getRevenueSankey(): { nodes: SankeyNode[]; links: SankeyLink[] }
   for (const o of owners) links.push({ source: `O:${o.id}`, target: "DESK", value: rng.float(0.4, 1.6) });
   for (const b of borrowers) links.push({ source: "DESK", target: `B:${b.id}`, value: rng.float(0.4, 1.6) });
   return { nodes, links };
+}
+
+/**
+ * Loan terms and collateral the INDEM module (spec020 IND-028) needs and the SLAB book does not carry.
+ * Additive: it reads `getLoanBook()` and draws from its own random stream, so no existing output changes
+ * (src/data/slGolden.test.ts pins that). Rows are matched to loans by `loanId`.
+ */
+export interface LoanIndemnificationTerms {
+  loanId: string;
+  /** Beneficial owner id (a `BENEFICIAL_OWNERS` counterparty) whose security is on loan. */
+  ownerId: string;
+  term: "open" | "term";
+  /** Business days to maturity for a term loan; null for an open loan. */
+  maturityDays: number | null;
+  /** Collateral required as a percentage of loan value. */
+  marginPct: number;
+}
+
+export interface BorrowerCollateralHolding {
+  id: string;
+  borrowerId: string;
+  kind: "CASH" | "SECURITY";
+  /** Collateral security ticker (SECURITY only). */
+  ticker: string | null;
+  quantity: number | null;
+  cashAmount: number | null;
+}
+
+export interface IndemnificationBookExtension {
+  loanTerms: LoanIndemnificationTerms[];
+  collateral: BorrowerCollateralHolding[];
+}
+
+/**
+ * Margin is 102% for government loans and 102% or 105% for other loans; hard-to-borrow names are 105%.
+ * Each borrower holds exactly the collateral its loans require: CASH loans are covered by one cash
+ * holding, NON_CASH loans by a government security (60-90%) and an ETF. Margin lag is a simulation
+ * effect (price moves between margin calls), not a collateral shortfall in the starting book.
+ */
+export function getIndemnificationBookExtension(): IndemnificationBookExtension {
+  const rng = new Rng("indem-book-1");
+  const loans = getLoanBook();
+  const owners = BENEFICIAL_OWNERS;
+
+  const loanTerms: LoanIndemnificationTerms[] = loans.map((loan) => {
+    const sec = bySymbol(loan.ticker)!;
+    const ownerId = rng.pick(owners).id;
+    const isTerm = rng.bool(0.15);
+    const maturityDays = isTerm ? rng.int(5, 90) : null;
+    const marginPct = sec.hardToBorrow ? 105 : sec.assetClass === "GOVT" ? 102 : rng.pick([102, 105]);
+    return { loanId: loan.id, ownerId, term: isTerm ? "term" : "open", maturityDays, marginPct };
+  });
+
+  const termByLoan = new Map(loanTerms.map((t) => [t.loanId, t]));
+  const required = new Map<string, { cash: number; noncash: number }>();
+  for (const loan of loans) {
+    const need = required.get(loan.borrowerId) ?? { cash: 0, noncash: 0 };
+    need[loan.collateralType === "CASH" ? "cash" : "noncash"] += (loan.notional * termByLoan.get(loan.id)!.marginPct) / 100;
+    required.set(loan.borrowerId, need);
+  }
+
+  const govts = LENDABLE.filter((s) => s.assetClass === "GOVT");
+  const etfs = LENDABLE.filter((s) => s.assetClass === "ETF");
+  const collateral: BorrowerCollateralHolding[] = [];
+  for (const borrowerId of [...required.keys()].sort()) {
+    const need = required.get(borrowerId)!;
+    if (need.cash > 0) {
+      collateral.push({ id: `C-${borrowerId}-CASH`, borrowerId, kind: "CASH", ticker: null, quantity: null, cashAmount: need.cash });
+    }
+    if (need.noncash > 0) {
+      const govt = rng.pick(govts);
+      const etf = rng.pick(etfs);
+      const govtShare = rng.float(0.6, 0.9);
+      collateral.push({ id: `C-${borrowerId}-GOVT`, borrowerId, kind: "SECURITY", ticker: govt.ticker, quantity: (need.noncash * govtShare) / govt.px, cashAmount: null });
+      collateral.push({ id: `C-${borrowerId}-ETF`, borrowerId, kind: "SECURITY", ticker: etf.ticker, quantity: (need.noncash * (1 - govtShare)) / etf.px, cashAmount: null });
+    }
+  }
+  return { loanTerms, collateral };
 }

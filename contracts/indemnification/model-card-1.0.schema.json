@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quantmeridian:indemnification:model-card:1.0",
+  "title": "Indemnification model card 1.0 (spec020 IND-014)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["model_card_schema_version", "model_version", "snapshot_hash", "profile_name", "profile_hash", "mode", "seed", "paths", "preview", "horizon_days", "step", "convergence", "validation", "data_label", "limitations"],
+  "properties": {
+    "model_card_schema_version": {"const": "1.0"},
+    "model_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "snapshot_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "profile_name": {"type": "string", "minLength": 1},
+    "profile_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "mode": {"enum": ["desk", "annual"]},
+    "seed": {"type": "integer", "minimum": 0},
+    "paths": {"type": "integer", "minimum": 1000},
+    "preview": {"type": "boolean"},
+    "horizon_days": {"type": "integer", "minimum": 21},
+    "step": {"enum": ["daily", "weekly", "monthly"]},
+    "convergence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checked", "max_shift_in_standard_errors", "passed"],
+      "properties": {
+        "checked": {"type": "boolean"},
+        "max_shift_in_standard_errors": {"type": ["number", "null"], "minimum": 0},
+        "passed": {"type": ["boolean", "null"]}
+      }
+    },
+    "validation": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["check", "passed", "note"],
+        "properties": {
+          "check": {"type": "string", "minLength": 1},
+          "passed": {"type": ["boolean", "null"], "description": "null: the check could not be made on this run; the note says why"},
+          "note": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "data_label": {"enum": ["SIM", "USER_INPUT", "MIXED"]},
+    "limitations": {"type": "string", "minLength": 1}
+  }
+}

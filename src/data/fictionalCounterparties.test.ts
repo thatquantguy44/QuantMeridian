@@ -9,7 +9,7 @@ import { getCounterpartyCreditOverlays } from "./econEnhancements";
  * margin calls, breaches or recalls attributed to a real firm are misleading. Real names remain fine as
  * market data (tickers such as JPM and GS, index names such as "ICE BofA").
  */
-const REAL_FIRMS = /\b(Citadel|Millennium|Point72|Balyasny|D\.?\s?E\.? Shaw|Two Sigma|AQR|Marshall Wace|Brevan|Elliott|Goldman|Morgan Stanley|J\.?P\.? ?Morgan|JPMorgan|Bank of America|UBS|BNP|BlackRock|Vanguard|State Street|CalPERS|GPIF|Norges Bank IM|Bridgewater|Renaissance|Barclays|Deutsche Bank|HSBC|Citigroup|Jefferies|Fidelity|PIMCO)\b/i;
+const REAL_FIRMS = /\b(Citadel|Millennium|Point72|Balyasny|D\.?\s?E\.? Shaw|Two Sigma|AQR|Marshall Wace|Brevan|Elliott|Goldman|Morgan Stanley|J\.?P\.? ?Morgan|JPMorgan|Bank of America|UBS|BNP|BlackRock|Vanguard|State Street|CalPERS|GPIF|Norges Bank IM|Bridgewater|Renaissance|BlueCrest|Barclays|Deutsche Bank|HSBC|Citigroup|Jefferies|Fidelity|PIMCO)\b/i;
 
 describe("fictional counterparties", () => {
   it("uses only fictional names in the shared counterparty list", () => {

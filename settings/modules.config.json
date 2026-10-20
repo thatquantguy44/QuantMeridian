@@ -12,6 +12,7 @@
     "MVOL":   { "enabled": true, "label": "Market Volatility" },
     "SLAB":   { "enabled": true, "label": "Securities Lending" },
     "SQZ":    { "enabled": true, "label": "Squeeze Radar" },
+    "INDEM":  { "enabled": true, "label": "Indemnification Risk" },
     "PB":     { "enabled": true, "label": "Prime Finance" },
     "COLL":   { "enabled": true, "label": "Collateral Mgmt" },
     "CASH":   { "enabled": true, "label": "Cash Optimizer" },

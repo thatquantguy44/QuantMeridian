@@ -19,6 +19,7 @@ import {
   Banknote,
   Coins,
   Flame,
+  ShieldAlert,
   Globe2,
   Gavel,
   SquareStack,
@@ -57,6 +58,7 @@ const ALL_NAV: NavItem[] = [
   { code: "MVOL", label: "Market Volatility", href: "/market-volatility", icon: Activity, desc: "VIX claim audits & volatility regimes", group: "MARKETS" },
   { code: "SLAB", label: "Securities Lending", href: "/securities-lending", icon: Landmark, desc: "Inventory, loan book & revenue", group: "FINANCE" },
   { code: "SQZ", label: "Squeeze Radar", href: "/securities-lending/squeeze", icon: Flame, desc: "Borrow demand, heat score & squeeze risk", group: "FINANCE" },
+  { code: "INDEM", label: "Indemnification Risk", href: "/securities-lending/indemnification", icon: ShieldAlert, desc: "Borrower default & reinvestment indemnification (SIM)", group: "FINANCE" },
   { code: "PB", label: "Prime Finance", href: "/prime-finance", icon: Briefcase, desc: "Hedge fund financing & risk", group: "FINANCE" },
   // Optimization Center is the hub of this group: keep it first, then the models in demo order.
   { code: "OPT", label: "Optimization Center", href: "/optimization", icon: Cpu, desc: "Solver runs & impact analysis", group: "OPTIMIZATION" },

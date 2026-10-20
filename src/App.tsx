@@ -14,6 +14,7 @@ import MarketChart from "./app/market-chart/page";
 import MarketVolatility from "./app/market-volatility/page";
 import SecuritiesLending from "./app/securities-lending/page";
 import Squeeze from "./app/securities-lending/squeeze/page";
+import Indemnification from "./app/securities-lending/indemnification/page";
 import PrimeFinance from "./app/prime-finance/page";
 import Collateral from "./app/collateral/page";
 import CashOptimizer from "./app/cash-optimizer/page";
@@ -108,6 +109,7 @@ export function App() {
         {on("MVOL") && <Route path="market-volatility" element={<MarketVolatility />} />}
         {on("SLAB") && <Route path="securities-lending" element={<SecuritiesLending />} />}
         {on("SQZ") && <Route path="securities-lending/squeeze" element={<Squeeze />} />}
+        {on("INDEM") && <Route path="securities-lending/indemnification" element={<Indemnification />} />}
         {on("PB") && <Route path="prime-finance" element={<PrimeFinance />} />}
         {on("COLL") && <Route path="collateral" element={<Collateral />} />}
         {on("CASH") && <Route path="cash-optimizer" element={<CashOptimizer />} />}

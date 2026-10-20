@@ -215,7 +215,7 @@ export function getCounterpartyCreditOverlays(): CounterpartyCreditOverlay[] {
     { counterparty: "Bramblecrest Partners", rating: "A-", stressScore: 55, marginUplift: 2.4, wrongWayFlag: "NO", action: "Monitor HY collateral mix" },
     { counterparty: "Cobaltline Asset Mgmt", rating: "BBB+", stressScore: 64, marginUplift: 3.2, wrongWayFlag: "YES", action: "Cap lower-grade credit collateral" },
     { counterparty: "Harrowgate Partners", rating: "BBB", stressScore: 71, marginUplift: 4.1, wrongWayFlag: "YES", action: "Prefer cash or UST substitutions" },
-    { counterparty: "BlueCrest", rating: "BBB-", stressScore: 78, marginUplift: 5.6, wrongWayFlag: "YES", action: "Escalate haircut override" },
+    { counterparty: "Kestrelmoor Capital", rating: "BBB-", stressScore: 78, marginUplift: 5.6, wrongWayFlag: "YES", action: "Escalate haircut override" },
   ];
 }
 

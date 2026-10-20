@@ -1,0 +1,13 @@
+{
+  "api_schema_version": "1.0",
+  "service": "indemnification_api",
+  "port": 8018,
+  "request_validation": true,
+  "database_access": false,
+  "market_data_access": false,
+  "model_families": ["monte_carlo_desk", "monte_carlo_annual"],
+  "max_body_bytes": 8000000,
+  "max_concurrent_runs": 1,
+  "run_history_size": 50,
+  "readiness": "READY"
+}

@@ -1,0 +1,372 @@
+{
+  "api_schema_version": "1.0",
+  "snapshot_hash": "749b03a8ffbb0dda43a2fa1fd4a099a6e8618f1c8e732a2a4c3bfcc4f5c8cc55",
+  "as_of": "2026-10-20",
+  "source": {
+    "label": "SIM",
+    "book_seed": "contract-fixture-1",
+    "generator_version": "fixture-1"
+  },
+  "currency": "USD",
+  "run": {
+    "mode": "desk",
+    "seed": 20201020,
+    "paths": 1000,
+    "preview": true,
+    "horizon_days": 21,
+    "step": "daily"
+  },
+  "model": {
+    "rho_d": 0.25,
+    "rho_w": 0.3,
+    "student_t_enabled": true,
+    "student_t_nu": 5,
+    "default_recovery": 0.4,
+    "market": {
+      "equity_vol_annual": 0.18,
+      "rates_vol_bps_daily": 6,
+      "spread_vol_bps_daily": 4,
+      "fx_vol_annual": 0.08,
+      "factor_corr": [
+        [
+          1,
+          0.1,
+          -0.6,
+          0.2
+        ],
+        [
+          0.1,
+          1,
+          -0.2,
+          0
+        ],
+        [
+          -0.6,
+          -0.2,
+          1,
+          -0.1
+        ],
+        [
+          0.2,
+          0,
+          -0.1,
+          1
+        ]
+      ],
+      "jump_intensity_annual": 1,
+      "jump_mean": 0.12,
+      "jump_sd": 0.08
+    },
+    "returns": {
+      "open_loan_hazard_annual": 3,
+      "recallable_multiplier": 1.5,
+      "stress_sensitivity": 0.5
+    },
+    "pool_risk": {
+      "credit_beta": {
+        "HQLA": 0,
+        "AGENCY": 0.1,
+        "A1/P1": 0.4,
+        "BANK": 1,
+        "CREDIT": 1.5
+      },
+      "issuer_hazard_annual": {
+        "HQLA": 0,
+        "AGENCY": 0,
+        "A1/P1": 0.001,
+        "BANK": 0.004,
+        "CREDIT": 0.01
+      },
+      "issuer_recovery": 0.4,
+      "issuer_stress_sensitivity": 1,
+      "daily_liquidity_fraction": {
+        "T+0": 1,
+        "T+1": 0.5,
+        "T+7": 0.25,
+        "TERM": 0.1
+      },
+      "forced_sale_floor_bps": {
+        "T+0": 0,
+        "T+1": 1,
+        "T+7": 3,
+        "TERM": 25
+      }
+    }
+  },
+  "pricing": {
+    "cost_of_capital": 0.1,
+    "flag_threshold": 0.5,
+    "risk_weights": {
+      "aaa_to_aa_minus": 0.2,
+      "a_plus_to_a_minus": 0.5,
+      "bbb_plus_to_bb_minus": 1,
+      "below_bb_minus": 1.5,
+      "unrated": 1
+    }
+  },
+  "rating_pd_table": {
+    "table_version": 1,
+    "label": "ILLUSTRATIVE",
+    "pd_1y": {
+      "AAA": 0.0001,
+      "AA+": 0.0001,
+      "AA": 0.0002,
+      "AA-": 0.0003,
+      "A+": 0.0004,
+      "A": 0.0006,
+      "A-": 0.0009,
+      "BBB+": 0.0013,
+      "BBB": 0.002,
+      "BBB-": 0.0035,
+      "BB+": 0.0055,
+      "BB": 0.0085,
+      "BB-": 0.015,
+      "B+": 0.025,
+      "B": 0.04,
+      "B-": 0.065,
+      "CCC": 0.25,
+      "NR": 0.01
+    }
+  },
+  "basel_haircuts": {
+    "label": "ILLUSTRATIVE",
+    "base_mpor_days": 10,
+    "equity_main_index": 0.15,
+    "equity_other": 0.25,
+    "sovereign": {
+      "le_1y": 0.005,
+      "1y_to_5y": 0.02,
+      "gt_5y": 0.04
+    },
+    "corporate": {
+      "le_1y": 0.02,
+      "1y_to_5y": 0.06,
+      "gt_5y": 0.12
+    },
+    "fx_mismatch": 0.08
+  },
+  "closeout_profile": {
+    "profile_schema_version": "1.0",
+    "name": "default",
+    "profile_version": 1,
+    "defaults": {
+      "mpor_liquid_days": 5,
+      "mpor_other_days": 10,
+      "mpor_concentrated_days": 10,
+      "mpor_pool_forced_sale_days": 5,
+      "mpor_fixed_days": null,
+      "addon_days": 0,
+      "concentration_threshold_pct_adv": 25,
+      "htb_uses_concentrated_period": true,
+      "impact_k": 0.5,
+      "impact_alpha": 0.5,
+      "half_spread_floor_bps": 0,
+      "cost_cap_bps": null,
+      "stress_beta": 0,
+      "stress_factor": "equity",
+      "unwind": "end_of_period",
+      "margin_call_every_days": 1
+    },
+    "asset_class_overrides": {},
+    "pool_bucket_overrides": {},
+    "borrower_overrides": {
+      "B2": {
+        "addon_days": 2
+      }
+    },
+    "position_overrides": {
+      "L3": {
+        "adv_units": 400000
+      }
+    }
+  },
+  "securities": [
+    {
+      "id": "EQ1",
+      "label": "Fixture Equity One",
+      "asset_class": "EQUITY",
+      "liquidity_class": "liquid",
+      "hard_to_borrow": false,
+      "currency": "USD",
+      "price": 50,
+      "adv_units": 2000000,
+      "daily_vol": 0.018,
+      "equity_beta": 1,
+      "rate_duration": 0,
+      "spread_duration": 0
+    },
+    {
+      "id": "EQ2",
+      "label": "Fixture Equity Two",
+      "asset_class": "EQUITY",
+      "liquidity_class": "other",
+      "hard_to_borrow": true,
+      "currency": "USD",
+      "price": 12,
+      "adv_units": 500000,
+      "daily_vol": 0.04,
+      "equity_beta": 1.4,
+      "rate_duration": 0,
+      "spread_duration": 0
+    },
+    {
+      "id": "UST1",
+      "label": "Fixture Treasury Note",
+      "asset_class": "GOVT",
+      "liquidity_class": "liquid",
+      "hard_to_borrow": false,
+      "currency": "USD",
+      "price": 99.5,
+      "adv_units": 5000000,
+      "daily_vol": 0.003,
+      "equity_beta": 0,
+      "rate_duration": 4.2,
+      "spread_duration": 0
+    }
+  ],
+  "borrowers": [
+    {
+      "id": "B1",
+      "name": "Alderwood Capital",
+      "rating": "A",
+      "spread_bps": null,
+      "recovery": null,
+      "credit_provenance": "sim"
+    },
+    {
+      "id": "B2",
+      "name": "Harrowgate Partners",
+      "rating": "BBB",
+      "spread_bps": 240,
+      "recovery": 0.4,
+      "credit_provenance": "user_input"
+    }
+  ],
+  "owners": [
+    {
+      "id": "O1",
+      "name": "Summitline Index Partners"
+    },
+    {
+      "id": "O2",
+      "name": "Pacific Coast Teachers Pension"
+    }
+  ],
+  "loans": [
+    {
+      "id": "L1",
+      "borrower_id": "B1",
+      "owner_id": "O1",
+      "security_id": "EQ1",
+      "quantity": 400000,
+      "rate_bps": 30,
+      "collateral_type": "CASH",
+      "margin_pct": 102,
+      "term": "open",
+      "maturity_days": null,
+      "recallable": true,
+      "provenance": "sim"
+    },
+    {
+      "id": "L2",
+      "borrower_id": "B1",
+      "owner_id": "O2",
+      "security_id": "UST1",
+      "quantity": 1000000,
+      "rate_bps": 12,
+      "collateral_type": "NON_CASH",
+      "margin_pct": 102,
+      "term": "term",
+      "maturity_days": 15,
+      "recallable": false,
+      "provenance": "sim"
+    },
+    {
+      "id": "L3",
+      "borrower_id": "B2",
+      "owner_id": "O1",
+      "security_id": "EQ2",
+      "quantity": 300000,
+      "rate_bps": 450,
+      "collateral_type": "CASH",
+      "margin_pct": 105,
+      "term": "open",
+      "maturity_days": null,
+      "recallable": true,
+      "provenance": "sim"
+    }
+  ],
+  "collateral": [
+    {
+      "id": "C1",
+      "borrower_id": "B1",
+      "kind": "CASH",
+      "security_id": null,
+      "quantity": null,
+      "cash_amount": 20400000,
+      "provenance": "sim"
+    },
+    {
+      "id": "C2",
+      "borrower_id": "B1",
+      "kind": "SECURITY",
+      "security_id": "UST1",
+      "quantity": 1020000,
+      "cash_amount": null,
+      "provenance": "sim"
+    },
+    {
+      "id": "C3",
+      "borrower_id": "B2",
+      "kind": "CASH",
+      "security_id": null,
+      "quantity": null,
+      "cash_amount": 3780000,
+      "provenance": "sim"
+    }
+  ],
+  "pool": {
+    "positions": [
+      {
+        "id": "P1",
+        "instrument": "Overnight repo",
+        "liquidity_bucket": "T+0",
+        "credit_bucket": "HQLA",
+        "allocation": 12000000,
+        "yield_bps": 431,
+        "wam_days": 1
+      },
+      {
+        "id": "P2",
+        "instrument": "Agency discount notes",
+        "liquidity_bucket": "T+7",
+        "credit_bucket": "AGENCY",
+        "allocation": 8000000,
+        "yield_bps": 440,
+        "wam_days": 30
+      },
+      {
+        "id": "P3",
+        "instrument": "Bank term deposit",
+        "liquidity_bucket": "TERM",
+        "credit_bucket": "BANK",
+        "allocation": 4180000,
+        "yield_bps": 462,
+        "wam_days": 90
+      }
+    ],
+    "owner_shares": [
+      {
+        "owner_id": "O1",
+        "share": 0.6
+      },
+      {
+        "owner_id": "O2",
+        "share": 0.4
+      }
+    ],
+    "rescaled": true,
+    "source_total": 9000000,
+    "note": "Rescaled to the book's cash collateral; mix unchanged."
+  }
+}
