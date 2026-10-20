@@ -4,10 +4,12 @@
 
 **Branch:** `spec020-indemnification-scope`, open as [PR #188](https://github.com/thatquantguy44/QuantMeridian/pull/188) against `main`.
 
-**State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The model core is built and tested in Python:
-the contract, the close-out profile, market paths, the default copula, loan returns, the reinvestment pool,
-the close-out shortfall, risk metrics, the engine and the result/model-card assembly. There is **no HTTP API
-and no UI page yet**, and the the HTTP service, terminal route and UI are not built. Phase 2 (the optimizer) is not approved: decision 10 is open.
+**State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The **model is complete in Python**: the
+contract, the close-out profile, market paths, the default copula, loan returns, the reinvestment pool, the
+close-out shortfall, risk metrics, the Basel cross-check, sensitivities, named stresses, pricing, and the result and
+model-card assembly (`analysis.run_analysis(snapshot)` returns the whole validated result). **What is left is
+delivery**: the HTTP service (IND-T13), the terminal route and UI page (IND-T14), and the validation report and
+benchmark (IND-T15). Phase 2 (the optimizer) is not approved: decision 10 is open.
 
 | Task | What | Status |
 |---|---|---|
