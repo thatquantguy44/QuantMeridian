@@ -6,7 +6,7 @@ snapshot it is given and substitutes nothing. Everything it produces from the SI
 
 Specification: `docs/specs/spec020/` (start with `HANDOFF.md`). Wire contract: `contracts/indemnification/`.
 
-**Status: the model and the HTTP service are built; the terminal route and UI page are not.** See the handoff.
+**Status: the model, the HTTP service, the terminal route and the INDEM page are built (phase 1, PR #188).** The validation report and benchmark (IND-T15) and the phase 2 optimizer are not. See the handoff.
 
 ## Run the tests
 

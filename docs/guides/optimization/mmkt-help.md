@@ -4,7 +4,7 @@
 
 1. Open [Money Market Optimizer](/money-market). The header should read `MODEL READY`.
 2. Pick a rate source in **Rate source**, for example the SIM base curve. (Selecting a scenario card also selects its rate set.)
-3. Press **Run optimizer** in the **Policy** panel. With the default **Ticketed MIP plan** formulation the run takes about 15 seconds and returns a verified, indicative execution blotter.
+3. Press **Run optimizer** in the **Policy** panel. With the default **Ticketed MIP plan** formulation the run takes from about 3 to 45 seconds depending on the scenario (the base case about 20 s, measured 2026-10-20) and returns a verified, indicative execution blotter.
 4. Change something: switch **Cash forecast case** to *p10 downside*, raise a floor, or disable an instrument, then run again.
 5. Press **Run all scenarios** at the bottom to compare all five scenarios side by side.
 
@@ -144,7 +144,7 @@ Shown after **Run all scenarios**. For the rate-cut and forecast-miss scenarios 
 | Yield basis | Simple ACT/365 money-market yield |
 | Verification tolerance | 1e-7 in the service; the page ticks values within 1e-6 |
 | Ticket rules | $25mm minimum ticket, $25mm lots, at most 12 tickets, decision 2026-10-19 09:00 ET |
-| Solve time | About 15 seconds for a ticketed base run; the LP preview is under a second |
+| Solve time | About 3–45 s for a ticketed run, depending on the scenario (base about 20 s, measured 2026-10-20); the LP preview is under a second. Reducing it is spec011 MM-012 |
 | LP size limit | 50,000 variables |
 | Defaults | See the policy table above; the full book is in the [white paper](/guides/MMKT/whitepaper) |
 

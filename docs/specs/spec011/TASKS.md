@@ -2,7 +2,7 @@
 
 - **Spec:** spec011-money-market-execution (`SPEC.md`, `PLAN.md`)
 - **Status:** Approved 2026-10-18 — verified ticketed execution slice built; integration follow-ups open
-- **Last updated:** 2026-10-18
+- **Last updated:** 2026-10-20
 - **Checkpoint:** See [HANDOFF.md](HANDOFF.md) for branch state, local run steps and ordered next steps
 - **Parent requirements:** 0018 REQ-016–020, REQ-027–030, REQ-041
 
@@ -18,6 +18,7 @@
 | MM-008 | Add the four named scenarios and run history integration with OPT. | MM-007, REQ-029 | in-progress | Base, rate cut, fund fee/gate, cash forecast miss and downgrade are SIM service runs. Model-backed plan deltas appear in comparison. 2026-10-19: each run the terminal forwards (id, status, verification, request hash, SIM set, round trip) appears in OPT's in-memory session run log (`src/lib/server/runLog.ts`). Durable OPT persistence remains open (spec015). |
 | MM-009 | Add service security, health, telemetry, and local launcher integration. | REQ-027 | in-progress | Bearer auth, ready health/capabilities, safe run-attempt logging and the local launcher are scaffolded. **2026-10-18:**<br>- `/api/econ/mmkt-service` reports health, binding and token state.<br>- Fixed two service bugs: the capability manifest now resolves when the service runs from source, and a null `maximum_amount` (uncapped) no longer crashes the LP builder.<br>- Fixed the terminal proxy dispatcher to honour `NO_PROXY` and bypass loopback, so local model services are reachable behind an outbound proxy.<br>- Added `services/money_market_api/tests` and a CI job.<br>Durable idempotency, telemetry and integration checks remain. |
 | MM-011 | Current-positions input so the "current allocation" baseline can be computed. | MM-006 (baseline), REQ-019 | todo | Define the positions contract (holdings by candidate, account and maturity, with provenance). Evaluate the held allocation's modeled return under the same conventions and verifier. Until then the option is listed but fails closed. |
+| MM-012 | Bring the ticketed-plan demo solve under 0018 NFR-002 (demo-size p95 < 2 s): a solver time limit and gap tolerance on `optimization_core.HighsBackend`, with the achieved gap disclosed, the verifier kept, and a time-limited answer never reported as proven optimal; or a tighter formulation or a smaller demo book. | 0018 NFR-002, MM-006, MM-010 | todo | Measured 2026-10-20 (InventoryBallast `specs/0018-live-poc-showcase/benchmark.md`): the 26-candidate demo book's `ticketed_mip` solves take 2.6–44.6 s by scenario (p95 ≈ 44 s). Each returns `optimal_verified`. `HighsBackend._solve_mip` calls SciPy `milp` with no `options`, so there is no time limit or gap. The 1-candidate baseline solves in under 0.1 s |
 | MM-010 | Benchmark and validate the demo path; publish model card and as-built paper. | REQ-041 | in-progress | Local golden tests: 7/7; real SIM base with three independently verified frontier points and 12 tickets solved in 22.05s with 25mm lots. As-built execution paper updated. Full `pytest`, terminal typecheck/build, browser viewport and Gold path remain unverified (opt-in Playwright path added) in this workspace. |
 
 ## Definition of Done

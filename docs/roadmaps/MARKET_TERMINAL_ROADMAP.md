@@ -2,6 +2,28 @@
 
 Date: 2026-06-18
 
+> **Status update (2026-10-20).** This review predates the optimization work, so read its optimizer
+> sections as history.
+>
+> - **Real local solvers.** Optimization now runs as real local solver services, each independently
+>   verified, with no simulated fallback:
+>   - IBAL (`inventory_optimizer_api`, the InventoryBallast engine on HiGHS);
+>   - MMKT (`money_market_api`, a ticketed MIP and an LP preview);
+>   - COLL (`collateral_optimizer_api`);
+>   - INDEM risk (`indemnification_api`, phase 1).
+>
+>   The shared library is `services/optimization_core`, which uses HiGHS through SciPy, not OR-Tools.
+> - **OPT** reads service results only; the generated runs are removed. It keeps an in-memory
+>   session run log. A durable, audited registry is still spec015, a draft.
+> - **Still open:**
+>   - S&U's production solver (spec012 SU-003 onward);
+>   - the liquidity service (spec014, awaiting approval);
+>   - MMKT latency (spec011 MM-012).
+> - **Where to look:**
+>   - the work queue: `docs/handoff.md`, "▶ STOPPING POINT — 2026-10-20";
+>   - the program spec: InventoryBallast `specs/0018-live-poc-showcase/`;
+>   - service ports: `docs/services.md`.
+
 ## Executive Summary
 
 The current `market_terminal` build is already pointed in the right institutional direction: a dense, keyboard-driven securities finance terminal with modules for markets, securities lending, prime finance, collateral, cash, sources and uses, optimization, trading, alerts, AI, and a full Economics & Macro section. The strongest design choice is the explicit linkage between macro conditions and securities finance economics. This is the right spine for collateral management, optimization, securities lending, and funding analytics because those businesses are driven by rates, credit, liquidity, balance sheet usage, and asset availability.
@@ -187,6 +209,8 @@ Features:
 
 Purpose: replace simulated optimization outputs with reproducible local solver runs.
 
+> **Superseded (2026-10-20).** Delivered differently: one verified Python service per model on `optimization_core` (HiGHS), not OR-Tools. OPT shows only service results, with no simulated fallback. See the status update at the top.
+
 Data start:
 
 - Existing `src/data/collateral.ts`, `src/data/optimization.ts`, and `market_data_pipeline` gold outputs.
@@ -371,6 +395,8 @@ Acceptance criteria:
 - Results can be used by `COLL` and `OPT`.
 
 ### Sprint 3: Real Local Optimizer
+
+> **Superseded (2026-10-20).** See the status update at the top. The "keep simulated fallback" deliverable was reversed: no silent fallback.
 
 Deliverables:
 
