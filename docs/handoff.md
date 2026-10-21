@@ -16,6 +16,17 @@ reviewed pin-update PR workflow. This resolves spec015's repository-identificati
 for collateral; implementation, binding approval and production sources remain open. The
 current `src/data/collateral.ts` economics and client what-if remain illustrative SIM only.
 
+## Indemnification risk (INDEM, spec020) — 2026-10-21
+
+Phase 1 of spec020 is **built, merged ([PR #188](https://github.com/thatquantguy44/QuantMeridian/pull/188)) and
+validated**: the Python service (`services/indemnification_api`, port 8018), the terminal routes and the INDEM page at
+`/securities-lending/indemnification`. It does not change the owner's top priority below. The next INDEM step is
+IND-T15a (make long reported annual runs work through the terminal: timeout, cancel, memory); phase 2 (an
+optimizer) needs the owner to resolve decision 10 first. Pickup document:
+[`docs/specs/spec020/HANDOFF.md`](specs/spec020/HANDOFF.md); evidence and benchmark:
+[`docs/specs/spec020/VALIDATION.md`](specs/spec020/VALIDATION.md); how to run the service:
+[`docs/services.md`](services.md) section 5a.
+
 ## ▶ TOP PRIORITY — live proof-of-concept showcase (InventoryBallast spec `0018`, set 2026-10-17)
 
 **This is the highest-priority work for Market Terminal. Start here.** It outranks "Current

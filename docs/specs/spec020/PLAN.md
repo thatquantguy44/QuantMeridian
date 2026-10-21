@@ -218,3 +218,12 @@ where M_b = Σ_k m_k · (u_bk · L_b) is the collateral amount. The products u_b
 8. Add the validation report, demo-scale benchmark and handoff. Phase 1 ends here.
 9. Resolve decision 10, then build the phase 2 optimizer, verifier and fresh-path re-test.
 10. Add the Optimizer tab, approval record and phase 2 validation report.
+
+**As built, from the UI and validation work (2026-10-21):**
+
+- **Draws are independent of the day count.** `market.simulate_paths` draws each array (factors, idiosyncratic, jump counts, jump sizes) from its own child stream, day by day. The simulated days include the longest close-out period, so a day-major `(paths, days, …)` layout reshuffled every path when a sweep changed that period. Common random numbers across sweep points now hold for every swept parameter.
+- **Estimator-agreement check.** Compared in standard errors only when at least 30 sampled paths have a loss; otherwise the model-card validation item has `passed: null` and says why. `model-card-1.0` allows `passed: boolean | null`.
+- **Terminal route and page.** The browser calls only same-origin `/api/indemnification/{health,capabilities,book,runs,runs/[run_id]}`; the server proxy (`src/lib/server/indemnificationProxy.ts`) holds the URL and token, is local-only, validates every response against the contract, and applies a 300 s run timeout (too short for reported annual runs with sweeps: IND-T15a). The page sends choices only; the server builds the SIM snapshot with `buildSimSnapshot`.
+- **Page defaults.** Desk view, preview (5,000 paths), sweeps at 2,000 paths per point, stresses on. Annual view defaults to 252 days and weekly steps; pricing needs annual over 252 days.
+- **Saved close-out profiles** live in browser local storage (`quantmeridian.indem.profiles.v1`) with JSON export and import; every run records the full profile it used, so no result depends on that storage.
+

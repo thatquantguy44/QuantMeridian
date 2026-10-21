@@ -29,6 +29,7 @@ browser ──► terminal (Vite dev server, :3000) ──► model service (127
 | [`sources_uses_api`](../services/sources_uses_api/README.md) | SXU `/sources-uses` | 8015 (reserved) | **not yet**: contracts and tests only | [`spec012/HANDOFF.md`](specs/spec012/HANDOFF.md) |
 | `liquidity_api` | `/cash-optimizer/liquidity` | 8016 (reserved) | **not yet**: spec014 is a draft | `docs/specs/spec014/` |
 | [`collateral_optimizer_api`](../services/collateral_optimizer_api/README.md) | COLL `/collateral`, OPT preview | 8017 | yes, needs an authorized InventoryBallast checkout | `docs/specs/spec016/` |
+| [`indemnification_api`](../services/indemnification_api/README.md) | INDEM `/securities-lending/indemnification` | 8018 | yes, no external engine | [`spec020/HANDOFF.md`](specs/spec020/HANDOFF.md) |
 | [`news_nlp`](../services/news_nlp/README.md) | NEWS sentiment, NER, clustering | 8088 | yes (lexicon fallback without the model stack) | [`services/news_nlp/README.md`](../services/news_nlp/README.md) |
 | [`macro_data_etl`](../services/macro_data_etl/README.md) | ETL batch jobs for global macro data | — (CLI) | yes, run on demand | [`services/macro_data_etl/README.md`](../services/macro_data_etl/README.md) |
 | `agent_worker` | ECOIQ agent panel | — (polls a queue) | yes | `docs/specs/spec009/` |
@@ -162,6 +163,37 @@ COLLATERAL_OPTIMIZER_API_TOKEN=local-secret
 
 - **Check:** `/health` reports `UNCONFIGURED` without the attestation and `INCOMPATIBLE` if the
   commit, wheel, lock or schema has drifted; runs then fail closed.
+
+## 5a. Indemnification risk: `indemnification_api` (port 8018)
+
+Monte Carlo of correlated markets and borrower defaults (wrong-way link, reinvestment pool, close-out profile)
+for the INDEM page. The terminal builds the simulated lending book and sends the settings; the service has no
+database access and needs no external model. Local only. The model is complete and validated
+([`spec020/VALIDATION.md`](specs/spec020/VALIDATION.md)); the page works end to end.
+
+```bash
+python3.12 -m venv .venv-indem
+.venv-indem/bin/pip install -e "./services/indemnification_api[dev]"
+cd services/indemnification_api
+INDEMNIFICATION_API_TOKEN=local-token INDEM_ENV=local \
+  ../../.venv-indem/bin/uvicorn indemnification_api.app:app --app-dir src --port 8018
+```
+
+Terminal `.env.local`:
+
+```bash
+INDEMNIFICATION_API_URL=http://127.0.0.1:8018
+INDEMNIFICATION_API_TOKEN=local-token
+```
+
+- **Not started by `npm run dev:all` yet** (spec020 IND-T15b). Start it by hand as above.
+- **Check:** `curl http://127.0.0.1:8018/health` returns `"status":"ready"`. The page's header badge shows
+  "Service ready"; without the URL and token it says the service is not configured and does not substitute data.
+- **Run times:** a desk preview with sensitivities takes about 20 s. A reported annual run (252 days, 50,000
+  paths) takes about 163 s and 3.5 GB of memory; with sensitivities about 414 s, which is **longer than the
+  terminal's 300 s run timeout** (spec020 IND-T15a). Use preview runs, or turn sensitivities off, until that is fixed.
+- **Gotcha:** one run at a time. The page's Cancel stops waiting but the service keeps computing until the model
+  finishes, so a new run meanwhile gets "busy". Restart the service after changing model code; it does not reload.
 
 ## 6. Agent worker: `agent_worker` (no port)
 

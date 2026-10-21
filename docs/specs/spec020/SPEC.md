@@ -2,10 +2,10 @@
 
 - **ID:** spec020-indemnification-risk
 - **Parent:** MARKET_TERMINAL_ROADMAP.md (SLAB, counterparty credit overlays); FUTURE_FEATURE_ROADMAP.md §3.1
-- **Status:** Approved for phase 1 implementation 2026-10-20 (decisions 1–9 resolved). Phase 2 (optimizer) is not approved: decision 10 is open and phase 2 starts only after phase 1 passes its validation report.
+- **Status:** Approved for phase 1 implementation 2026-10-20 (decisions 1–9 resolved). Phase 2 (optimizer) is not approved: decision 10 is open and phase 2 starts only after phase 1 passes its validation report. **Phase 1 is built, merged (PR #188) and validated** (`VALIDATION.md`, 2026-10-21); follow-ups IND-T15a and IND-T15b are tracked in TASKS.md.
 - **Author:** Joshua Lutkemuller, CFA
 - **Approver:** Joshua Lutkemuller, CFA (2026-10-20, phase 1)
-- **Last updated:** 2026-10-20
+- **Last updated:** 2026-10-21
 
 > WHAT and WHY only. Model architecture belongs in PLAN.md; task ordering belongs in TASKS.md.
 
