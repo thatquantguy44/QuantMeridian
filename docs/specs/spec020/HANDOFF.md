@@ -1,15 +1,14 @@
 # Spec020 build handoff: Borrower default and indemnification risk (INDEM)
 
-**Updated:** 2026-10-20
+**Updated:** 2026-10-20 (post-merge status refreshed in the end-of-session handoff pass)
 
-**Branch:** `spec020-indemnification-scope`, open as [PR #188](https://github.com/thatquantguy44/QuantMeridian/pull/188) against `main`.
+**Branch:** `spec020-indemnification-scope`, **merged** to `main` as [PR #188](https://github.com/thatquantguy44/QuantMeridian/pull/188) (`6e21ccd`).
 
 **State:** phase 1 is **approved** (2026-10-20, decisions 1–9). The **model is complete in Python**: the
 contract, the close-out profile, market paths, the default copula, loan returns, the reinvestment pool, the
 close-out shortfall, risk metrics, the Basel cross-check, sensitivities, named stresses, pricing, and the result and
-model-card assembly (`analysis.run_analysis(snapshot)` returns the whole validated result). **What is left is
-delivery**: the HTTP service (IND-T13), the terminal route and UI page (IND-T14), and the validation report and
-benchmark (IND-T15). Phase 2 (the optimizer) is not approved: decision 10 is open.
+model-card assembly (`analysis.run_analysis(snapshot)` returns the whole validated result). Delivery is done: the HTTP service (IND-T13) and the terminal route and UI page (IND-T14).
+**What is left** is the validation report and benchmark (IND-T15). Phase 2 (the optimizer) is not approved: decision 10 is open.
 
 | Task | What | Status |
 |---|---|---|
@@ -29,7 +28,7 @@ benchmark (IND-T15). Phase 2 (the optimizer) is not approved: decision 10 is ope
 | IND-T11 | Sensitivities and named stresses (`sensitivity.py`, `stress.py`); `analysis.run_analysis` composes the full result | Done |
 | IND-T12 | Pricing: cost in bps against fee, economic capital, regulatory proxy, flags (`pricing.py`) | Done |
 | IND-T13 | HTTP service (`app.py`, `auth.py`, request/response/error contracts) | Done |
-| IND-T14 | UI page, route, nav, profile editor | Built and browser-checked; PR description and a final `npm run build` still to do |
+| IND-T14 | UI page, route, nav, profile editor | Done; merged in PR #188, and `npm run build` passes on `main` (2026-10-20) |
 | IND-T15 | Validation report, benchmark, as-built | Not started |
 | IND-T16 – T21 | Phase 2 optimizer | Not approved |
 

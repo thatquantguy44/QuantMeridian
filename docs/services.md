@@ -29,6 +29,7 @@ browser ──► terminal (Vite dev server, :3000) ──► model service (127
 | [`sources_uses_api`](../services/sources_uses_api/README.md) | SXU `/sources-uses` | 8015 (reserved) | **not yet**: contracts and tests only | [`spec012/HANDOFF.md`](specs/spec012/HANDOFF.md) |
 | `liquidity_api` | `/cash-optimizer/liquidity` | 8016 (reserved) | **not yet**: spec014 is a draft | `docs/specs/spec014/` |
 | [`collateral_optimizer_api`](../services/collateral_optimizer_api/README.md) | COLL `/collateral`, OPT preview | 8017 | yes, needs an authorized InventoryBallast checkout | `docs/specs/spec016/` |
+| [`indemnification_api`](../services/indemnification_api/README.md) | INDEM `/securities-lending/indemnification` | 8018 | yes (phase 1: risk model and pricing; no optimizer) | [`spec020/HANDOFF.md`](specs/spec020/HANDOFF.md) |
 | [`news_nlp`](../services/news_nlp/README.md) | NEWS sentiment, NER, clustering | 8088 | yes (lexicon fallback without the model stack) | [`services/news_nlp/README.md`](../services/news_nlp/README.md) |
 | [`macro_data_etl`](../services/macro_data_etl/README.md) | ETL batch jobs for global macro data | — (CLI) | yes, run on demand | [`services/macro_data_etl/README.md`](../services/macro_data_etl/README.md) |
 | `agent_worker` | ECOIQ agent panel | — (polls a queue) | yes | `docs/specs/spec009/` |

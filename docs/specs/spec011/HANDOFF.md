@@ -1,10 +1,10 @@
 # Spec011 build handoff: Money Market Optimizer
 
-**Updated:** 2026-10-18. The approved spec is in `SPEC.md`; task evidence is in `TASKS.md`.
+**Updated:** 2026-10-20. The approved spec is in `SPEC.md`; task evidence is in `TASKS.md`.
 
 ## Current slice
 
-PR #179 carries this slice. The MMKT local service now has two explicit bindings. `local-mmkt-lp-v1` remains a continuous preview. `local-mmkt-execution-v2` solves the ticketed MIP and returns a verified indicative blotter, cutoff timeline, fixed-integer shadow-price labels, and independently verified floor frontier points. The terminal defaults to the ticketed SIM book, requires the v2 binding for that mode, and shows rate-cut/forecast-miss changes using service results. It does not route orders or claim that SIM results are live recommendations.
+PR #179 (merged) carries this slice. The MMKT local service now has two explicit bindings. `local-mmkt-lp-v1` remains a continuous preview. `local-mmkt-execution-v2` solves the ticketed MIP and returns a verified indicative blotter, cutoff timeline, fixed-integer shadow-price labels, and independently verified floor frontier points. The terminal defaults to the ticketed SIM book, requires the v2 binding for that mode, and shows rate-cut/forecast-miss changes using service results. It does not route orders or claim that SIM results are live recommendations.
 
 The SIM book uses dated offers and $25mm lots so its execution plan is operationally legible and responds within the terminal request timeout. The five named scenarios retain explicit SIM rate selection and fail-closed non-OK pricing. Frontiers are computed on the selected run; batch comparison and baselines omit frontier re-solves to keep the demo responsive. Each returned allocation remains independently verified.
 
@@ -30,7 +30,8 @@ Open `/money-market` and select a SIM set. The service must be READY with bindin
 
 1. Connect Gold `gold.mmkt_rate_snapshot` and reconcile instrument IDs once EcoMedallion coverage is available. Until then the Gold option fails closed.
 2. Define a current-positions feed and compute the actual-current-allocation baseline (MM-011).
-3. Persist OPT run history and enforce durable idempotency (MM-008/009).
+3. Persist OPT run history and enforce durable idempotency (MM-008/009). Since PR #187, OPT has an in-memory session run log of MMKT runs; only persistence remains, and it belongs to spec015.
 4. Generate cross-language contract parity and run full constraint matrix, typecheck/build, and browser viewport checks in a complete environment (MM-002/010).
+5. **Latency (MM-012):** the ticketed-plan demo book takes 2.6–44.6 s against 0018 NFR-002's 2 s, because the MIP runs with no time limit or gap.
 
 WAM/WAL remain days-to-maturity proxies; fund fee/gate and rate assumptions are illustrative SIM inputs. The as-built execution conventions are in `docs/whitepapers/money_market_execution.md`.

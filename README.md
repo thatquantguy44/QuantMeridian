@@ -53,7 +53,7 @@ BlackRock.
 | `REINV` | **Cash Collateral Reinvestment** | Reinvestment ladder, spread carry, WAL/tenor buckets, liquidity buffers, policy-path sensitivity, and collateral cash deployment scenarios |
 | `LIQ`  | **Liquidity & Funding Stress** | Funding ladder, stress outflows, liquidity survival horizon, desk exposure heat map, scenario console, and escalation signals |
 | `SXU`  | **Sources & Uses** | Matching engine network graph, internalization opportunities, funding savings, allocation heat map |
-| `OPT`  | **Optimization Center** | Flagship — solver runs (Gurobi / OR-Tools / Pyomo), objective/runtime/status/duals, before-after comparison, recommended trades |
+| `OPT`  | **Optimization Center** | Hub for the optimization models: service health and binding state, a verified collateral SIM preview, and a session run log of real IBAL, MMKT and COLL runs (in memory, not persisted; durable audited history is spec015) |
 | `IBAL` | **InventoryBallast** | Real InventoryBallast solver workspace: synthetic or uploaded securities-lending datasets, strict validation, pinned Python service solve, allocation/constraint verification, and result bundle export |
 | `DESK` | **Trading Desk** | Trader scorecards, execution analytics (slippage / VWAP / TWAP / fill rates), risk analytics, position concentration |
 | `ECON` | **Macro Dashboard** | FRED-connected economic indicators grouped by category, surprise index, breadth, live series explorer |
@@ -443,6 +443,26 @@ Use this section as the running handoff log whenever a feature moves from planni
 - Re-pinned the adapter to merged InventoryBallast `main` commit `e84801b65a4d1c23b19cb34b0de1e217f6b345f9` and updated the strict package fingerprint.
 - Added an authenticated engine scenario catalog and stress-test endpoint that use the current validated dataset and a matching independently verified baseline. Results include engine-generated scenario lineage, ranked stress outcomes, signed entity driver deltas, and reconciliation residuals.
 - Added the Scenario Studio panel, parameter-schema reference, baseline/config identity display, attribution table, and CSV export. The existing synthetic-profile what-if sweep remains available separately.
+
+#### 2026-10-20 — IBAL diagnostics and demo path, OPT run log, INDEM (`IBAL`, `OPT`, `MMKT`, `COLL`, `SXU`, `INDEM`)
+
+- **IBAL** (PRs #183, #185, #186):
+  - Re-pinned to InventoryBallast `a42dad3` (engine spec0020).
+  - Added the Sensitivity and Infeasibility tabs, model statistics, timings and MIP progress, and `/v1/explain` and `/v1/sweep`.
+  - Added the user-edited showcase run, and agency and prime panels in the workbench.
+  - Removed the `MIP_QP_CONFLICT` guard.
+  - Added a local demo-path Playwright suite at 375/768/1440 px.
+- **OPT** (#187): a session run log of every IBAL, MMKT and COLL run the terminal forwards. Metadata only, in memory, `NOT PERSISTED`.
+- **MMKT** (#179): the ticketed MIP execution plan. Its demo solves miss the 2 s latency target (spec011 MM-012).
+- **COLL** (#172–#177): a pinned collateral service with SIM previews.
+- **SXU** (#175): contracts only.
+- **INDEM** (#188): phase 1 at `/securities-lending/indemnification`, service on port 8018.
+- **Checks at `main` `6e21ccd`:**
+  - `tsc` clean;
+  - 1,038 Vitest tests;
+  - 235 IBAL service tests;
+  - build passes.
+- **Pickup:** `docs/handoff.md`, "▶ STOPPING POINT — 2026-10-20".
 
 #### 2026-07-17 — Gold DB migration: DB-first economics & macro (all 22 economic modules)
 
