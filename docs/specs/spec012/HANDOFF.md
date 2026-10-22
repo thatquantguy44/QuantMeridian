@@ -1,6 +1,6 @@
 # Spec012 build handoff
 
-**Updated:** 2026-10-18
+**Updated:** 2026-10-20. Since the PR #170 check below, PR #175 merged the SU-002 contracts package (`services/sources_uses_api`: contracts and canonical hashes, no solver or endpoint).
 
 **Branch:** `claude/synthetic-snu-poc-27n9hu`. The SU-SIM showcase merged into `main` in
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) (merge commit `2b32b7c`). The
@@ -88,8 +88,7 @@ the workspace instead. Turning SIM off hides the PoC entirely.
 
 ## What does not exist yet (the production path)
 
-- No `services/sources_uses_api` (port 8015) and no versioned request/result service contract.
-- No canonical configuration/run hash (SU-009, AC-001, AC-009).
+- ~~No `services/sources_uses_api` and no versioned contract; no canonical hash.~~ PR #175 (SU-002) added the package with versioned contracts and canonical configuration/run hashes. It has **no solve endpoint** yet.
 - No server-side LP/MIP on `services/optimization_core`. Owner decision 1 in `docs/handoff.md`
   says each module gets its own Python service sharing that library.
 - The browser `simplex.ts` is a showcase solver. Do not promote it to production without a

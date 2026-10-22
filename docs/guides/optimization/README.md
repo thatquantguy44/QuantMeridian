@@ -9,7 +9,7 @@ on the module's header, or `/guides`):
 | COLL · Collateral Management | [coll-whitepaper.md](coll-whitepaper.md) | [coll-help.md](coll-help.md) | Pinned model, verified; synthetic and generated books |
 | IBAL · InventoryBallast | [ibal-whitepaper.md](ibal-whitepaper.md) | [ibal-help.md](ibal-help.md) | Pinned engine, verified; synthetic or uploaded datasets |
 | CASH · Cash Optimizer | [cash-whitepaper.md](cash-whitepaper.md) | [cash-help.md](cash-help.md) | Simulated dashboard; no model |
-| MMKT · Money Market Optimizer | [mmkt-whitepaper.md](mmkt-whitepaper.md) | [mmkt-help.md](mmkt-help.md) | Verified continuous LP on SIM rates |
+| MMKT · Money Market Optimizer | [mmkt-whitepaper.md](mmkt-whitepaper.md) | [mmkt-help.md](mmkt-help.md) | Verified ticketed MIP execution plan (default) and continuous LP preview, on SIM rate sets |
 | SXU · Sources & Uses | [sxu-whitepaper.md](sxu-whitepaper.md) | [sxu-help.md](sxu-help.md) | Browser PoC optimizer plus a configuration workspace |
 | MMFO · Money Market Fund Optimizer | [mmfo-whitepaper.md](mmfo-whitepaper.md) | [mmfo-help.md](mmfo-help.md) | Local POC LP, not independently verified |
 | REINV · Cash Reinvestment | [reinv-whitepaper.md](reinv-whitepaper.md) | [reinv-help.md](reinv-help.md) | Simulated dashboard with live yields; no model |

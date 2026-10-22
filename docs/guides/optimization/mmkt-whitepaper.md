@@ -192,7 +192,7 @@ The stale and unavailable rows are deliberate: `CP-3M-BETA` and `TB-52W-1014` ar
 
 ### Reference run (base case, ticketed)
 
-The base case solves in about 16 seconds locally as `ticketed_mip`, `execution_ready: true`, with integrality, bound and row violations at zero. It writes all **12 tickets**, mostly Fed RRP from the QM Securities account plus the government fund, the prime fund (at its $400mm cap), tri-party repo and the 4-week bill. Modeled net return is about **$2,629k** over the horizon. The frontier: floors at 80% of base earn about $2,756k, at 100% $2,629k, at 120% $2,498k.
+The base case solves in about 16–23 seconds locally as `ticketed_mip` (repeated runs, 2026-10-20), `execution_ready: true`, with integrality, bound and row violations at zero. It writes all **12 tickets**, mostly Fed RRP from the QM Securities account plus the government fund, the prime fund (at its $400mm cap), tri-party repo and the 4-week bill. Modeled net return is about **$2,629k** over the horizon. The frontier: floors at 80% of base earn about $2,756k, at 100% $2,629k, at 120% $2,498k.
 
 ## Outputs and how to read them
 
@@ -225,7 +225,7 @@ When the ticket cap binds (all 12 used), relaxing it may raise return; when a fl
 - One forecast path per run; quantiles are supplied, not calibrated; no stochastic or robust optimization.
 - WAM and WAL are maturity-date proxies; fund holdings are treated as maturing on 10-30.
 - Constant rates through the horizon; no forward curve.
-- Ticketed solves take seconds, not milliseconds (about 16 s for the base case).
+- Ticketed solves take seconds, not milliseconds. The 2026-10-20 benchmark measured 2.6–44.6 s across the named scenarios, against 0018 NFR-002's 2 s target. The MIP runs to proven optimality with no time limit or gap tolerance; spec011 MM-012 tracks bringing it under target.
 - Real Gold rates and current positions are not connected; there is no durable run history (OPT lists each run's metadata in an in-memory session log only).
 
 ## Status and governance

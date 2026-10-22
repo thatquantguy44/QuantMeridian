@@ -1,8 +1,8 @@
 # Plan: IBAL Showcase
 
 - **Spec:** spec013-ibal-showcase (SPEC.md)
-- **Status:** Draft — pending owner review
-- **Last updated:** 2026-10-17
+- **Status:** Approved 2026-10-17 with the spec (SPEC.md, "Decisions"); implemented, and only IBAL-008 is open
+- **Last updated:** 2026-10-20
 
 ## Approach
 

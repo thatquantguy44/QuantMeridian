@@ -101,6 +101,8 @@ This roadmap is a product and engineering backlog for the QIT Terminal, with the
 
 ### 3.1 Securities lending and squeeze intelligence
 
+> **Status (2026-10-20).** Borrower-default and indemnification risk shipped as INDEM phase 1 (spec020, PR #188). Its optimizer, phase 2, awaits decision 10.
+
 - Add borrow-rate history, utilization history, lendable supply changes, recall pressure, and specials lifecycle tracking.
 - Add issuer-level and sector-level aggregation for fee opportunity, concentration, and squeeze risk.
 - Add scenario tools for recall shocks, fee compression, client demand changes, and collateral substitution impacts.
@@ -121,6 +123,8 @@ This roadmap is a product and engineering backlog for the QIT Terminal, with the
 - Add policy-rate transmission scenarios linking FOMC path changes into reinvestment yield, funding cost, collateral haircuts, and optimization runs.
 
 ### 3.4 Optimization platform
+
+> **Status (2026-10-20).** Partly delivered for IBAL: solver explainability (LP sensitivity ranges, the elastic infeasibility explanation, parameter sweeps, model statistics and MIP progress) and verified runs per service. Replayable, persisted run history is still open (spec015, draft); OPT has an in-memory session run log only.
 
 - Add solver explainability: objective terms, constraint binding status, dual/shadow prices, infeasible constraint diagnostics, and recommended manual overrides.
 - Add before/after blotters and approval workflows for recommended trades or collateral movements.

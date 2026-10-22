@@ -1,11 +1,71 @@
 # Market Terminal Handoff
 
-**Updated:** 2026-10-18. The top-priority section was updated for PR #166 (merged: spec012
-SU-SIM, the spec011 MMKT module, demo books) and its follow-ups PR #167, PR #168 and PR #170, then
-re-checked against `main` at PR #170 (merge `7ef36f5`): statements about already-merged branches
-and PRs were corrected; nothing new was built after PR #170. The rest of this file was last updated
-2026-09-16 and is retained as context.
+**Updated:** 2026-10-20, end of session. Start with "▶ STOPPING POINT — 2026-10-20" below; it
+supersedes the dated checkpoints further down, which are kept as history. The rest of this file was
+last updated 2026-09-16 and is context only.
 **Default branch:** `main` (0018 was merged in PR #148; subsequent follow-up docs were merged in PR #150)
+
+## ▶ STOPPING POINT — 2026-10-20 (read this first)
+
+**Where things stand.** `main` is at `6e21ccd` (PR #188).
+
+- **Checks on that commit (2026-10-20):**
+  - `npx tsc --noEmit` is clean.
+  - `npx vitest run` → 1,038 tests in 100 files pass.
+  - The IBAL service suite → 235 pass, against InventoryBallast pin `a42dad3`.
+- **Local only, by owner decision 2** (CI runs only the smoke specs):
+  - the IBAL service suite;
+  - the demo-path Playwright suite, `test/ibal-demo-path.spec.ts`;
+  - `test/opt-run-log.spec.ts`.
+
+**Merged since 2026-10-17.**
+
+| Area | PRs | What landed |
+| --- | --- | --- |
+| IBAL (spec013) | #178, #179, #183, #185, #186 | Pin moves `bb425cac` → `a42dad3`. The guided showcase over the engine's three SIM books. The diagnostic tabs: Sensitivity, Infeasibility, model statistics, timings and MIP progress. `/v1/explain` and `/v1/sweep`. The user-edited showcase run (`/v1/showcase/edited-runs`). Removal of the `MIP_QP_CONFLICT` guard. Agency and prime panels in the workbench. The demo-path suite at 375/768/1440 px. **spec013 IBAL-001 to IBAL-007 are done; IBAL-008 (as-built evidence) is open.** |
+| OPT | #182, #187 | OPT hub and launcher. A **session run log** of IBAL, MMKT and COLL runs: in memory, `NOT PERSISTED`, at `GET /api/optimization/runs`. The durable registry is still spec015, a draft. |
+| MMKT (spec011) | #179 | Execution v2: the ticketed MIP (MM-006), blotter, cut-off timeline, shadow prices, frontier and scenarios, all on SIM rate sets. |
+| COLL (spec016) | #172, #174, #176, #177 | `services/collateral_optimizer_api`, pinned to the InventoryBallast collateral package, with local SIM previews and export. Production activation is blocked on spec015 and on governed sources. |
+| S&U (spec012) | #175 | `services/sources_uses_api` contracts and canonical hashes (SU-002). **No solver or endpoint yet.** |
+| INDEM (spec020) | #188 | Borrower-default and indemnification risk, phase 1: `services/indemnification_api` (port 8018), the `/securities-lending/indemnification` page and its e2e tests. The validation report and benchmark are done (PR #190, `spec020/VALIDATION.md`). Phase 2, the optimizer, waits on decision 10. |
+| Other | #171, #173, #180, #181 | A handoff refresh. The MMFO provenance badge (so the old "known red test" is fixed). The services runbook. Demo readiness. |
+
+**Benchmark finding, not yet fixed.** InventoryBallast `specs/0018-live-poc-showcase/benchmark.md`
+(2026-10-20) measured the demo path against 0018 NFR-002.
+
+- **IBAL passes by orders of magnitude.** Showcase run p95 is 48 ms or less against 3 s, and a
+  10-scenario stress batch takes 41 ms against 30 s.
+- **MMKT's ticketed plan fails.** The 26-candidate demo book takes 2.6–44.6 s depending on the
+  scenario, with p95 ≈ 44 s against 2 s. The cause is that `services/optimization_core` (`solver.py`,
+  `HighsBackend._solve_mip`) calls SciPy `milp` with no time limit or gap, so every solve runs to
+  proven optimality. Recorded as spec011 MM-012.
+
+**Start here next session.** "Agent" means an agent can just do it; "owner" means it needs your
+decision. Pick from the top.
+
+1. **(Agent) MMKT under NFR-002 (spec011 MM-012).** Give `HighsBackend` a time limit and a gap
+   tolerance. Disclose the achieved gap and keep the verifier's verdict, so a limit is never shown
+   as proven optimal. Then re-run the MMKT row of the InventoryBallast benchmark.
+2. **(Agent) S&U production LP, verifier and API (spec012 SU-003 to SU-005, approved).** Then the
+   MIP rules (SU-006), the result views (SU-007) and OPT run-log entries (SU-008). This is the
+   largest unstarted block, and it unblocks InventoryBallast 0018 T-015 and T-030 for S&U.
+3. **(Agent) spec013 IBAL-008.** Consolidate the as-built evidence: white paper, validation
+   evidence and test counts. Everything else in spec013 is done.
+4. **(Agent) spec020 IND-T15a,** make long reported INDEM runs work through the terminal. An annual
+   50,000-path run with sweeps takes 414 s against the proxy's 300 s timeout, Cancel does not stop the
+   service, and memory reaches 3.5 GB. Then IND-T15b (polish, `dev:all`). Pickup:
+   [`spec020/HANDOFF.md`](specs/spec020/HANDOFF.md); evidence: [`spec020/VALIDATION.md`](specs/spec020/VALIDATION.md);
+   how to run the service: [`services.md`](services.md) section 5a.
+5. **(Agent, when the engine changes) Next IBAL pin.** InventoryBallast 0016 T-026 will add a
+   per-owner fairness deviation field to the result. Regenerate
+   `contracts/ibal/run-response.shape.json` (`IBAL_UPDATE_CONTRACT_SHAPE=1`) and the TypeScript
+   parity maps. Bump the pin in its own PR (spec013 decision 1).
+6. **(Owner) Decisions:**
+   - spec014 approval (liquidity; all its questions are answered);
+   - spec015 approval (the durable OPT registry);
+   - spec020 decision 10 (INDEM phase 2);
+   - spec016's governed-source decisions;
+   - the EcoMedallion live probe (`scripts/probe_mmkt_series.py`), which gates real MMKT rates.
 
 ## Collateral model binding spec — 2026-10-18
 
@@ -16,21 +76,12 @@ reviewed pin-update PR workflow. This resolves spec015's repository-identificati
 for collateral; implementation, binding approval and production sources remain open. The
 current `src/data/collateral.ts` economics and client what-if remain illustrative SIM only.
 
-## Indemnification risk (INDEM, spec020) — 2026-10-21
-
-Phase 1 of spec020 is **built, merged ([PR #188](https://github.com/thatquantguy44/QuantMeridian/pull/188)) and
-validated**: the Python service (`services/indemnification_api`, port 8018), the terminal routes and the INDEM page at
-`/securities-lending/indemnification`. It does not change the owner's top priority below. The next INDEM step is
-IND-T15a (make long reported annual runs work through the terminal: timeout, cancel, memory); phase 2 (an
-optimizer) needs the owner to resolve decision 10 first. Pickup document:
-[`docs/specs/spec020/HANDOFF.md`](specs/spec020/HANDOFF.md); evidence and benchmark:
-[`docs/specs/spec020/VALIDATION.md`](specs/spec020/VALIDATION.md); how to run the service:
-[`docs/services.md`](services.md) section 5a.
-
 ## ▶ TOP PRIORITY — live proof-of-concept showcase (InventoryBallast spec `0018`, set 2026-10-17)
 
 **This is the highest-priority work for Market Terminal. Start here.** It outranks "Current
 Focus" and "Next Work" below; those stay as context.
+
+> **History (2026-10-18).** The stopping point at the top supersedes this checkpoint.
 
 **Active checkpoint (2026-10-18):**
 [PR #166](https://github.com/thatquantguy44/QuantMeridian/pull/166) and its follow-ups
@@ -58,8 +109,8 @@ services, including OPT's MMKT probe.
 Separately, `main` now has the spec015 MMFO local PoC (PRs #163–#165). It is SIM-only and not
 independently verified. It is not the MMKT service.
 
-**Known red test:** `src/tests/badge-coverage.test.ts` fails on `main` because the MMFO page has
-no provenance badge (spec015). Still true at PR #170: `src/app/money-market-fund-optimizer/page.tsx`
+**Known red test (fixed in PR #173):** `src/tests/badge-coverage.test.ts` failed on `main` because the MMFO page had
+no provenance badge (spec015). The page now imports `ProvenanceBadge`, and the suite passes. Still true at PR #170: `src/app/money-market-fund-optimizer/page.tsx`
 imports no badge and is not in the test's exempt list. PR #167 fixes the SXU half: the SXU page now has a module SIM
 switch and badge (spec012 SU-013).
 
@@ -73,14 +124,14 @@ InventoryBallast):
 | --- | --- | --- |
 | B — IBAL showcase: engine re-pin (now merged InventoryBallast `main` `a42dad3`, PR #40), diagnostic tabs, engine Scenario Studio (`0013` T-017), presenter mode | `spec013` (approved 2026-10-17) | `services/inventory_optimizer_api/`, `src/app/inventory-optimizer/` |
 | C — Money market execution optimizer (`MMKT` module; terminal module and SIM path merged in PR #166) | `spec011` (approved 2026-10-18) | `services/money_market_api/` (port 8014), `src/app/money-market/` |
-| D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only and SU-SIM showcase in `main`, service not started) | `spec012` (approved 2026-10-18) | `services/sources_uses_api/` (port 8015, not yet created), `src/app/sources-uses/` |
+| D — Configurable sources and uses on LP/MIP (replaces the random-number mock; setup-only and SU-SIM showcase in `main`) | `spec012` (approved 2026-10-18) | `services/sources_uses_api/` (port 8015: contracts and hashes only, SU-002, PR #175; no solver or endpoint yet), `src/app/sources-uses/` |
 | E — Liquidity forecasting, shortfall detection, ML anomaly detection, cash and lever oversight (replaces the random-number Liquidity page) | `spec014` (draft, not approved) | `services/liquidity_api/` (port 8016), `/cash-optimizer/liquidity` (spec014 Q7) |
 | Shared — model library: sparse builder, HiGHS adapter, verifier, elastic relaxation | — | `services/optimization_core/` (a library, not a service; in `main`, elastic follow-ups PRs #152–#153) |
 | White papers, one per model (mechanics, theory, application) | — | `docs/whitepapers/` |
 
 The OPT page's fabricated "Gurobi"/"OR-Tools" runs are replaced by real run history from all
 four services (REQ-029). Every number shown must come from a verified solve or a labeled input.
-**2026-10-19:** the fabricated runs are gone, and OPT's `RUNS` panel is a session run log of every
+**2026-10-20 (PR #187, merged):** the fabricated runs are gone, and OPT's `RUNS` panel is a session run log of every
 IBAL, MMKT and COLL run the terminal's server routes forward (metadata only, in memory, newest 200,
 `NOT PERSISTED`; `src/lib/server/runLog.ts`, `GET /api/optimization/runs`). S&U and liquidity join
 when their services exist; a durable, audited registry is still spec015 (draft).
@@ -105,7 +156,9 @@ legal entity × currency × account, with positions from the feed shared with sp
 plus the history windows, 80% coverage target, alert thresholds and retention. spec014 is still a
 draft: **only owner approval remains** before liquidity code.
 
-**Pick up here on the terminal side:**
+> **Superseded.** Kept as history; the current state and next steps are in "▶ STOPPING POINT — 2026-10-20" at the top of this file.
+
+**Pick up here on the terminal side** (as of 2026-10-18):
 
 1. ~~Review the draft packs in PR #151 for `spec011`–`spec014`~~ PR #151 is merged. `spec011`,
    `spec012` and `spec013` are approved; **`spec014` is still a draft** awaiting owner review
@@ -120,16 +173,23 @@ draft: **only owner approval remains** before liquidity code.
    1–4 and spec011 questions 1–3) and both specs were approved; the highest-value items are the MMKT MIP slice (MM-006), and creating `services/sources_uses_api`
    on `optimization_core`.
 
-**Current IBAL integration status (re-checked 2026-10-19):** the engine pin is InventoryBallast
-`main` `a42dad3` (PR #40, engine spec0020 solver diagnostics), bumped from `bb425cac` (PR #39) on the
-pin-only branch `feat/ibal-0020-pin` per spec013 decision 1. Stacked on it, `feat/ibal-0020-repin`
-adds `POST /v1/explain` and `POST /v1/sweep`, opt-in ranging and MIP progress on runs, the workbench
-Sensitivity and Infeasibility tabs, and model statistics, timings and MIP progress in Diagnostics
-(both branches pushed, no PR opened yet). `spec013` IBAL-001, -002, -003, -004, -005 and -007 are
-done. 2026-10-19: IBAL-006 is done too: the user-edited continuation (decision 3) is built and the
-demo-path suite (`test/ibal-demo-path.spec.ts`, local only) passes at 375, 768 and 1440 px; only
-IBAL-008 (as-built evidence) stays open. The showcase books are LPs, not MIPs; older notes saying
-otherwise were wrong.
+**Current IBAL integration status (2026-10-20):**
+
+- The engine pin is InventoryBallast `main` `a42dad3` (engine spec0020, solver diagnostics). It
+  merged as its own pin-only PR, #183 (spec013 decision 1).
+- #185 added:
+  - `POST /v1/explain` and `POST /v1/sweep`;
+  - opt-in ranging and MIP progress on runs;
+  - the workbench Sensitivity and Infeasibility tabs;
+  - model statistics, timings and MIP progress in Diagnostics.
+- #186 added:
+  - the user-edited showcase continuation (decision 3);
+  - removal of the `MIP_QP_CONFLICT` guard (the engine solves discrete rules plus a stability
+    penalty as `mip_linearized_stability`);
+  - agency and prime panels in the workbench;
+  - the local demo-path suite at 375, 768 and 1440 px.
+- `spec013` IBAL-001 to IBAL-007 are done. Only IBAL-008, the as-built evidence, stays open.
+- The showcase books are LPs, not MIPs; older notes saying otherwise were wrong.
 
 ## Cross-repo follow-up: EcoMedallion (MMKT rate feed) — tracked 2026-10-17
 
