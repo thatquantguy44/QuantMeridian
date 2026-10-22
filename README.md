@@ -47,6 +47,7 @@ BlackRock.
 | `MVOL` | **Market Volatility** | Reserve-balances-versus-VIX claim audit using Gold DB `WRESBAL`/`VIXCLS` plus Gold/FRED `SP500` outcome context, actual VIX level path, VIX-regime buckets, derived forward outcomes, base-rate lift, confidence bands, claim-threshold diagnostics, and cautious EDGE readout |
 | `SLAB` | **Securities Lending** | Inventory (internal / beneficial owner / prime), loan book, borrow demand, HTB & specials, revenue analytics (waterfall, Sankey, by borrower/security/asset class) |
 | `SQZ`  | **Squeeze Radar** | Borrow-demand / squeeze radar on the lending spine — composite heat score, fee×utilization quadrant (re-rate vs special), squeeze candidates, specials watch, sector heat, ALRT-ready heat-up alerts |
+| `INDEM` | **Indemnification Risk** | Agency-lender exposure when indemnifying beneficial owners against borrower default and cash-collateral reinvestment loss — Monte Carlo with a wrong-way link, editable close-out profile, sensitivities, named stresses, Basel cross-check and annual pricing view. Runs in a local Python service (port 8018); SIM data and illustrative parameters. See `docs/specs/spec020/` |
 | `PB`   | **Prime Finance** | Gross/net/long/short exposure, top hedge-fund clients, financing revenue & RoA, VaR / stress testing, financing optimization opportunities |
 | `COLL` | **Collateral Management** | IM/VM, excess/deficits, current vs optimized allocation, shadow prices, eligibility/concentration/haircut constraints, interactive what-if |
 | `CASH` | **Cash Optimizer** | Treasury funding sources & uses, cheapest funding path, Sankey flow, LCR/NSFR, intraday liquidity stress |
@@ -401,6 +402,7 @@ The table below shows the **real-world data source** each module ultimately draw
 | Rate Analysis Hub (BRA) | 🟡 Composite (BMRK + YCURV + RVOL + FCOST + UTIL) | Unified rate workflow; read from Gold DB |
 | ML Applications (EML) | 🔴 Sim/model | Recession probit, inflation nowcast, rate-path models |
 | Squeeze Radar (SQZ) | 🔴 Sim (lending spine) | utilization/fee + synthesized SI/DTC; needs vendor feed |
+| Indemnification Risk (INDEM) | 🔴 Sim (lending spine, illustrative parameters) | Local Python service; every figure labelled SIM with seed, path count and standard error |
 | Liquidity & Funding Stress (LIQ) | 🔴 Sim / local model | Stress ladder designed for FRED/Yahoo inputs |
 | InventoryBallast (IBAL) | 🔴 Synthetic / user upload via pinned service | Calls the separate InventoryBallast Python service; no governed production book feed yet |
 | **Tier B — non-series feeds (kept live):**| | |
@@ -417,7 +419,7 @@ The table below shows the **real-world data source** each module ultimately draw
 - 🔵 = ETL-fed via macro_data_etl or market_data_pipeline (Tier B)
 - 🟡 = Partial live (external APIs or internal fixtures, kept live by design as exceptions to Gold DB–only rule)
 - 🔴 = Simulation / model output (no external source of truth)
-- **Note:** Internal-book modules (SLAB, SQZ, PB, COLL, CASH, REINV, LIQ, SXU, OPT, IBAL, DESK) wire their macro *inputs* from Gold DB where applicable but keep their position/inventory/P&L books synthetic, uploaded, or otherwise explicitly user-provided until a governed book feed exists.
+- **Note:** Internal-book modules (SLAB, SQZ, INDEM, PB, COLL, CASH, REINV, LIQ, SXU, OPT, IBAL, DESK) wire their macro *inputs* from Gold DB where applicable but keep their position/inventory/P&L books synthetic, uploaded, or otherwise explicitly user-provided until a governed book feed exists.
 
 ### Ongoing integration log
 

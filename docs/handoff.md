@@ -27,7 +27,7 @@ last updated 2026-09-16 and is context only.
 | MMKT (spec011) | #179 | Execution v2: the ticketed MIP (MM-006), blotter, cut-off timeline, shadow prices, frontier and scenarios, all on SIM rate sets. |
 | COLL (spec016) | #172, #174, #176, #177 | `services/collateral_optimizer_api`, pinned to the InventoryBallast collateral package, with local SIM previews and export. Production activation is blocked on spec015 and on governed sources. |
 | S&U (spec012) | #175 | `services/sources_uses_api` contracts and canonical hashes (SU-002). **No solver or endpoint yet.** |
-| INDEM (spec020) | #188 | Borrower-default and indemnification risk, phase 1: `services/indemnification_api` (port 8018), the `/securities-lending/indemnification` page and its e2e tests. IND-T15 (validation report and benchmark) is open. Phase 2, the optimizer, waits on decision 10. |
+| INDEM (spec020) | #188 | Borrower-default and indemnification risk, phase 1: `services/indemnification_api` (port 8018), the `/securities-lending/indemnification` page and its e2e tests. The validation report and benchmark are done (PR #190, `spec020/VALIDATION.md`). Phase 2, the optimizer, waits on decision 10. |
 | Other | #171, #173, #180, #181 | A handoff refresh. The MMFO provenance badge (so the old "known red test" is fixed). The services runbook. Demo readiness. |
 
 **Benchmark finding, not yet fixed.** InventoryBallast `specs/0018-live-poc-showcase/benchmark.md`
@@ -51,7 +51,11 @@ decision. Pick from the top.
    largest unstarted block, and it unblocks InventoryBallast 0018 T-015 and T-030 for S&U.
 3. **(Agent) spec013 IBAL-008.** Consolidate the as-built evidence: white paper, validation
    evidence and test counts. Everything else in spec013 is done.
-4. **(Agent) spec020 IND-T15,** the validation report and benchmark for INDEM phase 1.
+4. **(Agent) spec020 IND-T15a,** make long reported INDEM runs work through the terminal. An annual
+   50,000-path run with sweeps takes 414 s against the proxy's 300 s timeout, Cancel does not stop the
+   service, and memory reaches 3.5 GB. Then IND-T15b (polish, `dev:all`). Pickup:
+   [`spec020/HANDOFF.md`](specs/spec020/HANDOFF.md); evidence: [`spec020/VALIDATION.md`](specs/spec020/VALIDATION.md);
+   how to run the service: [`services.md`](services.md) section 5a.
 5. **(Agent, when the engine changes) Next IBAL pin.** InventoryBallast 0016 T-026 will add a
    per-owner fairness deviation field to the result. Regenerate
    `contracts/ibal/run-response.shape.json` (`IBAL_UPDATE_CONTRACT_SHAPE=1`) and the TypeScript

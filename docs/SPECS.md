@@ -22,7 +22,7 @@ For the current work queue, start at [`handoff.md`](handoff.md), "▶ STOPPING P
 | [spec014](specs/spec014/) | Liquidity forecasting, shortfall and anomaly oversight | Draft; all owner questions resolved 2026-10-18 | **Awaits owner approval** before any code |
 | [spec015](specs/spec015/) | Pluggable money market and collateral Optimization Center (`OPT`) | Draft | OPT hub and session run log built; the durable registry is open |
 | [spec016](specs/spec016/) | InventoryBallast collateral optimizer binding (`COLL`) | Draft for review | Local SIM integration implemented; production activation blocked on spec015 and governed sources. [TASKS](specs/spec016/TASKS.md) |
-| [spec020](specs/spec020/) | Borrower default and indemnification risk (`INDEM`) | Phase 1 approved 2026-10-20 | Phase 1 merged (PR #188); IND-T15 open; phase 2 awaits decision 10. [HANDOFF](specs/spec020/HANDOFF.md) |
+| [spec020](specs/spec020/) | Borrower default and indemnification risk (`INDEM`) | Phase 1 approved 2026-10-20 | Phase 1 merged (PR #188) and validated (`VALIDATION.md`). Next: IND-T15a, long reported runs through the terminal. Phase 2 awaits decision 10. [HANDOFF](specs/spec020/HANDOFF.md) |
 
 Cross-repository program: InventoryBallast `specs/0018-live-poc-showcase/` (the live
 proof-of-concept) is the parent of spec011 to spec014.
