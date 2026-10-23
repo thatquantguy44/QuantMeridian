@@ -12,6 +12,7 @@ import IndexReturns from "./app/index-returns/page";
 import MarketLens from "./app/market-lens/page";
 import MarketChart from "./app/market-chart/page";
 import MarketVolatility from "./app/market-volatility/page";
+import VixImpliedForward from "./app/market-volatility/implied-vs-forward/page";
 import SecuritiesLending from "./app/securities-lending/page";
 import Squeeze from "./app/securities-lending/squeeze/page";
 import Indemnification from "./app/securities-lending/indemnification/page";
@@ -107,6 +108,7 @@ export function App() {
         {on("LENS") && <Route path="market-lens" element={<MarketLens />} />}
         {on("MKC") && <Route path="market-chart" element={<MarketChart />} />}
         {on("MVOL") && <Route path="market-volatility" element={<MarketVolatility />} />}
+        {on("VIXR") && <Route path="market-volatility/implied-vs-forward" element={<VixImpliedForward />} />}
         {on("SLAB") && <Route path="securities-lending" element={<SecuritiesLending />} />}
         {on("SQZ") && <Route path="securities-lending/squeeze" element={<Squeeze />} />}
         {on("INDEM") && <Route path="securities-lending/indemnification" element={<Indemnification />} />}

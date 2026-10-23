@@ -1,0 +1,162 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\title{VIX Implied vs Forward Returns (VIXR): Formulas}
+\author{QuantMeridian Market Terminal}
+\date{Code: \texttt{src/lib/vixImpliedForward.ts}, \texttt{src/lib/vixWalkForward.ts}}
+
+\begin{document}
+\maketitle
+
+\noindent Every formula below is the one the code evaluates. The statistics are computed in the browser from Gold
+series \texttt{VIXCLS} and the chosen S\&P~500 series. The golden tests compare them with an independent
+numpy/scipy implementation (\texttt{scripts/fixtures/vixr\_reference.py}).
+
+\subsection*{Notation}
+\begin{itemize}
+\item $d_k$ is trading date $k$, with S\&P~500 close $P_k$ and VIX close $V_k$ (VIX points are annualized volatility in \%).
+\item $h = 30$ calendar days, the VIX horizon.
+\item $e(k) = \max\{\, j : d_j \le d_k + h \,\}$ is the window end index, and $N_k = e(k) - k$ is the number of trading days in the window.
+\item $\Phi$ is the standard normal cumulative distribution function.
+\end{itemize}
+A window is kept only if the data reach $d_k + h$, $e(k) > k$, and the gap $\,(d_k + h) - d_{e(k)} \le 5$ days (a longer gap is a data outage, not a holiday).
+
+\subsection*{Implied move and band}
+\begin{align*}
+\sigma_k &= V_k \sqrt{\tfrac{30}{365}} \quad \text{(implied one-standard-deviation 30-day log move, in \%)}\\
+\text{band}_k^{\pm c} &= 100\left(e^{\pm c\,\sigma_k/100} - 1\right) \quad \text{(price-level band in \%, for } c = 1, 2\text{)}
+\end{align*}
+The band is read from a single day's VIX; nothing is averaged over time.
+
+\subsection*{Forward return and standardized move}
+\begin{align*}
+R_k &= 100\left(\frac{P_{e(k)}}{P_k} - 1\right) \quad \text{(forward return, \%)}\\
+\ell_k &= 100 \ln\frac{P_{e(k)}}{P_k} \quad \text{(forward log return, \%)}\\
+z_k &= \frac{\ell_k}{\sigma_k} \quad \text{(move in implied standard deviations)}
+\end{align*}
+
+\subsection*{Realized and trailing volatility}
+\begin{align*}
+r_j &= \ln\frac{P_j}{P_{j-1}}\\
+\mathrm{RV}_k &= 100\sqrt{\frac{252}{N_k}\sum_{j=k+1}^{e(k)} r_j^{2}} \quad \text{(next-30-day realized volatility, vol points; not demeaned)}\\
+b(k) &= \min\{\, j : d_j \ge d_k - h \,\}, \qquad M_k = k - b(k)\\
+\mathrm{RV}^{\mathrm{trail}}_k &= 100\sqrt{\frac{252}{M_k}\sum_{j=b(k)+1}^{k} r_j^{2}} \quad \text{(requires a full 30-day lookback and } M_k \ge 10\text{)}
+\end{align*}
+Worked example. With closes $100, 101, 99.5, 100.5, 100, 101.5$ the squared log returns sum to $0.0006694$ over $N=5$ days, so
+$\mathrm{RV} = 100\sqrt{252 \times 0.0006694/5} = 18.4$ vol points.
+
+\subsection*{Premium and ratios}
+\begin{align*}
+\text{premium}_k &= V_k - \mathrm{RV}_k\\
+\text{realized-to-implied} &= \frac{\tfrac1n\sum_k \mathrm{RV}_k}{\tfrac1n\sum_k V_k} \quad \text{(ratio of means, as on the KPI strip)}\\
+\text{share VIX above realized} &= \frac{100}{n}\sum_k \mathbf{1}\{V_k > \mathrm{RV}_k\}
+\end{align*}
+
+\subsection*{Sampling and effective sample size}
+\noindent \textbf{Daily:} every valid start date; neighbouring windows share up to 21 returns, so
+\[
+n_{\mathrm{eff}} = \max\!\left(1, \operatorname{round}\!\left(\frac{n}{21}\right)\right).
+\]
+\textbf{Non-overlapping:} keep the first window, then repeatedly the first window whose start date is on or after the previous window's end date; $n_{\mathrm{eff}} = n$.
+
+\subsection*{Calibration shares and Wilson intervals}
+\begin{align*}
+\hat p_c &= \frac{100}{n}\sum_k \mathbf{1}\{|z_k| \le c\}\\
+\hat p_{<-2} &= \frac{100}{n}\sum_k \mathbf{1}\{z_k < -2\}, \qquad
+\hat p_{>2} = \frac{100}{n}\sum_k \mathbf{1}\{z_k > 2\}
+\end{align*}
+Normal benchmarks: $100\,(2\Phi(c) - 1) = 68.27$ for $c=1$ and $95.45$ for $c=2$, and $100\,\Phi(-2) = 2.28$ for each tail.
+Wilson 95\% interval with proportion $p = \hat p/100$, $m = n_{\mathrm{eff}}$, $z_{0.975} = 1.96$:
+\[
+\frac{p + \frac{z^2}{2m} \;\pm\; z\sqrt{\frac{p(1-p)}{m} + \frac{z^2}{4m^2}}}{1 + \frac{z^2}{m}}
+\]
+truncated to $[0, 1]$ and multiplied by 100.
+
+\subsection*{Distribution of standardized moves}
+\begin{align*}
+\bar z &= \frac1n\sum_k z_k, \qquad s_z = \sqrt{\frac1n\sum_k (z_k - \bar z)^2}\\
+\text{excess kurtosis} &= \frac{\frac1n\sum_k (z_k - \bar z)^4}{\left(\frac1n\sum_k (z_k - \bar z)^2\right)^{2}} - 3
+\end{align*}
+Histogram bins $[a, b)$ of width $0.5$ on $[-4, 4]$, with the outer bins open-ended. The normal reference count is $n\,[\Phi(b) - \Phi(a)]$, with $\Phi(-\infty)=0$ and $\Phi(\infty)=1$.
+
+\subsection*{Regression with Newey-West errors}
+Fit $y_k = \alpha + \beta x_k + \varepsilon_k$ by ordinary least squares with $X = [\,1\ \ x\,]$ and residuals $\hat e_k$:
+\begin{align*}
+\hat\beta &= \frac{\sum_k (x_k - \bar x)(y_k - \bar y)}{\sum_k (x_k - \bar x)^2}, \qquad \hat\alpha = \bar y - \hat\beta \bar x, \qquad
+R^2 = 1 - \frac{\sum_k \hat e_k^2}{\sum_k (y_k - \bar y)^2}\\
+\widehat{\operatorname{Var}}(\hat\theta) &= (X^\top X)^{-1}\, \hat S\, (X^\top X)^{-1}\\
+\hat S &= \Gamma_0 + \sum_{l=1}^{L} w_l\left(\Gamma_l + \Gamma_l^\top\right), \qquad
+\Gamma_l = \sum_{k=l+1}^{n} \hat e_k \hat e_{k-l}\, X_k^\top X_{k-l}, \qquad w_l = 1 - \frac{l}{L+1}\\
+t_\beta &= \frac{\hat\beta}{\operatorname{se}(\hat\beta)}
+\end{align*}
+The lag is $L = 21$ for daily windows and $L = 3$ for non-overlapping windows (clipped to $n-1$). The models are:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Model & $y$ & $x$\\
+\midrule
+Magnitude (Mincer--Zarnowitz) & $\mathrm{RV}_k$ & $V_k$\\
+Trailing benchmark & $\mathrm{RV}_k$ & $\mathrm{RV}^{\mathrm{trail}}_k$\\
+Absolute move & $|R_k|$ & $\sigma_k$\\
+Direction & $R_k$ & $V_k$\\
+\bottomrule
+\end{tabular}
+\end{center}
+An unbiased volatility forecast has $\alpha = 0$ and $\beta = 1$; the page reports $t = (\hat\beta - 1)/\operatorname{se}(\hat\beta)$ for that test. The trailing benchmark and the VIX regression are compared on the same dates, those with a full lookback.
+
+\subsection*{Rank correlation and quantiles}
+\begin{align*}
+\rho_S &= \operatorname{corr}\big(\operatorname{rank}(V_k),\ \operatorname{rank}(|R_k|)\big) \quad \text{(Pearson correlation of average ranks, so ties share a rank)}\\
+q_p &= x_{(\lfloor u \rfloor)} + (u - \lfloor u \rfloor)\left(x_{(\lceil u \rceil)} - x_{(\lfloor u \rfloor)}\right), \qquad u = p\,(n-1)
+\end{align*}
+Quintile buckets split at $q_{0.2}, q_{0.4}, q_{0.6}, q_{0.8}$ of the selected VIX values; level buckets split at $15, 20, 25, 30, 40$, each lower bound inclusive.
+
+\subsection*{Predictive grade (readout)}
+With the magnitude regression's $R^2$, slope and $t_\beta$:
+\[
+\text{grade} =
+\begin{cases}
+\text{none} & \hat\beta \le 0 \ \text{ or } \ t_\beta < 2 \ \text{ or } \ R^2 < 0.10\\
+\text{weak} & 0.10 \le R^2 < 0.30\\
+\text{moderate} & 0.30 \le R^2 < 0.50\\
+\text{strong} & R^2 \ge 0.50
+\end{cases}
+\]
+
+\subsection*{Expanding-window out-of-sample test}
+For a test window starting at $d_k$, the training set contains only windows whose 30 days had finished before $d_k$:
+\[
+\mathcal{T}_k = \{\, s : d_{e(s)} < d_k \,\}, \qquad \text{test only if } |\mathcal{T}_k| \ge n_0 \text{ and } \mathrm{RV}^{\mathrm{trail}}_k \text{ exists,}
+\]
+with $n_0 = 60$ (non-overlapping) or $504$ (daily). Fit by ordinary least squares on $\mathcal{T}_k$ only:
+\begin{align*}
+(\hat a_k, \hat b_k) &= \text{OLS of } \mathrm{RV}_s \text{ on } V_s, \quad s \in \mathcal{T}_k\\
+(\hat c_k, \hat g_k) &= \text{OLS of } R_s \text{ on } V_s, \quad s \in \mathcal{T}_k
+\end{align*}
+Forecasts of the next-30-day realized volatility $\mathrm{RV}_k$ and return $R_k$:
+\begin{align*}
+\widehat{\mathrm{RV}}^{\text{raw}}_k &= V_k\\
+\widehat{\mathrm{RV}}^{\text{cal}}_k &= \hat a_k + \hat b_k V_k\\
+\widehat{\mathrm{RV}}^{\text{trail}}_k &= \mathrm{RV}^{\mathrm{trail}}_k\\
+\widehat{\mathrm{RV}}^{\text{mean}}_k &= \frac{1}{|\mathcal{T}_k|}\sum_{s \in \mathcal{T}_k} \mathrm{RV}_s\\
+\widehat{R}^{\text{mean}}_k &= \frac{1}{|\mathcal{T}_k|}\sum_{s \in \mathcal{T}_k} R_s\\
+\widehat{R}^{\text{VIX}}_k &= \hat c_k + \hat g_k V_k
+\end{align*}
+Points are skipped while the training VIX has no variation. With forecast error $u^{m}_k = \text{outcome}_k - \text{forecast}^{m}_k$ over the $T$ test windows:
+\begin{align*}
+\mathrm{RMSE}_m &= \sqrt{\tfrac1T \sum_k (u^m_k)^2}, \qquad \mathrm{MAE}_m = \tfrac1T\sum_k |u^m_k|, \qquad \mathrm{bias}_m = -\tfrac1T\sum_k u^m_k\\
+\text{skill}_m &= 1 - \frac{\sum_k (u^m_k)^2}{\sum_k (u^{\text{bench}}_k)^2}\\
+C_\tau &= \sum_{k \le \tau}\left[(u^{\text{bench}}_k)^2 - (u^m_k)^2\right]
+\end{align*}
+Here skill is the out-of-sample $R^2$ against the expanding mean and $C_\tau$ is the cumulative advantage plotted on the chart. The Diebold--Mariano test of equal squared-error loss between models $A$ and $B$, with $\delta_k = (u^A_k)^2 - (u^B_k)^2$:
+\begin{align*}
+\bar\delta &= \frac1T\sum_k \delta_k, \qquad \hat\gamma_l = \frac1T\sum_{k=l+1}^{T}(\delta_k - \bar\delta)(\delta_{k-l} - \bar\delta)\\
+\widehat{\mathrm{LRV}} &= \hat\gamma_0 + 2\sum_{l=1}^{L}\left(1 - \frac{l}{L+1}\right)\hat\gamma_l, \qquad
+\mathrm{DM} = \frac{\bar\delta}{\sqrt{\widehat{\mathrm{LRV}}/T}}
+\end{align*}
+A value below $-2$ means model $A$ has a significantly smaller squared error. The test is reported for each forecast against the expanding mean and against the trailing-volatility forecast, with the same $L$ as the regressions.
+
+\end{document}

@@ -10,6 +10,7 @@
     "LENS":   { "enabled": true, "label": "Market Lens Studio" },
     "MKC":    { "enabled": true, "label": "Market Chart Studio" },
     "MVOL":   { "enabled": true, "label": "Market Volatility" },
+    "VIXR":   { "enabled": true, "label": "VIX Implied vs Forward" },
     "SLAB":   { "enabled": true, "label": "Securities Lending" },
     "SQZ":    { "enabled": true, "label": "Squeeze Radar" },
     "INDEM":  { "enabled": true, "label": "Indemnification Risk" },
