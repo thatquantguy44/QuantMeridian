@@ -4,6 +4,8 @@ import { parseInline, parseMarkdown, type Block } from "@/lib/markdown";
 import { GUIDE_DOCS, guideModules, hasGuide, loadGuide } from "./moduleGuides";
 
 const optimization = NAV.filter((item) => item.group === "OPTIMIZATION");
+// Every module that ships guides is linted, not only the Optimization suite.
+const guided = NAV.filter((item) => item.group === "OPTIMIZATION" || hasGuide(item.code));
 
 const REQUIRED: Record<string, string[]> = {
   whitepaper: ["Executive summary", "Business problem", "How it works", "Data and provenance", "Assumptions", "Outputs and how to read them", "Validation", "Limitations", "Status and governance", "References"],
@@ -26,7 +28,12 @@ describe("module guides", () => {
     expect(guideModules().map((m) => m.code)).toEqual(optimization.map((m) => m.code));
   });
 
-  for (const item of optimization) {
+  it("gives VIX Implied vs Forward its own guides outside the Optimization library", () => {
+    expect(hasGuide("VIXR")).toBe(true);
+    expect(guideModules().map((m) => m.code)).not.toContain("VIXR");
+  });
+
+  for (const item of guided) {
     for (const doc of GUIDE_DOCS) {
       it(`${item.code} ${doc.id}: has a title, the required sections and no broken internal links`, async () => {
         const blocks = parseMarkdown(await loadGuide(item.code, doc.id));

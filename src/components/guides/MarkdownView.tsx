@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 import Link from "@/components/Link";
 import { parseInline, type Block } from "@/lib/markdown";
+import { LatexBlock } from "@/components/math/LatexBlock";
 
 function Inline({ text }: { text: string }) {
   return <>{parseInline(text).map((token, index) => {
@@ -35,7 +36,15 @@ export function MarkdownView({ blocks }: { blocks: Block[] }) {
       }
       case "paragraph": return <p key={index} className="my-2 leading-relaxed text-term-text-dim"><Inline text={block.text} /></p>;
       case "quote": return <div key={index} className="my-3 border-l-2 border-term-amber bg-term-panel-2 px-3 py-2 text-term-text-dim"><Inline text={block.text} /></div>;
-      case "code": return <pre key={index} className="my-2 overflow-x-auto rounded-sm border border-term-border bg-term-bg p-2 font-mono text-[0.92em] text-term-text">{block.text}</pre>;
+      case "code":
+        if (block.lang === "latex") return (
+          <div key={index} className="my-2 rounded-sm border border-term-border bg-term-panel-2 p-3">
+            <LatexBlock latex={block.text} />
+            <details className="mt-2"><summary className="cursor-pointer text-3xs uppercase tracking-wide text-term-text-mute">LaTeX source</summary>
+              <pre className="mt-1 overflow-x-auto font-mono text-[10px] text-term-text-dim">{block.text}</pre></details>
+          </div>
+        );
+        return <pre key={index} className="my-2 overflow-x-auto rounded-sm border border-term-border bg-term-bg p-2 font-mono text-[0.92em] text-term-text">{block.text}</pre>;
       case "rule": return <hr key={index} className="my-4 border-term-border" />;
       case "list": {
         const ListTag = block.ordered ? "ol" : "ul";

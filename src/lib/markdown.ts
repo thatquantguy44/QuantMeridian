@@ -11,7 +11,7 @@ export type Block =
   | { type: "paragraph"; text: string }
   | { type: "list"; ordered: boolean; items: { text: string; children: string[] }[] }
   | { type: "table"; header: string[]; rows: string[][] }
-  | { type: "code"; text: string }
+  | { type: "code"; text: string; lang?: string }
   | { type: "quote"; text: string }
   | { type: "rule" };
 
@@ -62,11 +62,12 @@ export function parseMarkdown(source: string): Block[] {
     }
 
     if (line.startsWith("```")) {
+      const lang = line.slice(3).trim();
       const body: string[] = [];
       i++;
       while (i < lines.length && !lines[i].startsWith("```")) body.push(lines[i++]);
       i++; // closing fence
-      blocks.push({ type: "code", text: body.join("\n") });
+      blocks.push(lang ? { type: "code", text: body.join("\n"), lang } : { type: "code", text: body.join("\n") });
       continue;
     }
 

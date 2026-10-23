@@ -18,6 +18,7 @@ const PAGES = [
   { path: "/market-lens", title: "Market Lens Studio", code: "LENS" },
   { path: "/market-chart", title: "Market Chart Studio", code: "MKC" },
   { path: "/market-volatility", title: "Market Volatility", code: "MVOL" },
+  { path: "/market-volatility/implied-vs-forward", title: "VIX Implied vs Forward Returns", code: "VIXR" },
   { path: "/securities-lending", title: "Securities Lending", code: "SLAB" },
   { path: "/securities-lending/squeeze", title: "Squeeze Radar", code: "SQZ" },
   { path: "/securities-lending/indemnification", title: "Indemnification Risk", code: "INDEM" },

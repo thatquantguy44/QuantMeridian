@@ -1,6 +1,7 @@
 /**
- * Registry of the Optimization suite's module guides: one white paper / business guide and one Help & FAQ per module,
- * authored as markdown in docs/guides/optimization/ (<code>-whitepaper.md, <code>-help.md).
+ * Registry of module guides: one white paper / business guide and one Help & FAQ per module, authored as markdown in
+ * docs/guides/<group>/ (<code>-whitepaper.md, <code>-help.md). The /guides library lists the Optimization suite;
+ * any module with both files also gets a Guide button in its page header.
  *
  * Content is loaded lazily, so a page only downloads a guide when someone opens it.
  */
@@ -12,9 +13,10 @@ export const GUIDE_DOCS: { id: GuideDoc; label: string }[] = [
   { id: "whitepaper", label: "White paper" },
 ];
 
-const loaders = import.meta.glob("/docs/guides/optimization/*.md", { query: "?raw", import: "default" }) as Record<string, () => Promise<string>>;
+const loaders = import.meta.glob("/docs/guides/*/*.md", { query: "?raw", import: "default" }) as Record<string, () => Promise<string>>;
 
-const pathFor = (code: string, doc: GuideDoc) => `/docs/guides/optimization/${code.toLowerCase()}-${doc}.md`;
+const byFile = new Map(Object.keys(loaders).map((path) => [path.slice(path.lastIndexOf("/") + 1), path]));
+const pathFor = (code: string, doc: GuideDoc) => byFile.get(`${code.toLowerCase()}-${doc}.md`) ?? "";
 
 export interface ModuleGuideEntry { code: string; label: string; href: string; desc: string }
 

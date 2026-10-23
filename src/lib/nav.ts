@@ -33,6 +33,7 @@ import {
   TrendingUp,
   Dices,
   Scale,
+  ChartScatter,
   type LucideIcon,
 } from "lucide-react";
 import { isModuleEnabled } from "@/lib/moduleConfig";
@@ -56,6 +57,7 @@ const ALL_NAV: NavItem[] = [
   { code: "LENS", label: "Market Lens Studio", href: "/market-lens", icon: Telescope, desc: "Configurable analytics workspace", group: "MARKETS" },
   { code: "MKC", label: "Market Chart Studio", href: "/market-chart", icon: CandlestickChart, desc: "Freeform technical market charting", group: "MARKETS" },
   { code: "MVOL", label: "Market Volatility", href: "/market-volatility", icon: Activity, desc: "VIX claim audits & volatility regimes", group: "MARKETS" },
+  { code: "VIXR", label: "VIX Implied vs Forward", href: "/market-volatility/implied-vs-forward", icon: ChartScatter, desc: "VIX-implied 30-day move vs realized S&P 500 returns", group: "MARKETS" },
   { code: "SLAB", label: "Securities Lending", href: "/securities-lending", icon: Landmark, desc: "Inventory, loan book & revenue", group: "FINANCE" },
   { code: "SQZ", label: "Squeeze Radar", href: "/securities-lending/squeeze", icon: Flame, desc: "Borrow demand, heat score & squeeze risk", group: "FINANCE" },
   { code: "INDEM", label: "Indemnification Risk", href: "/securities-lending/indemnification", icon: ShieldAlert, desc: "Borrower default & reinvestment indemnification (SIM)", group: "FINANCE" },
