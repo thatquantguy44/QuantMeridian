@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { PageHeader, KpiStrip } from "@/components/ui/PageHeader";
 import { Panel, Stat, Tag } from "@/components/ui/Panel";
@@ -8,6 +8,7 @@ import { Sparkline } from "@/components/charts/Sparkline";
 import { fmtSigned, pnlClass } from "@/lib/format";
 import {
   getSqueezeBoard,
+  mergeShortInterest,
   getSqueezeCandidates,
   getRerateCandidates,
   getSpecialsWatch,
@@ -17,6 +18,7 @@ import {
   type SqueezeRow,
   type Classification,
 } from "@/data/squeeze";
+import type { YahooShortInterestRow } from "@/lib/server/yahooShortInterest";
 
 type View = "BOARD" | "QUAD" | "SQUEEZE" | "RERATE" | "SPECIALS" | "SECTOR" | "ALERTS";
 const VIEWS: { key: View; label: string }[] = [
@@ -80,19 +82,42 @@ function Quadrant({ rows }: { rows: SqueezeRow[] }) {
 
 export default function SqueezeRadar() {
   const [view, setView] = useState<View>("BOARD");
-  const board = useMemo(() => getSqueezeBoard(), []);
-  const squeeze = useMemo(() => getSqueezeCandidates(), []);
-  const rerate = useMemo(() => getRerateCandidates(), []);
-  const specials = useMemo(() => getSpecialsWatch(), []);
-  const sectors = useMemo(() => getSectorHeat(), []);
-  const alerts = useMemo(() => getHeatAlerts(), []);
-  const summary = useMemo(() => getSqueezeSummary(), []);
+  const [yahooRows, setYahooRows] = useState<YahooShortInterestRow[]>([]);
+  const [yahooStatus, setYahooStatus] = useState<"LOADING" | "YAHOO" | "ERR">("LOADING");
+  useEffect(() => {
+    let active = true;
+    fetch("/api/securities-finance/squeeze/short-interest")
+      .then((response) => {
+        if (!response.ok) throw new Error("Yahoo SI route unavailable");
+        return response.json() as Promise<{ source: "YAHOO" | "ERR"; rows: YahooShortInterestRow[] }>;
+      })
+      .then((result) => {
+        if (!active) return;
+        if (result.source === "YAHOO" && Array.isArray(result.rows)) {
+          setYahooRows(result.rows);
+          setYahooStatus("YAHOO");
+        } else {
+          setYahooStatus("ERR");
+        }
+      })
+      .catch(() => { if (active) setYahooStatus("ERR"); });
+    return () => { active = false; };
+  }, []);
+  const baseBoard = useMemo(() => getSqueezeBoard(), []);
+  const board = useMemo(() => mergeShortInterest(baseBoard, yahooRows), [baseBoard, yahooRows]);
+  const yahooCount = board.filter((row) => row.shortInterestSource === "YAHOO").length;
+  const squeeze = useMemo(() => getSqueezeCandidates(board), [board]);
+  const rerate = useMemo(() => getRerateCandidates(board), [board]);
+  const specials = useMemo(() => getSpecialsWatch(board), [board]);
+  const sectors = useMemo(() => getSectorHeat(board), [board]);
+  const alerts = useMemo(() => getHeatAlerts(board), [board]);
+  const summary = useMemo(() => getSqueezeSummary(board), [board]);
   const maxSectorHeat = Math.max(...sectors.map((s) => s.heat), 1);
   const btn = "rounded-sm border px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide transition-colors";
 
   return (
     <div className="flex min-h-full flex-col">
-      <PageHeader code="SQZ" title="Borrow-Demand / Squeeze Radar" desc="Heat score · fee momentum · squeeze risk" right={<ProvenanceBadge source="SIM" />} />
+      <PageHeader code="SQZ" title="Borrow-Demand / Squeeze Radar" desc="Heat score · fee momentum · squeeze risk" right={<span className="flex items-center gap-2"><ProvenanceBadge source="SIM" simSelected /><span className="text-3xs text-term-text-mute">{yahooStatus === "LOADING" ? "Yahoo SI loading" : yahooCount ? "Yahoo SI " + yahooCount + "/" + board.length : "Yahoo SI unavailable"}</span></span>} />
 
       <KpiStrip>
         <Stat label="Hottest Name" value={summary.hottest} sub="by heat score" tone="amber" />
@@ -131,8 +156,8 @@ export default function SqueezeRadar() {
                       <td className="px-2 py-1 text-right text-2xs text-term-text">{r.utilization}%</td>
                       <td className="px-2 py-1 text-right text-2xs text-term-text">{r.feeBps}</td>
                       <td className={clsx("px-2 py-1 text-right text-2xs", pnlClass(r.feeMom20))}>{fmtSigned(r.feeMom20, 0)}%</td>
-                      <td className="px-2 py-1 text-right text-2xs text-term-text-dim">{r.shortInterestPct}</td>
-                      <td className="px-2 py-1 text-right text-2xs text-term-text-dim">{r.daysToCover}</td>
+                      <td className="px-2 py-1 text-right text-2xs text-term-text-dim" title={r.shortInterestSource === "YAHOO" ? "Yahoo Finance · reported " + r.shortInterestAsOf : "Simulated"}>{r.shortInterestPct}{r.shortInterestSource === "YAHOO" && <span className="ml-1 text-term-blue">Y</span>}</td>
+                      <td className="px-2 py-1 text-right text-2xs text-term-text-dim" title={r.shortInterestSource === "YAHOO" ? "Yahoo Finance · reported " + r.shortInterestAsOf : "Simulated"}>{r.daysToCover}</td>
                       <td className={clsx("px-2 py-1 text-center text-3xs font-semibold", r.direction === "HEATING" ? "text-term-down" : r.direction === "COOLING" ? "text-term-up" : "text-term-text-mute")}>{r.direction === "HEATING" ? "▲" : r.direction === "COOLING" ? "▼" : "—"}</td>
                       <td className="px-2 py-1 text-right"><span className="inline-flex justify-end"><HeatBar v={r.heat} /></span></td>
                     </tr>
@@ -163,7 +188,7 @@ export default function SqueezeRadar() {
               <Panel key={r.ticker} title={`${r.ticker} — ${r.name}`} code="SQZ-3" accent={r.squeezeScore >= 70} right={<Tag tone={CLS_TONE[r.classification]}>{r.classification}</Tag>}>
                 <div className="grid grid-cols-4 divide-x divide-term-border border-b border-term-border">
                   <Cell label="Squeeze" value={`${r.squeezeScore}`} tone={r.squeezeScore >= 70 ? "down" : "amber"} />
-                  <Cell label="Short Int" value={`${r.shortInterestPct}%`} />
+                  <Cell label={r.shortInterestSource === "YAHOO" ? "Short Int · Yahoo" : "Short Int · SIM"} value={`${r.shortInterestPct}%`} />
                   <Cell label="Days Cover" value={`${r.daysToCover}`} />
                   <Cell label="5d Px" value={`${fmtSigned(r.priceChg5, 1)}%`} tone={r.priceChg5 >= 0 ? "up" : "down"} />
                 </div>
@@ -260,7 +285,7 @@ export default function SqueezeRadar() {
 
       <div className="border-t border-term-border bg-term-panel px-3 py-1.5 text-3xs text-term-text-mute">
         <span className="text-term-amber">SQZ</span> — borrow-demand radar built on the lending book: heat score, fee momentum, the fee×utilization re-rate view, and squeeze risk.
-        {" "}Microstructure signals (short interest, days-to-cover, options skew) are research-grade (SIM); swap in a borrow/SI vendor feed behind the same shapes.
+        {" "}Short interest and days-to-cover: {yahooCount} Yahoo reported, {board.length - yahooCount} SIM. Yahoo observations carry their report date in row tooltips; fee, utilization, options, price action and other book signals remain SIM.
       </div>
     </div>
   );
