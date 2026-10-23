@@ -9,9 +9,11 @@
  * fixed seed *consistently* with that spine (an HTB special also reads high SI /
  * high DTC / positive fee momentum), so the analytics are coherent and swap
  * cleanly for a live borrow/short-interest vendor feed behind the same shapes.
- * Everything is clearly `SIM`.
+ * The base board is SIM. A separate Yahoo short-interest overlay can update
+ * SI and DTC for individual names, with source and report date on each row.
  */
 import { Rng } from "@/lib/rng";
+import type { YahooShortInterestRow } from "@/lib/server/yahooShortInterest";
 import { getInventory } from "./securitiesLending";
 import { LENDABLE, type Security } from "./universe";
 
@@ -32,6 +34,8 @@ export interface SqueezeRow {
   feeHist: number[]; // recent fee path (bps)
   shortInterestPct: number; // % of float
   daysToCover: number;
+  shortInterestSource: "SIM" | "YAHOO";
+  shortInterestAsOf: string | null;
   putCall: number; // options put/call ratio
   skew: number; // 25-delta put-call skew (vol pts)
   etfFlow: number | null; // create/redeem, % of AUM (ETFs only)
@@ -133,6 +137,8 @@ export function getSqueezeBoard(): SqueezeRow[] {
       feeHist: b.feeHist,
       shortInterestPct: b.shortInterestPct,
       daysToCover: b.daysToCover,
+      shortInterestSource: "SIM",
+      shortInterestAsOf: null,
       putCall: b.putCall,
       skew: b.skew,
       etfFlow: b.etfFlow,
@@ -148,27 +154,59 @@ export function getSqueezeBoard(): SqueezeRow[] {
   return CACHE;
 }
 
+
+/** Apply Yahoo's dated SI/DTC pair, then recompute every score that uses them. */
+export function mergeShortInterest(board: SqueezeRow[], liveRows: YahooShortInterestRow[]): SqueezeRow[] {
+  const live = new Map(liveRows.map((row) => [row.ticker, row]));
+  const fees = board.map((row) => row.feeBps).sort((a, b) => a - b);
+  return board.map((row) => {
+    const observation = live.get(row.ticker);
+    if (!observation || !Number.isFinite(observation.shortInterestPct) ||
+        !Number.isFinite(observation.daysToCover) ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(observation.asOf)) return row;
+    const shortInterestPct = observation.shortInterestPct;
+    const daysToCover = observation.daysToCover;
+    const feePctile = fees.filter((fee) => fee <= row.feeBps).length / fees.length * 100;
+    const heat = Math.round(clamp(
+      0.3 * row.utilization + 0.2 * feePctile +
+      0.2 * clamp(50 + row.feeMom20 * 1.1) +
+      0.15 * clamp(shortInterestPct * 2.6) +
+      0.1 * clamp(daysToCover * 8) + 0.05 * row.attention
+    ));
+    const squeezeScore = Math.round(clamp(
+      0.4 * clamp(shortInterestPct * 2.6) +
+      0.3 * clamp(daysToCover * 8) +
+      0.2 * clamp(50 + row.feeMom5 * 2) +
+      0.1 * clamp(50 + row.priceChg5 * 6)
+    ));
+    return {
+      ...row, shortInterestPct, daysToCover, heat, squeezeScore,
+      shortInterestSource: "YAHOO" as const, shortInterestAsOf: observation.asOf,
+    };
+  }).sort((a, b) => b.heat - a.heat);
+}
+
 // ── Derived views ────────────────────────────────────────────────────────────
 
 /** Specials that are cheap relative to demand — the re-rate money view. */
-export function getRerateCandidates(): SqueezeRow[] {
-  return getSqueezeBoard()
+export function getRerateCandidates(board: SqueezeRow[] = getSqueezeBoard()): SqueezeRow[] {
+  return board
     .filter((r) => r.utilization >= 80 && r.feeBps < 150 && r.feeMom20 > 0)
     .sort((a, b) => b.utilization - a.utilization)
     .slice(0, 12);
 }
 
 /** High short interest + days-to-cover + accelerating fee + price up = squeeze risk. */
-export function getSqueezeCandidates(): SqueezeRow[] {
-  return getSqueezeBoard()
+export function getSqueezeCandidates(board: SqueezeRow[] = getSqueezeBoard()): SqueezeRow[] {
+  return board
     .filter((r) => r.shortInterestPct >= 12 && r.daysToCover >= 3 && r.feeMom5 > 0)
     .sort((a, b) => b.squeezeScore - a.squeezeScore)
     .slice(0, 12);
 }
 
 /** Names crossing toward special with a recall-risk flag. */
-export function getSpecialsWatch(): SqueezeRow[] {
-  return getSqueezeBoard()
+export function getSpecialsWatch(board: SqueezeRow[] = getSqueezeBoard()): SqueezeRow[] {
+  return board
     .filter((r) => r.classification === "SPECIAL" || r.classification === "HTB")
     .sort((a, b) => b.feeBps - a.feeBps)
     .slice(0, 14);
@@ -180,9 +218,9 @@ export interface SectorHeat {
   count: number;
   avgUtil: number;
 }
-export function getSectorHeat(): SectorHeat[] {
+export function getSectorHeat(board: SqueezeRow[] = getSqueezeBoard()): SectorHeat[] {
   const m = new Map<string, { heat: number; util: number; n: number }>();
-  for (const r of getSqueezeBoard()) {
+  for (const r of board) {
     const e = m.get(r.sector) ?? { heat: 0, util: 0, n: 0 };
     e.heat += r.heat;
     e.util += r.utilization;
@@ -201,12 +239,12 @@ export interface HeatAlert {
   heat: number;
 }
 /** Threshold breaches that would stream into ALRT. */
-export function getHeatAlerts(): HeatAlert[] {
+export function getHeatAlerts(board: SqueezeRow[] = getSqueezeBoard()): HeatAlert[] {
   const out: HeatAlert[] = [];
-  for (const r of getSqueezeBoard()) {
+  for (const r of board) {
     if (r.feeMom5 >= 18) out.push({ ticker: r.ticker, trigger: "Fee-momentum spike", detail: `borrow fee +${r.feeMom5}% in 5d → ${r.feeBps}bps`, heat: r.heat });
     else if (r.utilization >= 92 && r.feeMom20 > 0) out.push({ ticker: r.ticker, trigger: "Utilization > 92% & rising", detail: `util ${r.utilization}% · ${r.classification}`, heat: r.heat });
-    else if (r.shortInterestPct >= 28) out.push({ ticker: r.ticker, trigger: "Short-interest jump", detail: `SI ${r.shortInterestPct}% · ${r.daysToCover}d to cover`, heat: r.heat });
+    else if (r.shortInterestPct >= 28) out.push({ ticker: r.ticker, trigger: "High short interest", detail: `SI ${r.shortInterestPct}% · ${r.daysToCover}d to cover`, heat: r.heat });
   }
   return out.sort((a, b) => b.heat - a.heat).slice(0, 16);
 }
@@ -219,9 +257,8 @@ export interface SqueezeSummary {
   topSqueeze: string;
   alerts: number;
 }
-export function getSqueezeSummary(): SqueezeSummary {
-  const board = getSqueezeBoard();
-  const sq = getSqueezeCandidates();
+export function getSqueezeSummary(board: SqueezeRow[] = getSqueezeBoard()): SqueezeSummary {
+  const sq = getSqueezeCandidates(board);
   return {
     hottest: board[0]?.ticker ?? "—",
     heatingCount: board.filter((r) => r.direction === "HEATING").length,
